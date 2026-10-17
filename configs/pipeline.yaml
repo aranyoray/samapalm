@@ -20,6 +20,7 @@ paths:
 clock:
   drift_flag_s_per_8h: 1.0
   wall_vs_meta_disagreement_s: 3.0
+  kardia_tz_offset_h: 5.5          # Kardia start_wall_ts is written in device local time (IST) unless the export says otherwise
 
 sync:
   p1: {pulses: 3, on_ms: 100, off_ms: 200, at_s_after_start: 2.0}
@@ -38,6 +39,7 @@ sync:
   artefact:
     clean_window_s: 2.0
     k_mad: 8.0
+    margin: 1.5                     # excursion must exceed the clean-window maximum by this factor (ignores QRS)
   pat_window_ms: [120, 450]
 
 window:
@@ -59,6 +61,13 @@ qc:
   hand_preview_fps: 4
   eis_warp_px_max: 0.5
   min_valid_window_s: 20.0
+  landmark_jitter_px_max: 3.0       # motion_flag when the median frame-to-frame landmark displacement exceeds this
+  hand_detect_min_frac: 0.5         # fraction of preview frames with a detection for hand_detected
+  hand_mirror: false                # preview is not selfie-mirrored
+  hand_palmar_convention: left_thumb_right
+  hand_model_path: null             # MediaPipe hand_landmarker.task; else $PALMPPG_HAND_LANDMARKER
+  skin_min_area_frac: 0.05
+  saturation_level_frac: 0.98
 
 pi:
   width: 1536
@@ -96,6 +105,7 @@ rois:
           pad_index, pad_middle, pad_ring, pad_little, volar_wrist, whole_palm]
   excluded: [thumb]
   patch_grid: {rows: 16, cols: 24}
+  band_width_ratio: 0.6
   graph:
     radial: [thenar, pad_index, pad_middle]
     ulnar: [hypothenar, pad_ring, pad_little]
@@ -125,6 +135,12 @@ crf:
   hba1c_dm_threshold: 6.5
   equity_min_band: 4
   equity_max_band: 10
+
+features:
+  tz: Asia/Kolkata
+  time_of_day_cut_hour: 13          # morning < 13:00 local <= afternoon
+  lux_band_edges: [200, 400]        # <200, 200-400, >400
+  tertile_labels: [T1, T2, T3]      # bp_tertile cut points come from the development stream only
 
 strata:
   - mst_band

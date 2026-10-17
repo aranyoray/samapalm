@@ -48,11 +48,27 @@ class FeatureRegistry:
         self._items: dict[str, FeatureMeta] = {}
 
     def register(self, meta: FeatureMeta) -> FeatureMeta:
+        """Register a column. Two registrations of the same name must agree on the track-relevant fields
+        (group, camera, requires_ecg, requires_raw); units/description/tags are merged, keeping the richer text,
+        so a consumer module may register a column with minimal metadata before or after its producer (D-013)."""
         prev = self._items.get(meta.name)
-        if prev is not None and prev != meta:
-            raise TrackViolation(f"feature {meta.name} registered twice with different metadata")
-        self._items[meta.name] = meta
-        return meta
+        if prev is None:
+            self._items[meta.name] = meta
+            return meta
+        if (prev.group, prev.camera, prev.requires_ecg, prev.requires_raw) != (meta.group, meta.camera, meta.requires_ecg, meta.requires_raw):
+            raise TrackViolation(
+                f"feature {meta.name} registered twice with different track metadata: "
+                f"{(prev.group, prev.camera, prev.requires_ecg, prev.requires_raw)} vs "
+                f"{(meta.group, meta.camera, meta.requires_ecg, meta.requires_raw)}"
+            )
+        merged = FeatureMeta(
+            meta.name, prev.group, prev.requires_ecg, prev.requires_raw, prev.camera,
+            description=prev.description if len(prev.description) >= len(meta.description) else meta.description,
+            units=prev.units or meta.units,
+            tags=tuple(dict.fromkeys(prev.tags + meta.tags)),
+        )
+        self._items[meta.name] = merged
+        return merged
 
     def add(self, name: str, group: str, **kw) -> FeatureMeta:
         return self.register(FeatureMeta(name, group, **kw))

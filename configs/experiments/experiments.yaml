@@ -99,7 +99,7 @@ experiments:
     subset: value_present
   E14:
     name: repeatability
-    description: test-retest on re-shot clips (clip1 versus clip1b): ICC and within-person SD of pulse rate, SQI, morphology, predicted BP
+    description: "test-retest on re-shot clips (clip1 versus clip1b): ICC and within-person SD of pulse rate, SQI, morphology, predicted BP"
     tracks: [product_candidate, science]
     subset: has_reshoot
   E15:

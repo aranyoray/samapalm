@@ -23,9 +23,14 @@ def test_registry_track_filtering():
 def test_duplicate_registration_conflict():
     reg = FeatureRegistry()
     reg.add("x", "pulse")
-    reg.add("x", "pulse")
+    reg.add("x", "pulse", description="richer text", units="bpm")
+    assert reg.get("x").description == "richer text" and reg.get("x").units == "bpm"
+    reg.add("x", "pulse")  # minimal re-registration keeps the richer metadata
+    assert reg.get("x").description == "richer text"
     with pytest.raises(TrackViolation):
         reg.register(FeatureMeta("x", "pulse", requires_ecg=True))
+    with pytest.raises(TrackViolation):
+        reg.add("x", "hrv")
 
 
 def test_feature_prefix():

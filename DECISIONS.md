@@ -57,3 +57,21 @@ rationale, and what would change it. Provisional entries are the ones waiting on
 - **D-012 (2026-10-17) Synthetic frame geometry.** Synthetic Pi clips default to 384x216 (same aspect, 1/4
   scale, identical packing and Bayer order) so the positive control runs in minutes on 4 CPUs; the unpacker is
   tested at full 1536x864 geometry on a few frames.
+- **D-013 (2026-10-17) Registry merge rule.** `FeatureRegistry.register` compares only the track-relevant fields
+  (group, camera, requires_ecg, requires_raw) and merges units/description/tags, keeping the richer text. The producer
+  of a column owns its track flags; a consumer (the feature store) may register the same name with minimal metadata in
+  either order. `sync__grade` is a stratum, not a model input; WP2 registers it `requires_ecg=True` because a `fine`
+  grade needs the ECG artefact anchor, and that value stands.
+- **D-014 (2026-10-17) qc_table.parquet ownership.** `palmppg.ingest.run.append_qc_table` owns `work/tables/qc_table.parquet`
+  (upsert keyed by study_id, clip_id, camera). The feature store reads it and writes its own per-stream aggregate; it
+  never overwrites it. Clips that were attempted but never produced a `qc.json` get a row with `valid_clip = False`
+  and reason `not_processed`, so they count as failures in coverage (protocol 11.3).
+- **D-015 (2026-10-17) bp_tertile cut points** come from the training participants of each outer fold on the pilot
+  (there is no development stream yet) and from the development stream once it exists (`features.tertile_fit_stream`);
+  the cut points are written next to every table that uses them. Labelling rows with cut points fitted on the same
+  rows is refused by the function.
+- **D-016 (2026-10-17) Config additions after round 1:** `clock.kardia_tz_offset_h`, `sync.artefact.margin`,
+  `qc.landmark_jitter_px_max`, `qc.hand_detect_min_frac`, `qc.hand_mirror`, `qc.hand_palmar_convention`,
+  `qc.hand_model_path`, `qc.skin_min_area_frac`, `qc.saturation_level_frac`, `rois.band_width_ratio`,
+  `features.{tz, time_of_day_cut_hour, lux_band_edges, tertile_labels}`. Values are the ones the builders used as
+  defaults; none is a performance threshold.
