@@ -1,0 +1,33 @@
+# Per-unit capture configuration for capture_pi.py and sync_marker.py.
+unit_id: unit_01
+camera:
+  sensor_mode: {size: [1536, 864], format: SRGGB10_CSI2P, fps: 30}
+  roi_crop: null                  # or {x: 256, y: 144, w: 1024, h: 576}; Q14.4
+  exposure_us: 8000
+  analogue_gain: 2.0
+  awb_gains: [1.6, 1.4]
+  lens_position: 2.5              # dioptres, locked
+  frame_duration_us: 33333
+led:
+  gpio_pin: 17
+  block_px: {x: 8, y: 8, w: 32, h: 32}      # where the LED lands in the Pi frame (full-res Bayer coordinates)
+buzzer:
+  gpio_pin: 27
+  tone_hz: 2500
+marker:
+  p1: {pulses: 3, on_ms: 100, off_ms: 200, at_s_after_start: 2.0}
+  p2: {pulses: 2, on_ms: 300, off_ms: 300, mode: before_end, at_s_before_end: 5.0, at_s_after_start: 28.0}
+capture:
+  video_seconds: 60
+  min_free_gb: 20
+  require_clock_step_today: true
+  clock_sync_log: clock_sync_log.csv
+  study_root: /data/study
+  box_led_current_ma: 20
+illumination:
+  lux_nominal: 400
+phone:
+  model: OnePlus 12
+  app: OpenCamera
+  capture_mode: simultaneous
+  torch: "off"

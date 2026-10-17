@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+work/
+mlruns/
+data/study/
+data/test_stream/
+*.raw
+*.mp4
+*.zarr/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/

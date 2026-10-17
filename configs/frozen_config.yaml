@@ -1,0 +1,30 @@
+frozen_on: '2026-10-17'
+go_no_go:
+  coverage_min_pct: 90.0
+  coverage_equity_max_drop_points: 10.0
+  pulse_rate_tolerance_bpm: 3.0
+  pulse_rate_within_tolerance_min_pct: 95.0
+  temporal_vs_demographics_sbp_sd_reduction_mmhg: 2.0
+equity:
+  coverage_margin_points: 10.0
+  error_sd_ratio_margin: 1.15
+  reference_arm: 4-6
+  comparison_arm: 7-10
+  one_sided_alpha: 0.05
+sqi:
+  threshold: 0.35
+  status: provisional
+  freeze_step: run-order step 3 (first 10 participants)
+multiplicity:
+  hierarchy:
+  - sbp_error_sd_reduction
+  - dbp_error_sd_reduction
+  - af_vs_sinus_auc
+  - af_vs_hard_non_af_auc
+rhythm_operating_points:
+  af_vs_sinus_sensitivity_target: 0.9
+  af_vs_sinus_specificity_target: 0.9
+signature:
+  sha256: 2e4af62695ea99df88a4d6463a0278b6d3fff3844eb541e489615e4972d1dd81
+  signed_by: pipeline author (pre-data)
+  date: '2026-10-17'

@@ -1,0 +1,210 @@
+# Analysis configuration for SWHT-PP-003-2026. Thresholds that are frozen before the pilot runs
+# live in frozen_config.yaml (signed); this file holds everything else. No code hard-codes a
+# window length, a filter band or a QC threshold: it reads them from here.
+study:
+  id: SWHT-PP-003-2026
+  site: Medical College and Hospital, Kolkata
+  video_seconds: 60            # Q14.2: 60 s assumed pending confirmation on the ethics version
+  capture_mode: simultaneous   # Q14.1: simultaneous | sequential
+  reference_clock: pi_mono_ns
+  seed: 20261017
+  kardia_duration_s: 60        # Q14.3: if the app only allows 30 s, set 30 and sync.p2.mode: after_start
+
+paths:
+  study_root: data/study            # real study data mount (never committed)
+  work_root: work                   # derived caches, tables, reports
+  test_root: data/test_stream       # locked prospective test stream, separate mount, read once
+  synthetic_root: work/synthetic
+  mlruns: mlruns
+
+clock:
+  drift_flag_s_per_8h: 1.0
+  wall_vs_meta_disagreement_s: 3.0
+
+sync:
+  p1: {pulses: 3, on_ms: 100, off_ms: 200, at_s_after_start: 2.0}
+  p2: {pulses: 2, on_ms: 300, off_ms: 300, at_s_before_end: 5.0, mode: before_end, at_s_after_start: 28.0}
+  led_block:                      # LED pixel block in full-resolution Bayer coordinates (unit_config overrides)
+    pi: {x: 8, y: 8, w: 32, h: 32}
+    phone: {x: 8, y: 8, w: 48, h: 48}
+  edge_tolerance_frames: 1.0      # accept when all matched edges fit one offset + drift within one frame period
+  min_edges: 6
+  audio: {tone_hz: 2500, bandwidth_hz: 600, onset_tolerance_ms: 20}
+  xcorr: {lag_s: 3.0, rate_fs: 4.0, min_peak: 0.6, min_margin: 0.15, agree_s: 0.3}
+  coarse_anchor_uncertainty_s: 1.0
+  fine_anchor_uncertainty_s: 0.033
+  thumb_block:                    # region where the left thumb lands on the Kardia card (full-res Bayer coords)
+    pi: {x: 32, y: 700, w: 300, h: 150}
+  artefact:
+    clean_window_s: 2.0
+    k_mad: 8.0
+  pat_window_ms: [120, 450]
+
+window:
+  static_colour_s: 2.0
+  tail_exclusion_s: 5.0
+
+grid:
+  fs: 30.0
+
+qc:
+  drop_factor: 1.5
+  drop_pct_max: 2.0
+  saturation_frac_max: 0.005
+  flicker_hz: [50.0, 100.0, 10.0]
+  flicker_tolerance_hz: 0.3
+  flicker_snr_db_min: 6.0
+  lighting_drift_pct_max: 2.0
+  vignetting_residual_pct_max: 3.0
+  hand_preview_fps: 4
+  eis_warp_px_max: 0.5
+  min_valid_window_s: 20.0
+
+pi:
+  width: 1536
+  height: 864
+  bayer_pattern: RGGB
+  bit_depth: 10
+  packing: csi2p          # 4 pixels in 5 bytes
+  nominal_fps: 30
+  black_level: 64
+  white_level: 1023
+  roi_crop: false         # Q14.4
+
+phone:
+  nominal_fps: 30
+  width: 1920
+  height: 1080
+  transfer: srgb
+  vfr_until_proven: true
+  torch: "off"            # Q14.5; sequential mode default on, simultaneous default off
+  codec: h264
+  proxy_crf: 23           # Pi -> phone-proxy chain (8-bit sRGB, H.264) for product_candidate Pi features
+
+pulse:
+  band_rate: [0.5, 4.0]
+  band_morph: [0.4, 8.0]
+  detrend_lambda: 300
+  methods: [GREEN, CHROM, POS, PBV, ICA, PCA, LGI, OMIT, 2SR]
+  fusion: snr_weighted
+  sqi_method: snr_band    # SNR of the dominant band 0.5-4 Hz vs the rest, in dB, mapped to 0..1
+  window_s: 10.0
+  step_s: 1.0
+
+rois:
+  names: [thenar, hypothenar, central_palm, prox_index, prox_middle, prox_ring, prox_little, mid_phalanges,
+          pad_index, pad_middle, pad_ring, pad_little, volar_wrist, whole_palm]
+  excluded: [thumb]
+  patch_grid: {rows: 16, cols: 24}
+  graph:
+    radial: [thenar, pad_index, pad_middle]
+    ulnar: [hypothenar, pad_ring, pad_little]
+    arch: [central_palm, prox_index, prox_middle, prox_ring, prox_little]
+
+beats:
+  foot_method: intersecting_tangents
+  matched_filter: true
+  ibi_bounds_s: [0.33, 2.0]
+  quality_min: 0.5
+  hrv: [sdnn, rmssd, pnn50, sampen, ibi_hist_entropy, sd1, sd2, tpr]
+  resp_band: [0.1, 0.5]
+
+ecg:
+  fs: 300
+  band: [0.5, 40.0]
+  notch_hz: 50.0
+  detectors: [neurokit, pantompkins1985]
+  agreement_ms: 50
+  rhythm_classes: [sinus, af, aflutter, svt, frequent_ectopy, paced, other, unreadable]
+  hard_non_af: [aflutter, svt, frequent_ectopy, paced]
+
+crf:
+  bracket_mmhg: 10.0
+  bp1_outlier_mmhg: 15.0
+  bmi_cutoffs: asia_pacific
+  hba1c_dm_threshold: 6.5
+  equity_min_band: 4
+  equity_max_band: 10
+
+strata:
+  - mst_band
+  - mst_group
+  - equity_scope
+  - sex
+  - pregnant
+  - age_band
+  - bmi_class
+  - dept
+  - operator
+  - unit_id
+  - time_of_day
+  - lux_band
+  - flag_hypertension
+  - flag_diabetes
+  - flag_chronic_kidney_disease
+  - flag_arrhythmia
+  - flag_anaemia_thalassaemia
+  - haem_type
+  - arr_type
+  - dm_label
+  - antihtn_today
+  - acute_30m
+  - irregular_pulse
+  - bracket_flag
+  - recovery
+  - bp_category
+  - bp_tertile
+  - rhythm_class
+  - camera
+  - sync_grade
+  - ecg_digitised
+  - capture_mode
+  - handedness
+  - imaged_hand
+
+bootstrap:
+  n_resamples: 2000
+  ci: 0.95
+  min_cell_n: 20
+  unit: participant
+
+splits:
+  scheme: grouped_kfold
+  n_outer: 5
+  n_inner: 5
+  group: study_id
+
+tracks:
+  product_candidate: {cameras: [phone, pi_proxy], requires_ecg: false, requires_raw: false}
+  science: {cameras: [pi, phone, pi_proxy]}
+
+synth:
+  width: 384
+  height: 216
+  fps: 30
+  seconds: 60
+  ac_dc_g: [0.003, 0.010]
+  hr_bpm: [50, 120]
+  phone_width: 640
+  phone_height: 360
+  phone_crf: 23
+
+augment:
+  rotation_deg: [5, 10, 15]
+  translation_pct: [2, 5, 8]
+  scale: [0.95, 0.90, 0.85]
+  jitter_px: [0.5, 1.0, 2.0]
+  exposure_ev: [0.5, 1.0, 1.5]
+  shot_noise_light_factor: [0.5, 0.25, 0.125]
+  defocus_sigma_px: [1, 2, 4]
+  motion_blur_px: [3, 7, 11]
+  frame_drop_pct: [1, 3, 5]
+  flicker_pct: [0.5, 1.0, 2.0]
+  h264_crf: [18, 23, 28, 35]
+  downscale: [720, 480]
+  melanin_levels: [0.15, 0.30, 0.45]
+  rate_preservation_bpm: 1.0
+
+mlflow:
+  tracking_uri: file:./mlruns
+  experiment: SWHT-PP-003
