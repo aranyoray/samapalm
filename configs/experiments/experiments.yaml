@@ -1,0 +1,119 @@
+# Experiment definitions E0..E17 (protocol section 9). Every regression/classification table carries the two
+# baselines (predict-the-mean, demographics-only) and the static-versus-temporal ablation. Track is enforced by
+# TrackGuard. Nothing here states an expected result.
+defaults:
+  cv: {scheme: nested_grouped_kfold, n_outer: 5, n_inner: 5, group: study_id}
+  baselines: [predict_mean, demographics_only]
+  demographics_columns: [age, sex, bmi, mst_band]
+  ablation_arms: [static_only, temporal_only, static_plus_temporal, demographics_only, pulse_shuffled_control]
+  bootstrap: {n_resamples: 2000, ci: 0.95}
+  strata: all        # protocol section 7 list from pipeline.yaml
+  report_both_tracks: true
+
+experiments:
+  E0:
+    name: baselines
+    description: predict-the-mean and demographics-only for SBP, DBP, rhythm and pulse rate; reference tables for every later experiment
+    tracks: [product_candidate, science]
+    targets: [bp_target_sbp, bp_target_dbp, rhythm_af_vs_sinus, hr_ecg_bpm]
+    models: [predict_mean, demographics_ridge]
+  E1:
+    name: pulse_rate_vs_ecg
+    description: pulse rate from each method and camera against ECG HR; per camera, per MST band; within-3-bpm fraction (go/no-go)
+    tracks: [science]           # needs ECG HR as the reference; the pulse itself comes from both cameras
+    cameras: [pi, phone, pi_proxy]
+    methods: all_classical_plus_learned
+    tolerance_bpm: 3.0
+  E2:
+    name: sqi_and_coverage
+    description: coverage and SQI; logistic model of failure on MST band, disease flags, motion, lux, unit, camera
+    tracks: [product_candidate, science]
+    failure_definition: not valid_clip or abstained
+    covariates: [mst_band, flag_hypertension, flag_diabetes, flag_chronic_kidney_disease, flag_arrhythmia, flag_anaemia_thalassaemia, landmark_jitter_px, lux, unit_id, camera]
+  E3:
+    name: bp_feature_based
+    description: SBP and DBP from tabular features (static colour, pulse, HRV, morphology, APG, perfusion) with GBDT, ridge, elastic net, quantile pairs
+    tracks: [product_candidate, science]
+    targets: [bp_target_sbp, bp_target_dbp]
+    sensitivity_targets: [bp_target_23_sbp, bp_target_23_dbp]
+    models: [lightgbm, xgboost, catboost, ridge, elastic_net, quantile_pair]
+    monotone_constraints: {age: 1}
+    feature_groups: [static_colour, pulse, hrv, morphology, apg, perfusion, resp]
+  E4:
+    name: bp_deep
+    description: SBP and DBP from beat sequences, IBI series, STMaps and proxy video with 1D CNN, TCN, GRU, small transformer, ResNet-18, PhysNet, PhysFormer, ST-GCN
+    tracks: [product_candidate, science]
+    targets: [bp_target_sbp, bp_target_dbp]
+    models: [conv1d, tcn, gru, small_transformer, resnet18_stmap, physnet, physformer, stgcn]
+    requires: torch
+  E5:
+    name: static_vs_temporal
+    description: four arms (static only, temporal only, both, demographics only) plus the pulse-shuffled leakage control; pilot margin 2 mmHg SBP error SD (go/no-go)
+    tracks: [product_candidate, science]
+    targets: [bp_target_sbp, bp_target_dbp]
+    margin_sbp_error_sd_mmhg: 2.0
+    model: lightgbm
+  E6:
+    name: equity
+    description: non-inferiority of coverage and SBP error SD for MST 7-10 versus 4-6; regression of error on MST band with covariates; MST leakage probe
+    tracks: [product_candidate, science]
+    source_experiments: [E2, E3]
+  E7:
+    name: rhythm
+    description: AF versus sinus, AF versus hard non-AF, multi-class; irregularity-only versus morphology; visibility-graph features; pre-specified operating points
+    tracks: [product_candidate, science]
+    targets: [rhythm_af_vs_sinus, rhythm_af_vs_hard_non_af, rhythm_multiclass]
+    feature_sets: {irregularity_only: [hrv], morphology: [hrv, morphology, apg], plus_visibility: [hrv, morphology, apg, visibility]}
+    models: [lightgbm, logistic, gru]
+  E8:
+    name: anaemia
+    description: Hb regression and anaemia classification where hb_gdl exists; static colour versus pulse features
+    tracks: [product_candidate, science]
+    targets: [hb_gdl]
+    subset: hb_gdl_present
+  E9:
+    name: vascular_age
+    description: age prediction from pulse morphology and APG ageing index as a vascular-age proxy; residual against BP category and flags
+    tracks: [product_candidate, science]
+    targets: [age]
+  E10:
+    name: foundation_model_transfer
+    description: PaPaGei and SiamQuality embeddings (user-supplied weights) with linear probes on BP and rhythm; random-init embedder as the control
+    tracks: [product_candidate, science]
+    requires: fm_weights
+  E11:
+    name: shortcut_audit
+    description: predict operator, unit, dept, stream, time of day, antihtn_today and camera from features; residual association
+    tracks: [product_candidate, science]
+    nuisance: [operator, unit_id, dept, stream, time_of_day, antihtn_today, camera]
+  E12:
+    name: elevated_bp_screening
+    description: current elevated BP (stage 1 or above on the cuff mean) as a classification task with operating points, calibration and decision curves
+    tracks: [product_candidate, science]
+    target: bp_category_stage1_or_above
+  E13:
+    name: glucose_boundary
+    description: glucose and HbA1c boundary tasks; reported in full whatever the direction (a negative result is a deliverable)
+    tracks: [product_candidate, science]
+    targets: [glucose_mgdl, hba1c]
+    subset: value_present
+  E14:
+    name: repeatability
+    description: test-retest on re-shot clips (clip1 versus clip1b): ICC and within-person SD of pulse rate, SQI, morphology, predicted BP
+    tracks: [product_candidate, science]
+    subset: has_reshoot
+  E15:
+    name: extras
+    description: respiratory proxy versus nothing (no reference), perfusion by ROI, patch-grid maps; descriptive only
+    tracks: [science]
+  E16:
+    name: pi_vs_phone_transfer
+    description: train on Pi (proxy) test on phone; train on phone; train on Pi with compression augmentation test on phone; per-MST-band gaps
+    tracks: [product_candidate]
+    arms: [pi_proxy_to_phone, phone_to_phone, pi_proxy_aug_to_phone, pi_proxy_to_pi_proxy]
+  E17:
+    name: beat_level_ecg_to_pulse
+    description: R-peak to pulse-foot pairing, PAT mean/SD per clip, PAT versus SBP (cross-sectional, exploratory), PAT by MST band, ectopic capture fraction; sync grade fine only
+    tracks: [science]
+    requires_ecg: true
+    subset: sync_grade_fine
