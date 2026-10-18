@@ -475,7 +475,7 @@ class MotionBlur(Transform):
     def frame(self, f, rng):
         import cv2
 
-        k = int(self.params["kernel_px"]) * (1 if f.kind == "rgb" else 1)
+        k = int(self.params["kernel_px"])
         if f.kind == "bayer":
             k = max(1, int(round(k / 2)))
         if k <= 1:
