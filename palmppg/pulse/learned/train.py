@@ -104,6 +104,12 @@ def train_model(model, train_ds: ClipDataset, val_ds: ClipDataset | None = None,
         raise ValueError("training dataset has no windows")
     if config.num_threads:
         torch.set_num_threads(int(config.num_threads))
+    seed_torch(derived_seed(config.seed, "init"))
+    # Re-initialise every parameter from the seed so a run depends only on (data, config), not on how many random
+    # draws happened before the model was built (non-negotiable 11.6: fixed seeds give identical runs).
+    for mod in model.modules():
+        if hasattr(mod, "reset_parameters") and callable(mod.reset_parameters):
+            mod.reset_parameters()
     seed_torch(derived_seed(config.seed, "train"))
     layout = getattr(model, "input_layout", "NTCHW")
     model.to(config.device)

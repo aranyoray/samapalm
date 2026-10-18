@@ -33,7 +33,7 @@ import pandas as pd
 from palmppg.core.config import Config, load_frozen_config, load_pipeline_config
 from palmppg.core.crf import derive_file
 from palmppg.core.paths import ParticipantPaths, StudyLayout, WorkLayout
-from palmppg.core.timeline import uniform_grid
+from palmppg.core.timeline import Timeline, uniform_grid
 
 CAMERAS = ("pi", "phone", "pi_proxy")
 
@@ -627,3 +627,50 @@ def run_cohort(layout: StudyLayout, work: WorkLayout, cfg: Config | None = None,
     df = pd.DataFrame(rows)
     df.to_parquet(work.tables / "pipeline_runs.parquet", index=False)
     return df
+
+
+def rerun_downstream(layout: StudyLayout, study_id: str, work: WorkLayout, cfg: Config | None = None, clip_id: str = "clip1",
+                     sqi_threshold: float | None = None) -> dict:
+    """Re-run pulse -> beats -> QC -> features for one clip from the saved timeline and spatial outputs.
+
+    Used after a change to pulse selection or beat analysis; ingest, ECG, sync and spatial outputs are reused. The
+    timeline is not rebuilt, so the sync grade stays as computed by the full run (recorded in the result).
+    """
+    from palmppg.beats.run import run_beats
+    from palmppg.features.store import build_clip_features
+    from palmppg.pulse.run import run_pulse
+
+    cfg = cfg or load_pipeline_config()
+    if sqi_threshold is None:
+        sqi_threshold = float(load_frozen_config().get("sqi.threshold"))
+    pp = layout.participant(study_id)
+    clip_dir = work.clip(study_id, clip_id)
+    tl = Timeline.load(clip_dir / "timeline.json")
+    crf = derive_file(pp.crf, cfg.section("crf"))
+    clinician = _load_json(pp.clinician)
+    pi_meta = json.loads(pp.pi_meta(clip_id).read_text(encoding="utf-8"))
+    rp = clip_dir / "ecg" / "rpeaks.parquet"
+    rpeaks_ref = pd.read_parquet(rp)["t_ref_s"].to_numpy(float) if rp.exists() else None
+    log = StageLog()
+    result: dict[str, Any] = {"study_id": study_id, "clip_id": clip_id, "mode": "rerun_downstream", "sync_grade": tl.sync_grade, "qc": {}}
+    for cam in CAMERAS:
+        d = clip_dir / cam
+        if not (d / "traces.parquet").exists():
+            continue
+        log.run(f"pulse_{cam}", lambda d=d, cam=cam: run_pulse(d, cam, cfg, tl))
+        log.run(f"beats_{cam}", lambda d=d, cam=cam: run_beats(d, cam, cfg, tl, ecg_rpeaks_t_ref_s=rpeaks_ref if tl.sync_grade == "fine" else None))
+        qc = log.run(f"qc_{cam}", lambda d=d, cam=cam: finalise_qc(d, cam, study_id, clip_id, cfg, _hand_summary(d), _best_sqi(d),
+                                                                    tl.sync_grade, sqi_threshold, work.tables, timeline=tl))
+        if qc:
+            result["qc"][cam] = {"valid_clip": qc.get("valid_clip"), "reasons": qc.get("reasons"), "sqi_best": qc.get("sqi_best")}
+
+        def _features(cam=cam):
+            df = build_clip_features(study_id, clip_id, cam, clip_dir, crf, clinician, cfg, clip_meta=pi_meta)
+            df.to_parquet(clip_dir / f"features_{cam}.parquet", index=False)
+            return int(df.shape[1])
+
+        log.run(f"features_{cam}", _features)
+    result["stages"] = log.stages
+    result["ok"] = all(s["status"] == "ok" for s in log.stages)
+    _dump(result, clip_dir / "pipeline_rerun.json")
+    return result

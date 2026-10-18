@@ -117,6 +117,8 @@ def sample_latent(study_id: str, rng: np.random.Generator, cfg, overrides: dict 
         reflection_index=ri, decay_tau_s=float(np.clip(rng.normal(0.40, 0.06), 0.25, 0.60)))
     ac_lo, ac_hi = cfg.get("synth.ac_dc_g")
     ac_dc_g = float(rng.uniform(ac_lo, ac_hi)) * (0.8 if anaem else 1.0)
+    if "ac_dc_g" in o:  # null clips for SQI threshold calibration (D-025); drawn first so other fields are unchanged
+        ac_dc_g = float(o["ac_dc_g"])
 
     def bp(which):
         m = BP_MODEL[which]

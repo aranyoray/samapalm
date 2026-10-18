@@ -470,7 +470,7 @@ def run_method(name: str, rgb_or_patches, fs: float, cfg, band: tuple[float, flo
     Every other method averages patches over pixels first.
     """
     n = canonical_name(name)
-    get = cfg.get if hasattr(cfg, "get") else (lambda k, d=None: _dotted(cfg, k, d))
+    get = cfg.get if hasattr(cfg, "section") else (lambda k, d=None: _dotted(cfg, k, d))
     band = tuple(band) if band is not None else tuple(get("pulse.band_rate"))
     lam = get("pulse.detrend_lambda", None)
     seed = int(get("study.seed", 0) or 0)
@@ -501,7 +501,7 @@ def run_method(name: str, rgb_or_patches, fs: float, cfg, band: tuple[float, flo
 def run_all(rgb_or_patches, fs: float, cfg, band: tuple[float, float] | None = None,
             methods: Sequence[str] | None = None) -> dict[str, np.ndarray]:
     """Run every method in `methods` (default `pulse.methods`) on the same input; 2SR is skipped on (T, 3)."""
-    get = cfg.get if hasattr(cfg, "get") else (lambda k, d=None: _dotted(cfg, k, d))
+    get = cfg.get if hasattr(cfg, "section") else (lambda k, d=None: _dotted(cfg, k, d))
     names = [canonical_name(m) for m in (methods or get("pulse.methods"))]
     a = np.asarray(rgb_or_patches, dtype=float)
     out = {}

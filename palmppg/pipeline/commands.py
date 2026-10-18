@@ -50,14 +50,15 @@ def dispatch(args) -> int:
 
         if sub == "selftest":
             rep = bench.synthetic_bench_selftest(n_trials=20, seed=1)
-            out = Path("reports/bench_sync_report.md")
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(rep["markdown"] if isinstance(rep, dict) and "markdown" in rep else str(rep), encoding="utf-8")
-            print(out.read_text())
-            return 0
-        trials = bench.load_trials(args.trials_dir) if hasattr(bench, "load_trials") else None
-        md = bench.bench_trials_report(trials)
-        Path("reports/bench_sync_report.md").write_text(md if isinstance(md, str) else md["markdown"], encoding="utf-8")
+            print(rep["markdown"])
+            return 0 if rep["n_pass"] == rep["n_trials"] else 3
+        # hardware trials: one JSON file per trial in trials_dir, in the bench_trials_report trial shape
+        files = sorted(Path(args.trials_dir).glob("*.json"))
+        if not files:
+            print(f"no trial JSON files in {args.trials_dir}", file=sys.stderr)
+            return 2
+        trials = [json.loads(f.read_text(encoding="utf-8")) for f in files]
+        bench.bench_trials_report(trials, hardware=True)
         print("wrote reports/bench_sync_report.md")
         return 0
 

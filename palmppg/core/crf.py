@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Mapping
 
 DEPT_TAGS = ["Cardio OPD", "Medicine OPD", "Nephro OPD", "Endo OPD", "Haem OPD", "Thal Day Care", "Dialysis",
              "ANC (OBG)", "Medicine Ward", "Cardio Ward/CCU", "Other"]

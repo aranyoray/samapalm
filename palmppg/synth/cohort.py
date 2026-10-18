@@ -78,7 +78,6 @@ def write_unit_calibration(unit_dir: Path, prof: dict, cfg, r: np.random.Generat
     box light), luxmap.json and phone_flatfield.mp4 (CONTRACTS 3.1 / 3.5, section 5)."""
     unit_dir.mkdir(parents=True, exist_ok=True)
     w, h = prof["width"], prof["height"]
-    black, white = float(cfg.get("pi.black_level")), float(cfg.get("pi.white_level"))
     pattern = str(cfg.get("pi.bayer_pattern"))
     dark = np.zeros((h, w), np.float32)
     hot = r.integers(0, h * w, size=max(3, h * w // 20000))

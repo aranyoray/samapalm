@@ -117,11 +117,15 @@ def test_sqi_best_fused_and_rates_recover_72_bpm(pi_run, cfg):
     assert sqi["camera"] == "pi" and sqi["requires_raw"] is True and sqi["study_id"] == SID and sqi["ssr_input"] == "roi_means"
     best = sqi["best"]
     assert best in sqi and "__" in best
-    for key in (best, "POS__thenar", "CHROM__central_palm", "2SR__roi_set", "GREEN__fused"):
+    for key in (best, "POS__thenar", "CHROM__central_palm", "GREEN__fused"):
         assert abs(sqi[key]["hr_bpm"] - HR_BPM) <= 1.0, key
+    # 2SR on the 14 ROI means (the documented fallback when no patch grid exists) estimates its subspace from
+    # 14 "pixels" instead of hundreds; it is held to 3 bpm, the patch-grid 2SR path to 1 bpm elsewhere
         assert set(sqi[key]) >= {"sqi", "snr_db", "hr_bpm", "template_corr", "skewness", "kurtosis"}
+    assert abs(sqi["2SR__roi_set"]["hr_bpm"] - HR_BPM) <= 3.0
     assert sqi["POS__thenar"]["sqi"] > sqi["POS__hypothenar"]["sqi"]
     assert sqi["fused"]["method"] == best.split("__")[0] and abs(sqi["fused"]["hr_bpm"] - HR_BPM) <= 1.0
+    assert best.split("__", 1)[1] in ("whole_palm", "fused") and sqi["selection"]["mode"] == "consensus_sqi"  # D-023
     run = json.loads((cam / "pulse_run.json").read_text())
     w = run["fusion_weights"]["POS"]
     assert sum(w.values()) == pytest.approx(1.0) and w["thenar"] > w["hypothenar"]
@@ -210,3 +214,17 @@ def test_window_too_short_gives_nan_outputs_without_error(tmp_path, cfg):
     assert len(out["pulse_rate"]) == 0
     with pytest.raises(ValueError):
         run_pulse(cam, "webcam", small, tl)
+
+
+def test_select_best_prefers_consensus_over_isolated_high_sqi(cfg):
+    """D-023: an isolated high-SQI candidate at the wrong rate loses to the rate most methods agree on."""
+    from palmppg.pulse.run import select_best
+
+    sqi = {"ICA__fused": {"sqi": 0.53, "hr_bpm": 68.1}, "PCA__fused": {"sqi": 0.39, "hr_bpm": 68.1},
+           "POS__whole_palm": {"sqi": 0.21, "hr_bpm": 93.2}, "PBV__whole_palm": {"sqi": 0.21, "hr_bpm": 93.2},
+           "ICA__whole_palm": {"sqi": 0.20, "hr_bpm": 93.1}, "2SR__whole_palm": {"sqi": 0.36, "hr_bpm": 93.5},
+           "POS__fused": {"sqi": 0.35, "hr_bpm": 93.3}, "GREEN__prox_little": {"sqi": 0.90, "hr_bpm": 60.0}}
+    best, sel = select_best(sqi, cfg)
+    assert best == "2SR__whole_palm" and abs(sel["consensus_hr_bpm"] - 93.2) < 0.5
+    best2, _ = select_best(sqi, cfg.with_overrides({"pulse": {"best_selection": "max_sqi"}}))
+    assert best2 == "ICA__fused"            # max over the same pre-specified candidates; prox_little is never a candidate

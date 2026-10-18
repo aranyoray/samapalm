@@ -101,3 +101,30 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   pulse at CRF 18 (HR error 0.14 bpm, 61 of 63 feet) and lost it at CRF 28 (30.9 bpm against 70.6 bpm). This is a
   measured property of the synthetic scene (AC/DC 0.5 percent on a static, low-texture palm), reported as a negative
   result; it feeds the phone-app design (highest bitrate, no re-encoding) and the section 8 compression curves.
+- **D-022 (2026-10-18) Which camera answers which criterion.** The pilot go/no-go criteria are evaluated on the Pi
+  (lab reference): coverage and the MST coverage drop on the Pi, pulse rate on the Pi (as the protocol states), and
+  the SBP error-SD reduction on the science track (Pi). Phone and pi_proxy figures are printed alongside in the same
+  dashboard and are never used to rescue a failed criterion.
+- **D-023 (2026-10-18) Beat signal selection.** The protocol's "best-SQI signal" is chosen among pre-specified
+  large-area candidates (whole-palm and the SNR-weighted multi-ROI fusion, per method; cfg `pulse.best_candidates`),
+  with each candidate's SQI weighted by cross-method agreement on the rate (`pulse.best_selection: consensus_sqi`,
+  tolerance 5 bpm). Taking the maximum SQI over all method x ROI pairs (about 130 candidates) selected noise: on one
+  synthetic participant the selected signal sat at 68 bpm while five whole-palm methods agreed on 93 bpm (truth
+  92.6 bpm). On the 30-participant synthetic cohort the change raised Pi pulse-rate agreement within 3 bpm on valid
+  clips from 40 percent (first 10 participants) to 82 percent (all 30). Per-ROI signals are still written.
+- **D-024 (2026-10-18) Pulse rate for E1** = 60 / median beat interval over the analysis window, compared with the
+  ECG median-interval rate. One missed beat doubles one interval and drags a mean-interval rate; the median is used
+  on both sides so the comparison is like for like.
+- **D-025 (2026-10-18) SQI threshold calibration against null clips.** On synthetic null clips (AC/DC = 0, small
+  geometry) the best-SQI met the provisional threshold 0.35 on 3 of 8 Pi clips, 8 of 8 phone clips and 4 of 8 proxy
+  clips, so the SQI criterion alone would have passed them. The Pi separates (null 95th percentile 0.38; 80 percent of pulse clips above it); the phone and proxy at
+  320x180 and 192x108 with H.264 do not (signal and null distributions overlap). The study threshold stays
+  provisional in the signed frozen config; at run-order step 3 it is set to the 95th percentile of best-SQI on bench
+  null recordings (static white card in the box, recorded on both cameras), a procedure that uses no outcome.
+  `palmppg.experiments.sqi_calibration` implements it.
+- **D-026 (2026-10-18) Bootstrap resamples in the synthetic report build.** The synthetic-run strata tables used 500
+  participant-bootstrap resamples to fit the build in about ten minutes on 4 CPUs; `palmppg reports build` uses cfg
+  `bootstrap.n_resamples` (2000) by default, which is what every pilot table uses.
+- **D-027 (2026-10-18) Learned-model training re-initialises weights from the seed.** `train_model` resets every
+  module's parameters from `TrainConfig.seed` before training, so two runs with the same seed and data are identical
+  whatever happened to the global random state before the model was built.

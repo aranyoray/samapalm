@@ -99,6 +99,9 @@ pulse:
   sqi_method: snr_band    # SNR of the dominant band 0.5-4 Hz vs the rest, in dB, mapped to 0..1
   window_s: 10.0
   step_s: 1.0
+  best_candidates: [whole_palm, fused]   # D-023: pre-specified large-area candidates for the beat signal
+  best_selection: consensus_sqi          # consensus_sqi | max_sqi
+  consensus_tol_bpm: 5.0
 
 rois:
   names: [thenar, hypothenar, central_palm, prox_index, prox_middle, prox_ring, prox_little, mid_phalanges,

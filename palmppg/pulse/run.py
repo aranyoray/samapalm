@@ -184,6 +184,36 @@ def _dump_json(obj: dict, path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- runner
+def select_best(sqi: dict, cfg: Config) -> tuple[str | None, dict]:
+    """Choose the signal beats are segmented on (protocol 6.5 "best-SQI signal"), D-023.
+
+    Candidates are pre-specified, not the full method x ROI grid: the ROI labels in cfg `pulse.best_candidates`
+    (default whole_palm and the SNR-weighted multi-ROI `fused` signal of each method). Taking the maximum SQI over
+    every method x ROI pair selects noise (on a clip without a pulse, the best of about 130 candidates still scores
+    high), so each candidate's SQI is multiplied by its cross-method agreement: the fraction of candidates whose rate
+    lies within cfg `pulse.consensus_tol_bpm` of its rate. With `pulse.best_selection: max_sqi` the plain maximum over
+    the same candidates is used. Returns (best key, selection detail).
+    """
+    rois = list(cfg.get("pulse.best_candidates", ["whole_palm", "fused"]))
+    mode = str(cfg.get("pulse.best_selection", "consensus_sqi"))
+    tol = float(cfg.get("pulse.consensus_tol_bpm", 5.0))
+    cands = [k for k, v in sqi.items() if isinstance(v, dict) and SEP in k and k.split(SEP, 1)[1] in rois
+             and v.get("sqi") is not None and v.get("hr_bpm") is not None and np.isfinite(v["hr_bpm"])]
+    if not cands:
+        cands = [k for k, v in sqi.items() if isinstance(v, dict) and SEP in k and v.get("sqi") is not None]
+        if not cands:
+            return None, {"mode": mode, "n_candidates": 0}
+        b = max(cands, key=lambda k: sqi[k]["sqi"] or 0.0)
+        return b, {"mode": "fallback_max_sqi", "n_candidates": len(cands)}
+    hr = np.array([sqi[k]["hr_bpm"] for k in cands], float)
+    raw = np.array([sqi[k]["sqi"] or 0.0 for k in cands], float)
+    agree = np.array([np.mean(np.abs(hr - h) <= tol) for h in hr])
+    score = raw * agree if mode == "consensus_sqi" else raw
+    i = int(np.argmax(score))
+    return cands[i], {"mode": mode, "n_candidates": len(cands), "agreement": float(agree[i]), "score": float(score[i]),
+                      "consensus_hr_bpm": float(np.median(hr[agree >= agree.max() - 1e-9])), "raw_sqi": float(raw[i])}
+
+
 def run_pulse(camera_dir, camera: str, cfg: Config, timeline, patches_path=None, write: bool = True) -> dict:
     """Run every classical method on every ROI of `<camera_dir>/traces.parquet` (section 6.3).
 
@@ -296,14 +326,10 @@ def run_pulse(camera_dir, camera: str, cfg: Config, timeline, patches_path=None,
         res = snr_band_sqi(fused_r[lo:hi] if enough else fused_r, fs, band_rate, window_s, step_s, ibi_bounds_s=ibi_bounds)
         sqi[fkey] = _sqi_summary(res)
         fused_by_method[m] = fkey
-    # best and fused summary
-    candidates = [k for k in sqi if not k.endswith(f"{SEP}fused")]
-    best = None
-    if candidates:
-        best = max(candidates, key=lambda k: ((sqi[k]["sqi"] or 0.0), -candidates.index(k)))
-        if (sqi[best]["sqi"] or 0.0) <= 0.0:
-            best = candidates[0]
+    # best and fused summary (D-023: pre-specified large-area candidates, consensus-weighted SQI)
+    best, selection = select_best(sqi, cfg)
     sqi["best"] = best
+    sqi["selection"] = selection
     if best is not None and best.split(SEP, 1)[0] in fused_by_method:
         fkey = fused_by_method[best.split(SEP, 1)[0]]
         sqi["fused"] = {"sqi": sqi[fkey]["sqi"], "snr_db": sqi[fkey]["snr_db"], "hr_bpm": sqi[fkey]["hr_bpm"],
