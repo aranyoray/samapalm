@@ -75,3 +75,29 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   `qc.hand_model_path`, `qc.skin_min_area_frac`, `qc.saturation_level_frac`, `rois.band_width_ratio`,
   `features.{tz, time_of_day_cut_hour, lux_band_edges, tertile_labels}`. Values are the ones the builders used as
   defaults; none is a performance threshold.
+- **D-017 (2026-10-17) Pi proxy CRF = 18.** The OnePlus 12 records at its highest bitrate (about 50 Mbit/s at
+  1080p30), which is closer to libx264 CRF 18 than to CRF 23. CRF 23, 28 and 35 remain augmentation severities
+  (section 8). Measured on the small synthetic geometry (192x108, 20 s, 0.32 percent AC/DC): the proxy keeps the pulse
+  at CRF 6 (AC 0.091 percent, spectral peak 96.7 bpm, SQI 0.63 against 0.101 percent / 96.7 bpm / 0.66 on the Pi
+  planes) and loses it at CRF 23 (peak 55 bpm), because x264 skips near-static macroblocks when a frame is only a
+  few macroblocks wide. The positive control therefore runs the proxy at the default geometry (384x216, 60 s) and
+  at the real 1536x864 frames, at CRF 18 and CRF 28, and reports what it measures.
+- **D-018 (2026-10-17) Positive-control HR comparison** is made over the analysis window on both sides: the truth
+  HR is the mean of the generator's instantaneous rate series inside the window, and the recovered HR comes from the
+  beat intervals (beats stage) or the dense-DFT spectral peak of the whole-palm trace, never from the 10 s SQI window
+  peak (resolution 6 bpm).
+- **D-019 (2026-10-17) QC series source.** `finalise_qc` measures saturation and flicker on the whole-palm ROI trace
+  inside the analysis window (protocol 6.1 says "in the skin mask"); the whole-frame series from ingest includes the
+  LED block, whose P1 pattern (100 ms on / 200 ms off) has a 10 Hz harmonic that would read as mains flicker.
+  `qc.json` records `qc_series_source`.
+- **D-020 (2026-10-18) PAT definition and its measured bias.** PAT is R-peak to the intersecting-tangent foot of the
+  palm pulse (cfg `beats.foot_method`). On the default-geometry positive control (injected PAT 235 ms to the
+  generator's onset foot) the pipeline measured 282 ms on the Pi path. The difference decomposes exactly: the mapped
+  R-peaks sit 18 ms early (fine-anchor error, below one 33 ms frame) and the tangent foot sits 28 ms after the onset
+  foot by construction (detected feet agree with the generator's tangent foot within 3 ms). PAT is therefore reported
+  as a cross-sectional association only (exploratory, `requires_ecg`), with the foot definition named, and absolute
+  values are not compared across foot definitions or across sync methods.
+- **D-021 (2026-10-18) Proxy at CRF 28.** On the default-geometry positive control the Pi->H.264 proxy recovered the
+  pulse at CRF 18 (HR error 0.14 bpm, 61 of 63 feet) and lost it at CRF 28 (30.9 bpm against 70.6 bpm). This is a
+  measured property of the synthetic scene (AC/DC 0.5 percent on a static, low-texture palm), reported as a negative
+  result; it feeds the phone-app design (highest bitrate, no re-encoding) and the section 8 compression curves.

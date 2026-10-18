@@ -88,7 +88,7 @@ phone:
   vfr_until_proven: true
   torch: "off"            # Q14.5; sequential mode default on, simultaneous default off
   codec: h264
-  proxy_crf: 23           # Pi -> phone-proxy chain (8-bit sRGB, H.264) for product_candidate Pi features
+  proxy_crf: 18           # Pi -> phone-proxy chain (8-bit sRGB, H.264) for product_candidate Pi features (D-017)
 
 pulse:
   band_rate: [0.5, 4.0]

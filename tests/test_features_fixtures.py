@@ -80,7 +80,6 @@ def write_timeline(clip_dir: Path, study_id: str = SID, clip_id: str = "clip1", 
     if grade == "fine":
         tl.set_map(ClockMap("ecg", 1.2, 0.0, 0.033, "artefact_lift", 2))
         tl.grade(True, True, True, True, True, "artefact_lift")
-        tl.sync_detail["xcorr_peak"] = 0.81
     elif grade == "coarse":
         tl.set_map(ClockMap("ecg", 1.0, 0.0, 1.0, "thumb_contact", 1))
         tl.grade(False, True, False, None, True, "thumb_contact")
@@ -89,6 +88,14 @@ def write_timeline(clip_dir: Path, study_id: str = SID, clip_id: str = "clip1", 
     tl.add_event("clip_start", 0.0, 0.0, "sync_events.csv")
     tl.add_event("clip_end", 60.0, 0.0, "sync_events.csv")
     tl.save(clip_dir / "timeline.json")
+    # sync.json in the palmppg.ingest.sync report shape; the cross-correlation peak lives only here
+    ecg_map = tl.maps.get("ecg")
+    write_json(clip_dir / "sync.json", {
+        "grade": tl.sync_grade, "grade_detail": dict(tl.sync_detail),
+        "offsets": {k: {"offset_s": m.offset_s, "drift": m.drift, "uncertainty_s": m.uncertainty_s, "method": m.method}
+                    for k, m in tl.maps.items()},
+        "ecg": {"xcorr": {"peak": 0.81 if grade == "fine" else None}, "map": None if ecg_map is None else {"method": ecg_map.method}},
+    })
     return tl
 
 

@@ -56,11 +56,12 @@ def test_register_features_is_idempotent(cfg):
     n1 = register_features(cfg)
     n2 = register_features(cfg)
     assert n1 == n2 > 0
-    assert "qc__phone__drop_pct" in REGISTRY and "qc__pi__reasons__n" in REGISTRY
-    assert REGISTRY.get("qc__pi__drop_pct").requires_raw is True
-    assert REGISTRY.get("qc__phone__drop_pct").requires_raw is False
+    # the store owns ids, covariates, derived strata and clinician fields; producer columns (qc__, sync__, ...)
+    # are registered by their producers or when the store emits them (D-013)
+    assert "study_id" in REGISTRY and "mst_band" in REGISTRY and "clinician__rhythm" in REGISTRY
+    assert REGISTRY.get("clinician__rhythm").requires_ecg is True
     assert REGISTRY.get("sync__ecg_uncertainty_s").requires_ecg is True
-    assert REGISTRY.get("sync__grade").requires_ecg is False
+    assert REGISTRY.get("sync__grade").requires_ecg is True  # D-013: owned by ingest.sync
     assert REGISTRY.get("clinician__ecg_hr").requires_ecg is True
     assert REGISTRY.get("age").group == "covariate"
 

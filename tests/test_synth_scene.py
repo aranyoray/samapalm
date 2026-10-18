@@ -87,7 +87,13 @@ def test_sensor_noise_statistics(cfg, scene):
     expected_sd = np.sqrt(400.0 / scene.sensor["e_per_dn"] + scene.sensor["read_noise_dn"] ** 2)
     assert abs(dn.mean() - 400.0) < 0.5 and abs(dn.std() - expected_sd) / expected_sd < 0.1
     th = scene.region_masks["thenar"]
-    assert abs(ac[th].sum() / dc[th].sum() / 0.006 - 1.0) < 0.02       # G-plane AC/DC in the thenar is the injected value
+    # G-plane AC/DC averaged over thenar pixels is the injected value (the AC map is normalised to mean 1 there;
+    # a brightness-weighted sum over all four Bayer channels is a different quantity)
+    gpos = np.zeros_like(th)
+    gpos[0::2, 1::2] = True
+    gpos[1::2, 0::2] = True
+    sel = th & gpos & (dc > 0)
+    assert abs(np.mean(ac[sel] / dc[sel]) / 0.006 - 1.0) < 0.02
     assert dc.max() < scene.sensor["white_level"] - scene.sensor["black_level"]
 
 
