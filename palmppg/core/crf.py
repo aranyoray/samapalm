@@ -191,6 +191,18 @@ def derive(crf: Mapping, cfg: Mapping | None = None) -> dict:
     out["last_meal_h"] = _num(crf.get("last_meal_h"))
     out["irregular_pulse"] = crf.get("irregular_pulse")
     out["imaged_hand"] = crf.get("imaged_hand", "left")
+    # Add-on fields captured by the onboarding app (configs/crf_schema.json); absent on older CRFs.
+    ga = _num(crf.get("gestational_age_weeks"))
+    out["gestational_age_weeks"] = ga
+    out["trimester"] = crf.get("trimester") if crf.get("trimester") is not None else ((1 if ga < 14 else 2 if ga < 28 else 3) if ga is not None else None)
+    out["anc_hb_gdl"] = _num(crf.get("anc_hb_gdl"))
+    out["ita_deg"] = _num(crf.get("ita_deg"))
+    tags = crf.get("cohort_tags") or []
+    out["cohort_tags"] = list(tags) if isinstance(tags, (list, tuple)) else [tags]
+    for tag in ("af_nested", "hard_control_nested", "anaemia_nested", "antenatal_addon"):
+        out[f"cohort_{tag}"] = tag in out["cohort_tags"]
+    hdp = crf.get("hdp_status")
+    out["hdp_present"] = None if hdp in (None, "unknown") else hdp != "none"
     out["requires_reshoot_review"] = bool(out["bracket_flag"])
     return out
 
@@ -211,4 +223,8 @@ def covariate_columns() -> list[str]:
             "flag_arrhythmia", "flag_anaemia_thalassaemia", "arr_type", "haem_type", "antihtn_today", "acute_30m",
             "hb_gdl", "hba1c", "dm_label", "bp_target_sbp", "bp_target_dbp", "bp_target_23_sbp", "bp_target_23_dbp",
             "bp_target_rule", "bracket_flag", "bp_category", "hr_cuff_mean", "spo2", "irregular_pulse", "recovery",
-            "imaged_hand", "handedness", "glucose_mgdl", "last_meal_h", "operator", "unit_id", "stream", "app_ver", "cuff_size"]
+            "imaged_hand", "handedness", "glucose_mgdl", "last_meal_h", "operator", "unit_id", "stream", "app_ver", "cuff_size",
+            # onboarding-app add-ons: nested cohorts, antenatal add-on, rhythm and haemoglobinopathy detail, colorimetry
+            "cohort_af_nested", "cohort_hard_control_nested", "cohort_anaemia_nested", "cohort_antenatal_addon",
+            "gestational_age_weeks", "trimester", "hdp_status", "hdp_present", "urine_protein", "anc_hb_gdl",
+            "arr_status", "transfusion_30d", "dm_type", "on_insulin", "on_dialysis", "ita_deg"]

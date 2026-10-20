@@ -1,0 +1,3843 @@
+{
+ "schema_version": "2026-10-20.1",
+ "cases": [
+  {
+   "name": "complete_male_1x60",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "errors": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "bracket_flag": false,
+     "recovery": "pass",
+     "bp1_outlier": false,
+     "cuff_suggestion": "adult",
+     "eligible": true
+    },
+    "export_has": [
+     "bp1",
+     "bp2",
+     "bp3",
+     "flags",
+     "mst_band",
+     "initials"
+    ],
+    "export_lacks": [
+     "name",
+     "phone",
+     "hospital_reg_no",
+     "consent",
+     "pregnant"
+    ],
+    "export_values": {
+     "initials": "RKD",
+     "irregular_pulse": false
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "pregnant_branch",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "ANC (OBG)",
+    "cohort_tags": [
+     "core",
+     "antenatal_addon"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 28,
+    "sex": "F",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "pregnant": "yes",
+    "gestational_age_weeks": 20.0,
+    "ga_source": "usg",
+    "parity": 0,
+    "hdp_status": "none",
+    "urine_protein": "trace"
+   },
+   "hand": {
+    "screens_include": [
+     "pregnancy"
+    ],
+    "errors": [
+     "gravida:required"
+    ],
+    "derived": {
+     "trimester": 2
+    },
+    "export_values": {
+     "pregnant": true,
+     "trimester": 2
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "pregnancy",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "pregnant",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "pregnancy": [
+      "gestational_age_weeks",
+      "trimester",
+      "ga_source",
+      "gravida",
+      "parity",
+      "hdp_status",
+      "urine_protein",
+      "anc_hb_gdl",
+      "anc_hb_date",
+      "anc_clinic_sbp",
+      "anc_clinic_dbp"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "gravida:required"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": 2,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "ANC (OBG)",
+     "cohort_tags": [
+      "core",
+      "antenatal_addon"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 28,
+     "sex": "F",
+     "pregnant": true,
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "gestational_age_weeks": 20.0,
+     "trimester": 2,
+     "ga_source": "usg",
+     "parity": 0,
+     "hdp_status": "none",
+     "urine_protein": "trace",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "branch_switch_drops_stale",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 34,
+    "sex": "F",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "pregnant": "no",
+    "gestational_age_weeks": 30.0,
+    "gravida": 2,
+    "hdp_status": "preeclampsia"
+   },
+   "hand": {
+    "screens_exclude": [
+     "pregnancy"
+    ],
+    "errors": [],
+    "export_lacks": [
+     "gestational_age_weeks",
+     "gravida",
+     "hdp_status",
+     "trimester"
+    ],
+    "export_values": {
+     "pregnant": false
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "pregnant",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 34,
+     "sex": "F",
+     "pregnant": false,
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "female_60_no_pregnancy_question",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 60,
+    "sex": "F",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "errors": [],
+    "export_lacks": [
+     "pregnant"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 60,
+     "sex": "F",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "flag_conditionals",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core",
+     "hard_control_nested"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "hypertension",
+     "arrhythmia",
+     "anaemia/thalassaemia"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "arr_type": "frequent pvc",
+    "arr_status": "present today",
+    "haem_type": "beta thal trait",
+    "transfusion_30d": "yes"
+   },
+   "hand": {
+    "errors": [
+     "antihtn_today:required",
+     "days_since_transfusion:required",
+     "hb_gdl:required"
+    ],
+    "questions_include": {
+     "history": [
+      "antihtn_today",
+      "arr_type",
+      "arr_status",
+      "haem_type",
+      "transfusion_30d",
+      "days_since_transfusion"
+     ]
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags",
+      "antihtn_today",
+      "n_antihtn_drugs",
+      "arr_type",
+      "arr_status",
+      "haem_type",
+      "transfusion_30d",
+      "days_since_transfusion"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "antihtn_today:required",
+     "days_since_transfusion:required",
+     "hb_gdl:required"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core",
+      "hard_control_nested"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "hypertension",
+      "arrhythmia",
+      "anaemia/thalassaemia"
+     ],
+     "arr_type": "frequent pvc",
+     "arr_status": "present today",
+     "haem_type": "beta thal trait",
+     "transfusion_30d": true,
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "diabetes_requires_hba1c_and_date",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "diabetes"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "dm_type": "type 2",
+    "on_insulin": "no",
+    "hba1c": 7.9
+   },
+   "hand": {
+    "errors": [
+     "hba1c_date:required"
+    ],
+    "export_values": {
+     "on_insulin": false
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags",
+      "dm_type",
+      "on_insulin"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "hba1c_date:required"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "diabetes"
+     ],
+     "dm_type": "type 2",
+     "on_insulin": false,
+     "hba1c": 7.9,
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "exclusive_none",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none",
+     "diabetes"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "dm_type": "type 2",
+    "on_insulin": "yes",
+    "hba1c": 8.1,
+    "hba1c_date": "2026-09-01"
+   },
+   "hand": {
+    "errors": [
+     "flags:exclusive"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags",
+      "dm_type",
+      "on_insulin"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "flags:exclusive"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none",
+      "diabetes"
+     ],
+     "dm_type": "type 2",
+     "on_insulin": true,
+     "hba1c": 8.1,
+     "hba1c_date": "2026-09-01",
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "no_consent_stops",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "no",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "stopped": "consent",
+    "errors": [
+     "consent:stop"
+    ],
+    "export_lacks": [
+     "consent"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "consent:stop"
+    ],
+    "warnings": [],
+    "stopped": "consent",
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": false
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "under_18_stops",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 16,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "stopped": "age",
+    "errors": [
+     "age:stop"
+    ],
+    "derived": {
+     "eligible": false
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "age:stop"
+    ],
+    "warnings": [],
+    "stopped": "age",
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": false
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 16,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "bp_problems_and_warnings",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 170,
+     "dbp": 100,
+     "hr": 90,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 80,
+     "dbp": 90,
+     "hr": 70,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 140,
+     "dbp": 88,
+     "hr": 72,
+     "wall_ts": null
+    }
+   },
+   "hand": {
+    "errors": [
+     "bp2:bp_order",
+     "bp3:bp_time"
+    ],
+    "warnings": [
+     "bp2:warn",
+     "bp3:warn"
+    ],
+    "derived": {
+     "bracket_flag": true,
+     "bp1_outlier": true
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "bp2:bp_order",
+     "bp3:bp_time"
+    ],
+    "warnings": [
+     "bp2:warn",
+     "bp3:warn"
+    ],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": true,
+     "bp1_outlier": true,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 170,
+      "dbp": 100,
+      "hr": 90,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 80,
+      "dbp": 90,
+      "hr": 70,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 140,
+      "dbp": 88,
+      "hr": 72,
+      "wall_ts": null
+     },
+     "recovery": "pass",
+     "bracket_flag": true,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "two_clip_plan",
+   "settings": {
+    "clip_plan": "2x30"
+   },
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:07:30+05:30",
+     "quality": "fail",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "clip1b": {
+     "started_at": "2026-10-20T10:08:00+05:30",
+     "ended_at": "2026-10-20T10:08:30+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "clip2": {
+     "started_at": "2026-10-20T10:10:00+05:30",
+     "ended_at": "2026-10-20T10:10:30+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    }
+   },
+   "hand": {
+    "errors": [],
+    "screens_include": [
+     "clip1b",
+     "clip2"
+    ],
+    "screens_exclude": [
+     "clip2b"
+    ],
+    "order": [
+     "clip1",
+     "clip1b",
+     "bp2",
+     "clip2",
+     "bp3"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "clip1",
+     "clip1b",
+     "bp2",
+     "clip2",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "clip1b": [
+      "clip1b"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip2": [
+      "clip2"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:07:30+05:30",
+      "quality": "fail",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "clip1b": {
+      "started_at": "2026-10-20T10:08:00+05:30",
+      "ended_at": "2026-10-20T10:08:30+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip2": {
+      "started_at": "2026-10-20T10:10:00+05:30",
+      "ended_at": "2026-10-20T10:10:30+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "2x30"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "formats_and_dates",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-3-42",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "abc",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 11,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "hb_gdl": "11.2",
+    "hb_date": "2026-12-01"
+   },
+   "hand": {
+    "errors": [
+     "study_id:pattern",
+     "phone:pattern",
+     "hb_gdl:type",
+     "hb_date:future",
+     "mst_band:max"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "hb_date:future",
+     "hb_gdl:type",
+     "mst_band:max",
+     "phone:pattern",
+     "study_id:pattern"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-3-42",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 11,
+     "flags": [
+      "none"
+     ],
+     "hb_gdl": "11.2",
+     "hb_date": "2026-12-01",
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "abc",
+     "pid": "SWHT-PP-3-42"
+    }
+   }
+  },
+  {
+   "name": "future_date",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    },
+    "hb_gdl": 11.2,
+    "hb_date": "2026-12-01"
+   },
+   "hand": {
+    "errors": [
+     "hb_date:future"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "hb_date:future"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "hb_gdl": 11.2,
+     "hb_date": "2026-12-01",
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "short_rest",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:03:00+05:30",
+     "ended_at": "2026-10-20T10:04:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "errors": [],
+    "derived": {
+     "recovery": "short_rest"
+    }
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "short_rest",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:03:00+05:30",
+      "ended_at": "2026-10-20T10:04:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "short_rest",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "missing_required_bp3_and_clip",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 7,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "quality": "pass"
+    }
+   },
+   "hand": {
+    "errors": [
+     "bp3:required",
+     "clip1:clip_incomplete"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [
+     "bp3:required",
+     "clip1:clip_incomplete"
+    ],
+    "warnings": [],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 7,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "quality": "pass"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  },
+  {
+   "name": "mst_low_warning",
+   "settings": {},
+   "now": "2026-10-20T11:00:00+05:30",
+   "answers": {
+    "study_id": "SWHT-PP-003-0042",
+    "consent": "yes",
+    "stream": "pilot",
+    "dept": "Medicine OPD",
+    "cohort_tags": [
+     "core"
+    ],
+    "imaged_hand": "left",
+    "name": "Rahul Kumar Das",
+    "hospital_reg_no": "MCH-12345",
+    "phone": "9830012345",
+    "bp1": {
+     "sbp": 138,
+     "dbp": 86,
+     "hr": 78,
+     "wall_ts": "2026-10-20T10:00:00+05:30"
+    },
+    "age": 52,
+    "sex": "M",
+    "height_cm": 168.0,
+    "weight_kg": 70.0,
+    "handedness": "right",
+    "arm_circumference_cm": 30.0,
+    "cuff_size": "adult",
+    "mst_band": 3,
+    "flags": [
+     "none"
+    ],
+    "acute_30m": [
+     "none"
+    ],
+    "last_meal_h": 2.5,
+    "bp2": {
+     "sbp": 132,
+     "dbp": 84,
+     "hr": 74,
+     "wall_ts": "2026-10-20T10:06:00+05:30"
+    },
+    "irregular_pulse": "no",
+    "clip1": {
+     "started_at": "2026-10-20T10:07:00+05:30",
+     "ended_at": "2026-10-20T10:08:00+05:30",
+     "quality": "pass",
+     "kardia_on": true,
+     "beep_heard": true,
+     "notes": ""
+    },
+    "bp3": {
+     "sbp": 130,
+     "dbp": 82,
+     "hr": 73,
+     "wall_ts": "2026-10-20T10:09:30+05:30"
+    }
+   },
+   "hand": {
+    "errors": [],
+    "warnings": [
+     "mst_band:warn"
+    ]
+   },
+   "full": {
+    "visible_screens": [
+     "enrolment",
+     "identity",
+     "bp1",
+     "demographics",
+     "skin",
+     "history",
+     "chart_values",
+     "acute",
+     "bp2",
+     "clip1",
+     "bp3",
+     "review"
+    ],
+    "visible_questions": {
+     "enrolment": [
+      "study_id",
+      "consent",
+      "stream",
+      "dept",
+      "cohort_tags",
+      "imaged_hand"
+     ],
+     "identity": [
+      "name",
+      "hospital_reg_no",
+      "phone"
+     ],
+     "bp1": [
+      "bp1",
+      "rest_note"
+     ],
+     "demographics": [
+      "age",
+      "sex",
+      "height_cm",
+      "weight_kg",
+      "bmi",
+      "handedness",
+      "arm_circumference_cm",
+      "cuff_suggestion",
+      "cuff_size"
+     ],
+     "skin": [
+      "mst_band",
+      "ita_deg"
+     ],
+     "history": [
+      "flags"
+     ],
+     "chart_values": [
+      "hb_gdl",
+      "hb_date",
+      "hba1c",
+      "hba1c_date"
+     ],
+     "acute": [
+      "acute_30m",
+      "last_meal_h",
+      "glucose_mgdl",
+      "spo2"
+     ],
+     "bp2": [
+      "rest_elapsed",
+      "bp2",
+      "irregular_pulse"
+     ],
+     "clip1": [
+      "clip1"
+     ],
+     "bp3": [
+      "bp3",
+      "adverse_event"
+     ],
+     "review": [
+      "recovery",
+      "bracket_flag",
+      "operator_notes"
+     ]
+    },
+    "errors": [],
+    "warnings": [
+     "mst_band:warn"
+    ],
+    "stopped": null,
+    "derived": {
+     "bmi": 24.8,
+     "cuff_suggestion": "adult",
+     "trimester": null,
+     "rest_elapsed_s": 360,
+     "recovery": "pass",
+     "bracket_flag": false,
+     "bp1_outlier": false,
+     "eligible": true
+    },
+    "export": {
+     "study_id": "SWHT-PP-003-0042",
+     "stream": "pilot",
+     "dept": "Medicine OPD",
+     "cohort_tags": [
+      "core"
+     ],
+     "imaged_hand": "left",
+     "bp1": {
+      "sbp": 138,
+      "dbp": 86,
+      "hr": 78,
+      "wall_ts": "2026-10-20T10:00:00+05:30"
+     },
+     "age": 52,
+     "sex": "M",
+     "height_cm": 168.0,
+     "weight_kg": 70.0,
+     "handedness": "right",
+     "arm_circumference_cm": 30.0,
+     "cuff_size": "adult",
+     "mst_band": 3,
+     "flags": [
+      "none"
+     ],
+     "acute_30m": [
+      "none"
+     ],
+     "last_meal_h": 2.5,
+     "bp2": {
+      "sbp": 132,
+      "dbp": 84,
+      "hr": 74,
+      "wall_ts": "2026-10-20T10:06:00+05:30"
+     },
+     "irregular_pulse": false,
+     "clip1": {
+      "started_at": "2026-10-20T10:07:00+05:30",
+      "ended_at": "2026-10-20T10:08:00+05:30",
+      "quality": "pass",
+      "kardia_on": true,
+      "beep_heard": true,
+      "notes": ""
+     },
+     "bp3": {
+      "sbp": 130,
+      "dbp": 82,
+      "hr": 73,
+      "wall_ts": "2026-10-20T10:09:30+05:30"
+     },
+     "recovery": "pass",
+     "bracket_flag": false,
+     "initials": "RKD",
+     "operator": "op1",
+     "unit_id": "unit_01",
+     "app_ver": "test",
+     "schema_version": "2026-10-20.1",
+     "clip_plan": "1x60"
+    },
+    "identity": {
+     "name": "Rahul Kumar Das",
+     "hospital_reg_no": "MCH-12345",
+     "phone": "9830012345",
+     "pid": "SWHT-PP-003-0042"
+    }
+   }
+  }
+ ]
+}

@@ -9,6 +9,7 @@
     palmppg experiments run <E1> | run-all
     palmppg gonogo [--interim]
     palmppg reports build
+    palmppg crf pull --study-root <dir>
     palmppg lint
 """
 from __future__ import annotations
@@ -84,6 +85,11 @@ def build_parser() -> argparse.ArgumentParser:
     rs = r.add_subparsers(dest="sub", required=True)
     rb = rs.add_parser("build")
     _add_common(rb)
+
+    c = sub.add_parser("crf", help="onboarding-app CRFs from Supabase")
+    cs = c.add_subparsers(dest="sub", required=True)
+    cp = cs.add_parser("pull", help="write participants/<PID>/crf.json from Supabase (credentials from SUPABASE_* env vars)")
+    cp.add_argument("--study-root", required=True)
 
     sub.add_parser("lint", help="banned vocabulary scan")
     return ap

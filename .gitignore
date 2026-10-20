@@ -11,3 +11,8 @@ data/test_stream/
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.idea/
+*.apk

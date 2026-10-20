@@ -3,6 +3,11 @@
 Two ways to obtain the phone clip. Route (a) needs no code and is the pilot default; route (b) is the optional
 custom recorder, provided as source only.
 
+Route (b) is now also built into the onboarding app as
+`android/app/src/main/java/org/samahealth/onboarding/recorder/PalmRecorderActivity.kt`, launched from each clip
+screen of the survey and compiled by Gradle in GitHub Actions (see `android/README.md`). `PalmRecorder.kt` in this
+folder is the original standalone version, kept for reference; the frame-log format below applies to both.
+
 ## (a) Open Camera route (default)
 
 Open Camera with the Camera2 API, configured as in `../phone_settings.md` (1920x1080 at 30 fps, H.264 at the

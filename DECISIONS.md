@@ -128,3 +128,25 @@ rationale, and what would change it. Provisional entries are the ones waiting on
 - **D-027 (2026-10-18) Learned-model training re-initialises weights from the seed.** `train_model` resets every
   module's parameters from `TrainConfig.seed` before training, so two runs with the same seed and data are identical
   whatever happened to the global random state before the model was built.
+- **D-028 (2026-10-20) Onboarding app and backend.** The CRF is captured by an Android app driven by one shared
+  schema (`configs/crf_schema.json`) that the Kotlin engine (`android/crf-core`) and the Python engine
+  (`palmppg/core/crf_schema.py`) both interpret; 16 golden fixtures pin identical behaviour in both languages.
+  Backend: one free Supabase project (auth, REST and row-level security in one service; about 20 MB of the 500 MB
+  free database for 2,000 participants). Neon was not chosen because it would need a separate auth and API layer for a
+  mobile client. Google Sheets and CSV export run from Apps Script with a read-only exporter account; the pipeline
+  pulls with `palmppg crf pull`.
+- **D-029 (2026-10-20) Identity separation.** Name, hospital registration number and phone are stored in their own
+  table locally and on the server; the CRF table rejects rows carrying them; operators can write but never read
+  identity; the tablet removes names after upload by default; the visit is uploaded before its identity so a PID clash
+  cannot attach a name to another person's record. Initials remain in the CRF as protocol section 3.1 lists them.
+- **D-030 (2026-10-20) Rest gate and clip plans.** BP1 is taken on seating and the history is taken during the rest
+  (protocol section 1); `recovery` = "pass" when the first clip starts at least `rest_seconds` (300) after BP1, else
+  "short_rest". The clip plan is a tablet setting: `1x60` (protocol) or `2x30` (two bracketed clips, per the
+  hypotheses brief); each is a fixed screen flow in the schema.
+- **D-031 (2026-10-20) Add-on CRF fields** for the hypotheses brief (cohort tags, arrhythmia subtype and status,
+  haemoglobinopathy type and transfusion, diabetes type and insulin, dialysis and eGFR, ITA, the antenatal block). They
+  are carried into the feature store as covariates (`palmppg.core.crf.covariate_columns`); none is a model target and
+  none changes a frozen threshold. `docs/hypotheses_crf_map.md` maps each hypothesis to its fields.
+- **D-032 (2026-10-20) Android build verification.** This container cannot reach Google's Maven host, so the Android
+  module is compiled by GitHub Actions (`.github/workflows/onboarding.yml`), which also publishes the debug APK. The
+  JVM module with all survey logic and the Supabase client is compiled and tested locally (Gradle, Maven Central).

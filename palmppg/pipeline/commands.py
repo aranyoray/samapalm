@@ -32,6 +32,13 @@ def dispatch(args) -> int:
         print(f"{sum(len(v) for v in hits.values())} hit(s)")
         return 1 if hits else 0
 
+    if cmd == "crf" and sub == "pull":
+        from palmppg.capture.crf_pull import pull
+
+        r = pull(args.study_root)
+        print(json.dumps({k: (len(v) if isinstance(v, list) else v) for k, v in r.items()}, indent=1, default=str))
+        return 3 if r["problems"] else 0
+
     if cmd == "synth" and sub == "cohort":
         from palmppg.synth.cohort import make_cohort
 
