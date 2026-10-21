@@ -308,7 +308,14 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
     val recorder = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == Activity.RESULT_OK) {
             val path = r.data?.getStringExtra(PalmRecorderActivity.EXTRA_MP4) ?: return@rememberLauncherForActivityResult
-            put("phone_file", JsonPrimitive(path))
+            val samples = r.data?.getIntExtra(PalmRecorderActivity.EXTRA_ECG_SAMPLES, 0) ?: 0
+            val seconds = r.data?.getDoubleExtra(PalmRecorderActivity.EXTRA_ECG_SECONDS, 0.0) ?: 0.0
+            // the recorder captures the Kardia itself, so this is measured rather than self-reported
+            var next = o + ("phone_file" to JsonPrimitive(path)) + ("ecg_samples" to JsonPrimitive(samples))
+            if (samples > 0) {
+                next = next + ("kardia_on" to JsonPrimitive(true)) + ("ecg_seconds" to JsonPrimitive(seconds))
+            }
+            set(JsonObject(next))
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -320,6 +327,10 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
             }
         }
         Text("Start ${str(o["started_at"])?.substring(11, 19) ?: "-"} · end ${str(o["ended_at"])?.substring(11, 19) ?: "-"}", style = MaterialTheme.typography.bodySmall)
+        val ecgSamples = (o["ecg_samples"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 0
+        if (ecgSamples > 0) {
+            Text("ECG captured on this device: $ecgSamples samples", style = MaterialTheme.typography.bodySmall)
+        }
         for ((k, label) in listOf("kardia_on" to "Kardia recording during the clip", "beep_heard" to "Sync beeps heard (start and end)")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = bool(o[k]) == true, onCheckedChange = { put(k, JsonPrimitive(it)) }, enabled = !readOnly)

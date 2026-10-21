@@ -1,4 +1,4 @@
-package org.swht.palm
+package org.samahealth.onboarding.recorder
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter

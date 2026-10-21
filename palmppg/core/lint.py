@@ -20,7 +20,10 @@ BANNED_PATTERNS = [
 
 ALLOWLIST_FILES = {"palmppg/core/lint.py", "tests/test_core_lint.py"}
 TEXT_SUFFIXES = {".py", ".md", ".yaml", ".yml", ".txt", ".html", ".csv", ".json", ".sh", ".kt", ".toml", ".cfg", ".ini", ".rst", ".tex"}
-SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", "mlruns", ".pytest_cache", ".ruff_cache", "work", ".mypy_cache"}
+SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", "mlruns", ".pytest_cache", ".ruff_cache", "work", ".mypy_cache",
+             # generated trees: Gradle build output carries vendor strings such as
+             # androidx.work.diagnostics that are not ours to reword
+             "build", ".gradle"}
 
 
 def scan_text(text: str) -> list[tuple[int, str, str]]:

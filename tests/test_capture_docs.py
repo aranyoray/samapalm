@@ -19,16 +19,24 @@ PHONE_REQUIRED = [
     "clip1_meta.json", "led_block", "start_wall_ns", "sequential", "simultaneous",
 ]
 ANDROID_REQUIRED = [
-    "Open Camera", "PTS", "SENSOR_TIMESTAMP", "LED", "beep", "PalmRecorder.kt", "Gradle", "not been compiled",
+    "Open Camera", "PTS", "SENSOR_TIMESTAMP", "LED", "beep", "PalmRecorderActivity", "Gradle",
     "clip1_frames.csv", "frame_idx", "sensor_ts_ns", "wall_ns", "iso", "exposure_ns", "CONTROL_AE_LOCK", "CONTROL_AWB_LOCK",
     "variable frame rate", "offset", "drift",
+    # the recorder now carries the ECG on the same clock, which is the reason it exists
+    "CLOCK_BOOTTIME", "SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME", "CLOCK_MONOTONIC", "MANUAL_SENSOR",
+    "BleKardia", "ClockBridge", "PulseMeter", "lower envelope", "perfusion", "_ecg.atc", "not been run",
 ]
 KOTLIN_REQUIRED = [
-    "NOT BEEN COMPILED", "Gradle", "SENSOR_TIMESTAMP", "SENSOR_SENSITIVITY", "SENSOR_EXPOSURE_TIME", "CONTROL_AE_LOCK",
+    "SENSOR_TIMESTAMP", "SENSOR_SENSITIVITY", "SENSOR_EXPOSURE_TIME", "CONTROL_AE_LOCK",
     "CONTROL_AWB_LOCK", "CONTROL_AF_MODE_OFF", "CONTROL_VIDEO_STABILIZATION_MODE_OFF", "LENS_OPTICAL_STABILIZATION_MODE_OFF",
-    "setVideoSize(1920, 1080)", "setVideoFrameRate(30)", "VideoEncoder.H264", "AudioSource.MIC",
+    "VIDEO_W = 1920", "VIDEO_H = 1080", "FPS = 30", "setVideoSize(VIDEO_W, VIDEO_H)",
+    "setVideoFrameRate(FPS)", "VideoEncoder.H264", "AudioSource.MIC",
     "frame_idx,sensor_ts_ns,wall_ns,iso,exposure_ns", "FLASH_MODE_TORCH", "CaptureCallback", "onCaptureCompleted",
     "_frames.csv", "_meta.json",
+    # merged from the standalone recorder: one clock, a real ECG, and metadata read back from the file
+    "ClockBridge", "BleKardia", "PulseMeter", "AtcWriter", "MediaMetadataRetriever",
+    "CONTROL_AE_MODE_OFF", "SENSOR_FRAME_DURATION", "REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR",
+    "_sync.json", "EXTRA_ECG_SAMPLES",
 ]
 README_REQUIRED = [
     "4.5", "metronome", "one frame", "20 ms", "tap", "sync_events.csv", "palmppg bench report", "bench_sync_report.md",
@@ -54,16 +62,40 @@ def test_android_readme_documents_both_routes():
     missing = [s for s in ANDROID_REQUIRED if s.lower() not in text.lower()]
     assert not missing, missing
     assert "(a)" in text and "(b)" in text
+    # the standalone recorder and the uncompiled sketch were folded into the onboarding app
+    assert "SamaPalmRecorder" not in text and "PalmRecorder.kt" not in text
+
+
+RECORDER = ROOT / "android" / "app" / "src" / "main" / "java" / "org" / "samahealth" / "onboarding" / "recorder"
 
 
 def test_palm_recorder_source_states_status_and_logs_sensor_timestamp():
-    text = (CAP / "android" / "PalmRecorder.kt").read_text(encoding="utf-8")
+    text = (RECORDER / "PalmRecorderActivity.kt").read_text(encoding="utf-8")
     missing = [s for s in KOTLIN_REQUIRED if s not in text]
     assert not missing, missing
-    n_lines = len(text.splitlines())
-    assert 150 <= n_lines <= 300, n_lines
-    head = "\n".join(text.splitlines()[:15])
-    assert "NOT BEEN COMPILED" in head
+    head = "\n".join(text.splitlines()[:20])
+    assert "bench acceptance" in head
+    for name in ("ClockBridge.kt", "BleKardia.kt", "AtcWriter.kt", "PulseMeter.kt"):
+        assert (RECORDER / name).exists(), name
+
+
+def test_clock_bridge_converts_rather_than_assuming_one_clock():
+    """A camera timestamp is only CLOCK_BOOTTIME when the sensor says so; the rest is an hours-wide bug."""
+    text = (RECORDER / "ClockBridge.kt").read_text(encoding="utf-8")
+    for s in ("SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME", "elapsedRealtimeNanos", "nanoTime",
+              "toReferenceNs", "offsetUncertaintyNs"):
+        assert s in text, s
+
+
+def test_atc_writer_matches_the_parser_layout():
+    """The app writes ATC that palmppg/ecg/atc.py reads: crc32 over id + payload, 264 B info, <BHHBH fmt."""
+    text = (RECORDER / "AtcWriter.kt").read_text(encoding="utf-8")
+    for s in ("ALIVE", "CRC32", "RESOLUTION_NV", "EXACT_NV_PER_COUNT", "info", "fmt ", "ecg "):
+        assert s in text, s
+    widths = [32, 40, 44, 32, 32, 32, 52]
+    assert sum(widths) == 264
+    for w in widths:
+        assert f"to {w}" in text
 
 
 def test_capture_readme_bench_procedure():

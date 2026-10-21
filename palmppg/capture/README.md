@@ -7,7 +7,7 @@
 | `clock_sync.sh` | `chronyc makestep` at shift start/end and the `clock_sync_log.csv` row; manual Kardia tablet row | 4.1 |
 | `offload.sh` | rsync to the SSD/laptop, SHA-256 manifest from the source verified on the copy, completeness check and `COMPLETE.flag` | 4.6 |
 | `phone_settings.md` | OnePlus 12 operator checklist | 5 |
-| `android/` | Open Camera route and its limitation; optional `PalmRecorder.kt` (not compiled here) | 5, 4.6 |
+| `android/` | Open Camera route and its limitation; the onboarding app recorder (clip + ECG on one clock) | 5, 4.6 |
 
 Every script runs without hardware: `--simulate` on the Python scripts (MockPin objects, a software frame
 source at 384x216 with the LED block painted from the marker's own pin state), `--simulate` on

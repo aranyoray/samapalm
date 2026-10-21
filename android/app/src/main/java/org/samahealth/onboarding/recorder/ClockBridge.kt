@@ -1,4 +1,4 @@
-package org.swht.palm
+package org.samahealth.onboarding.recorder
 
 import android.hardware.camera2.CameraMetadata
 import android.os.SystemClock

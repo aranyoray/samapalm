@@ -1,4 +1,4 @@
-package org.swht.palm
+package org.samahealth.onboarding.recorder
 
 import java.io.File
 import java.nio.ByteBuffer
@@ -20,8 +20,7 @@ object AtcWriter {
     const val RESOLUTION_NV = 153
     const val EXACT_NV_PER_COUNT = 1.0e6 * BleKardia.MV_PER_COUNT
 
-    private val MAGIC = byteArrayOf('A'.code.toByte(), 'L'.code.toByte(), 'I'.code.toByte(),
-        'V'.code.toByte(), 'E'.code.toByte())
+    private val MAGIC = "ALIVE".toByteArray(Charsets.US_ASCII)
     private val VERSION = byteArrayOf(1, 0, 0)
 
     private val INFO_FIELDS = listOf(

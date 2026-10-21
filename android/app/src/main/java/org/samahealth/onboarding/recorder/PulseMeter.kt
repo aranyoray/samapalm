@@ -1,4 +1,4 @@
-package org.swht.palm
+package org.samahealth.onboarding.recorder
 
 import kotlin.math.abs
 import kotlin.math.exp
