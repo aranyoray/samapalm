@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#102027">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <org.swht.palm.RoiOverlay
+            android:id="@+id/roi"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <org.swht.palm.TraceView
+        android:id="@+id/trace"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:background="#0B1519" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:textColor="#ECEFF1"
+        android:textSize="12sp"
+        android:fontFamily="monospace"
+        android:text="starting…" />
+
+    <LinearLayout
+        android:id="@+id/controls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/studyId"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:inputType="textNoSuggestions|textCapCharacters"
+            android:textColor="#ECEFF1"
+            android:textColorHint="#78909C"
+            android:textSize="14sp"
+            android:fontFamily="monospace"
+            android:hint="study_id"
+            android:importantForAutofill="no"
+            android:text="SWHT-PP-003-0001" />
+
+        <ToggleButton
+            android:id="@+id/btnTorch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:textSize="12sp"
+            android:textOn="TORCH"
+            android:textOff="torch"
+            android:checked="true" />
+
+        <Button
+            android:id="@+id/btnRecord"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="● REC"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#B71C1C" />
+    </LinearLayout>
+</LinearLayout>

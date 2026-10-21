@@ -1,7 +1,21 @@
 # OnePlus 12 recording routes (protocol section 5, section 4.6 optional stretch)
 
-Two ways to obtain the phone clip. Route (a) needs no code and is the pilot default; route (b) is the optional
-custom recorder, provided as source only.
+Three ways to obtain the phone clip. Route (a) needs no code and is the pilot default; route (b) is a
+source-only sketch that was never compiled; route (c) is a built app that supersedes (b) and also captures the
+ECG on the same clock.
+
+## (c) `SamaPalmRecorder/` — built app, phone clip **and** ECG (preferred over (b))
+
+A full Gradle project (`SamaPalmRecorder/`, builds to a 14 MB APK) that records the locked 60 s clip *and* the
+KardiaMobile 6L/Card ECG over BLE, both stamped on `CLOCK_BOOTTIME`. Because one device captures both, the
+phone-to-ECG alignment is subtraction rather than a marker fit; the phone-to-Pi leg still needs the LED block
+and the buzzer on the audio track, exactly as in route (a). It writes the CONTRACTS 3.5 phone files, a
+CONTRACTS 3.6 ATC produced from the live stream, and a `sync.json` reporting the camera clock source, the
+applied `boottime - monotonic` offset and the recovered ECG timeline. See `SamaPalmRecorder/README.md`.
+
+Unlike (b) it is built and its ATC output is checked against `palmppg/ecg/atc.py`
+(`tools/check_atc_roundtrip.py`). Like (b) it has **not** been through the bench acceptance and has captured no
+participant data.
 
 Route (b) is now also built into the onboarding app as
 `android/app/src/main/java/org/samahealth/onboarding/recorder/PalmRecorderActivity.kt`, launched from each clip
