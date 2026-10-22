@@ -566,7 +566,13 @@ class PalmRecorderActivity : Activity() {
             .put("export_format", "atc")
             .put("source", "live BLE capture by the onboarding app, not an AliveCor app export")
             .put("ble_device_name", ble.deviceName ?: JSONObject.NULL)
-            .put("channels", "lead1 = lead I (LA-RA), lead2 = lead II (LL-RA)")
+            .put(
+                "channels",
+                if (cap.channels == 1) "lead1 = the device's single lead; lead2 is unused and zero"
+                else "lead1 = lead I (LA-RA), lead2 = lead II (LL-RA)"
+            )
+            .put("n_channels", cap.channels)
+            .put("channel_layout_decision", cap.layoutDecision)
             .put("nv_per_count_exact", AtcWriter.EXACT_NV_PER_COUNT)
             .put("atc_resolution_nv", AtcWriter.RESOLUTION_NV)
             .put(
@@ -657,6 +663,9 @@ class PalmRecorderActivity : Activity() {
             .put("measured_fs_hz", cap.measuredFsHz)
             .put("nominal_fs_hz", BleKardia.ECG_FS)
             .put("timeline_method", cap.envelopeFitUsed)
+            .put("n_channels", cap.channels)
+            .put("channel_layout_ratio", cap.layoutRatio)
+            .put("channel_layout_decision", cap.layoutDecision)
             .put("n_samples", cap.lead1.size)
             .put("n_packets", cap.packetCount)
             .put("arrival_delay_median_ns", cap.arrivalJitterMedianNs)

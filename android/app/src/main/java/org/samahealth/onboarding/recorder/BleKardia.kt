@@ -63,6 +63,8 @@ class BleKardia(private val context: Context) {
         const val SAMPLE_NS = 1_000_000_000L / ECG_FS
         /** Arrival later than the running minimum by more than this means samples were dropped. */
         private const val GAP_NS = 100_000_000L
+        /** Below this, neighbouring values are one waveform rather than two interleaved leads. */
+        private const val SINGLE_LEAD_RATIO = 0.9
 
         fun unlockToken(deviceName: String): String {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -99,15 +101,8 @@ class BleKardia(private val context: Context) {
     private val logLock = Any()
     private var packetCsv: BufferedWriter? = null
     private var capturing = false
-    private var globalSampleIdx = 0L
-    private var runningMinAnchorNs = Long.MAX_VALUE
-    private var gapCount = 0
-    private var missingSamples = 0L
-    private var lead1 = IntArray(64 * 1024)
-    private var lead2 = IntArray(64 * 1024)
-    private var nStored = 0
-    /** One entry per packet: index of its last sample, and its arrival time. */
-    private var pktEndIdx = LongArray(16 * 1024)
+    /** Raw payloads, decoded only at [finalise] once the channel layout is known. */
+    private var pktBytes = ArrayList<ByteArray>()
     private var pktRecvNs = LongArray(16 * 1024)
     private var nPkts = 0
 
@@ -147,15 +142,11 @@ class BleKardia(private val context: Context) {
      */
     fun startCapture(packetLog: File) {
         synchronized(logLock) {
-            globalSampleIdx = 0
-            runningMinAnchorNs = Long.MAX_VALUE
-            gapCount = 0
-            missingSamples = 0
-            nStored = 0
+            pktBytes = ArrayList()
             nPkts = 0
             loggedSamples = 0
             packetCsv = BufferedWriter(FileWriter(packetLog)).apply {
-                write("packet_idx,recv_ns,n_samples,first_sample_idx,hex\n")
+                write("packet_idx,recv_ns,n_int16,hex\n")
             }
             capturing = true
         }
@@ -176,22 +167,77 @@ class BleKardia(private val context: Context) {
         val arrivalJitterMedianNs: Long,
         val arrivalJitterP95Ns: Long,
         val envelopeFitUsed: String,
+        /** 1 for a single-lead device (Card, classic), 2 for the 6L. Decided from the samples. */
+        val channels: Int,
+        /** mean|x[i+1]-x[i]| / mean|x[i+2]-x[i]|: below 1 means adjacent samples are one waveform. */
+        val layoutRatio: Double,
+        val layoutDecision: String,
     ) {
         fun tRefNs(sampleIdx: Int): Long = t0RefNs + Math.round(sampleIdx * samplePeriodNs)
     }
 
     /**
-     * Stops buffering and recovers the sample timeline from the lower envelope of packet arrivals.
-     * A line through the minimum-delay packet of the first quarter and that of the last quarter
-     * gives both the time origin and the true sample period; with too few packets it falls back to
-     * the single minimum at the nominal rate.
+     * Stops buffering, works out how the payload is laid out, then decodes and times everything.
+     *
+     * The layout is decided from the samples rather than assumed. A KardiaMobile Card sends ten
+     * single-lead values per packet; a 6L sends lead I and lead II interleaved. Read a Card as
+     * interleaved pairs and you get half the rate, a 2:1 decimated lead I and a second "lead" that
+     * is really the samples you dropped — which is exactly what the first real recording showed.
+     * So: if neighbouring values track each other more closely than values two apart, they are one
+     * waveform, not two.
      */
     fun finalise(): Capture? {
         synchronized(logLock) {
             capturing = false
             try { packetCsv?.flush(); packetCsv?.close() } catch (_: Exception) {}
             packetCsv = null
-            if (nPkts < 2 || nStored == 0) return null
+            if (nPkts < 2 || pktBytes.isEmpty()) return null
+
+            var total = 0
+            for (b in pktBytes) total += b.size / 2
+            if (total < 8) return null
+            val raw = IntArray(total)
+            val pktValues = IntArray(nPkts)
+            var k = 0
+            for (i in 0 until nPkts) {
+                val b = pktBytes[i]
+                val n = b.size / 2
+                pktValues[i] = n
+                for (j in 0 until n) raw[k++] = decode(b, j * 2)
+            }
+
+            val ratio = adjacentOverSkipRatio(raw)
+            val channels = if (ratio < SINGLE_LEAD_RATIO) 1 else 2
+            val decision = if (channels == 1)
+                "single lead (adjacent/skip spread %.3f < %.2f)".format(ratio, SINGLE_LEAD_RATIO)
+            else
+                "two interleaved leads (adjacent/skip spread %.3f)".format(ratio)
+
+            // per-packet index of the last sample, in per-channel samples, with holes from dropped
+            // notifications opened up so that index stays proportional to time
+            val pktEndIdx = LongArray(nPkts)
+            val holeBefore = IntArray(nPkts)
+            var idx = 0L
+            var runningMin = Long.MAX_VALUE
+            var gaps = 0
+            var missing = 0L
+            for (i in 0 until nPkts) {
+                val n = (pktValues[i] / channels).toLong()
+                val provisional = idx + n
+                val anchor = pktRecvNs[i] - provisional * SAMPLE_NS
+                if (runningMin != Long.MAX_VALUE && anchor - runningMin > GAP_NS) {
+                    val hole = (anchor - runningMin) / SAMPLE_NS
+                    holeBefore[i] = hole.toInt()
+                    idx += hole
+                    missing += hole
+                    gaps++
+                }
+                val end = idx + n
+                val finalAnchor = pktRecvNs[i] - end * SAMPLE_NS
+                if (finalAnchor < runningMin) runningMin = finalAnchor
+                pktEndIdx[i] = end
+                idx = end
+            }
 
             fun minAnchorIn(from: Int, to: Int): Int {
                 var best = from
@@ -221,27 +267,61 @@ class BleKardia(private val context: Context) {
                 }
             }
 
+            val nSamples = (pktEndIdx[nPkts - 1]).toInt()
+            val l1 = IntArray(nSamples)
+            val l2 = IntArray(nSamples)
+            var w = 0
+            var src = 0
+            for (i in 0 until nPkts) {
+                w += holeBefore[i]            // holes stay zero-filled
+                val n = pktValues[i] / channels
+                for (j in 0 until n) {
+                    if (w >= nSamples) break
+                    l1[w] = raw[src + j * channels]
+                    if (channels == 2) l2[w] = raw[src + j * channels + 1]
+                    w++
+                }
+                src += pktValues[i]
+            }
+
             val delays = LongArray(nPkts) { i ->
                 pktRecvNs[i] - (t0 + Math.round(pktEndIdx[i] * periodNs))
             }
             delays.sort()
-            val median = delays[nPkts / 2]
-            val p95 = delays[minOf(nPkts - 1, (nPkts * 95) / 100)]
 
             return Capture(
-                lead1 = lead1.copyOf(nStored),
-                lead2 = lead2.copyOf(nStored),
+                lead1 = l1,
+                lead2 = l2,
                 t0RefNs = t0,
                 samplePeriodNs = periodNs,
                 measuredFsHz = 1.0e9 / periodNs,
-                gapCount = gapCount,
-                missingSamples = missingSamples,
+                gapCount = gaps,
+                missingSamples = missing,
                 packetCount = nPkts,
-                arrivalJitterMedianNs = median,
-                arrivalJitterP95Ns = p95,
+                arrivalJitterMedianNs = delays[nPkts / 2],
+                arrivalJitterP95Ns = delays[minOf(nPkts - 1, (nPkts * 95) / 100)],
                 envelopeFitUsed = fit,
+                channels = channels,
+                layoutRatio = ratio,
+                layoutDecision = decision,
             )
         }
+    }
+
+    /**
+     * mean|x[i+1]-x[i]| over mean|x[i+2]-x[i]|. One waveform sampled at the full rate moves less
+     * between neighbours than between every other sample, so the ratio sits below 1. Two different
+     * leads interleaved move more between neighbours than within a lead, pushing it above 1.
+     */
+    private fun adjacentOverSkipRatio(x: IntArray): Double {
+        if (x.size < 8) return 1.0
+        var d1 = 0.0
+        var d2 = 0.0
+        for (i in 0 until x.size - 2) {
+            d1 += Math.abs(x[i + 1] - x[i]).toDouble()
+            d2 += Math.abs(x[i + 2] - x[i]).toDouble()
+        }
+        return if (d2 <= 0.0) 1.0 else d1 / d2
     }
 
     // ---- scan ----
@@ -441,14 +521,7 @@ class BleKardia(private val context: Context) {
     // ---- data ----
 
     private fun grow() {
-        if (nStored + 64 > lead1.size) {
-            lead1 = lead1.copyOf(lead1.size * 2)
-            lead2 = lead2.copyOf(lead2.size * 2)
-        }
-        if (nPkts + 1 > pktEndIdx.size) {
-            pktEndIdx = pktEndIdx.copyOf(pktEndIdx.size * 2)
-            pktRecvNs = pktRecvNs.copyOf(pktRecvNs.size * 2)
-        }
+        if (nPkts + 1 > pktRecvNs.size) pktRecvNs = pktRecvNs.copyOf(pktRecvNs.size * 2)
     }
 
     private fun handlePacket(ch: BluetoothGattCharacteristic, value: ByteArray) {
@@ -462,66 +535,25 @@ class BleKardia(private val context: Context) {
         streaming = true
         statusLine = "BLE: streaming ${deviceName ?: ""} ($modeUsed)"
 
-        val pairs = value.size / 4
-        val singleChannel = pairs == 0 && value.size >= 2
-        val nSamples = if (singleChannel) value.size / 2 else pairs
-        if (nSamples == 0) return
+        val nValues = value.size / 2
+        if (nValues == 0) return
+
+        // The on-screen trace treats every value as one waveform, which is right for a single-lead
+        // device and merely cosmetic for the 6L. Nothing is decided here: the layout is worked out
+        // from the whole recording in finalise().
+        for (i in 0 until nValues) updateTraceAndHr(decode(value, i * 2), recvNs)
 
         synchronized(logLock) {
-            if (!capturing) {
-                // not recording: keep the trace and HR alive for positioning, nothing persisted
-                for (i in 0 until nSamples) {
-                    val off = if (singleChannel) i * 2 else i * 4
-                    updateTraceAndHr(decode(value, off), recvNs)
-                }
-                return
-            }
+            if (!capturing) return
             grow()
-
-            // A packet far later than the running envelope means notifications were dropped;
-            // advance the sample index over the hole so index stays proportional to time.
-            val provisionalEnd = globalSampleIdx + nSamples
-            val anchor = recvNs - provisionalEnd * SAMPLE_NS
-            if (runningMinAnchorNs != Long.MAX_VALUE && anchor - runningMinAnchorNs > GAP_NS) {
-                val missing = (anchor - runningMinAnchorNs) / SAMPLE_NS
-                globalSampleIdx += missing
-                missingSamples += missing
-                gapCount += 1
-                for (k in 0 until missing) {
-                    if (nStored + 1 > lead1.size) {
-                        lead1 = lead1.copyOf(lead1.size * 2)
-                        lead2 = lead2.copyOf(lead2.size * 2)
-                    }
-                    lead1[nStored] = 0
-                    lead2[nStored] = 0
-                    nStored++
-                }
-            }
-
-            val endIdx = globalSampleIdx + nSamples
-            val finalAnchor = recvNs - endIdx * SAMPLE_NS
-            if (finalAnchor < runningMinAnchorNs) runningMinAnchorNs = finalAnchor
-
-            pktEndIdx[nPkts] = endIdx
+            pktBytes.add(value.copyOf())
             pktRecvNs[nPkts] = recvNs
             nPkts++
-
+            loggedSamples += nValues
             packetCsv?.write(
-                "${nPkts - 1},$recvNs,$nSamples,$globalSampleIdx," +
+                "${nPkts - 1},$recvNs,$nValues," +
                     value.joinToString("") { "%02x".format(it) } + "\n"
             )
-
-            for (i in 0 until nSamples) {
-                val off = if (singleChannel) i * 2 else i * 4
-                val ch1 = decode(value, off)
-                val ch2 = if (singleChannel) 0 else decode(value, off + 2)
-                lead1[nStored] = ch1
-                lead2[nStored] = ch2
-                nStored++
-                loggedSamples++
-                updateTraceAndHr(ch1, recvNs)
-            }
-            globalSampleIdx = endIdx
             if (nPkts % 100 == 0) {
                 try { packetCsv?.flush() } catch (_: Exception) {}
             }

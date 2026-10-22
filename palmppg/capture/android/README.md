@@ -80,6 +80,15 @@ least-delayed packet of the first quarter and that of the last quarter gives bot
 device's real sample rate. What remains is the link's minimum delay, constant within a session, which biases
 absolute pulse arrival time but not beat-to-beat variation; it is reported in `<clip>_sync.json`, not hidden.
 
+**Channel layout is decided from the samples, not assumed.** A KardiaMobile Card sends ten single-lead values
+per 20-byte packet; a 6L interleaves lead I and lead II. Reading a Card as interleaved pairs yields half the
+rate, a 2:1 decimated lead I, and a second "lead" that is really the discarded samples — which is what the
+first real recording did, writing 150 Hz instead of 300 Hz. `finalise` therefore compares how much the signal
+moves between neighbouring values against how much it moves between values two apart: below 0.9 it is one
+waveform. On the recording that exposed this the ratio was 0.58; a synthetic two-lead stream whose leads
+correlate at 0.987 scores 2.44. The ratio and the decision are both written to `<clip>_sync.json`, so a wrong
+call is visible rather than silent.
+
 Per clip, when a Kardia was streaming: `<clip>_ecg.atc` (AliveCor ATC v1, read by `palmppg/ecg/atc.py`),
 `<clip>_ecg_samples.csv` (`t_ref_ns, sample_idx, lead1_raw, lead2_raw, lead1_mv, lead2_mv`),
 `<clip>_ecg_packets.csv` (raw arrivals, the irreplaceable record) and `<clip>_ecg_meta.json` (CONTRACTS 3.6).
