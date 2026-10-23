@@ -150,3 +150,28 @@ rationale, and what would change it. Provisional entries are the ones waiting on
 - **D-032 (2026-10-20) Android build verification.** This container cannot reach Google's Maven host, so the Android
   module is compiled by GitHub Actions (`.github/workflows/onboarding.yml`), which also publishes the debug APK. The
   JVM module with all survey logic and the Supabase client is compiled and tested locally (Gradle, Maven Central).
+- **D-033 (2026-10-23) Phone capture controls are fixed and read back, not locked and assumed.** Every clip recorded
+  with the standalone SamaPalmRecorder up to this date (ten sessions, OnePlus 12) had a near-black ROI for most or all
+  of its length (decoded ROI mean Y 2-11 of 255; frames at 2 s and 15 s of the 23 Oct clip are fully black, a
+  soft-focus hand enters at 28 s), and the app could not say so because the live ROI readout was unbound the moment REC
+  was pressed. Continuous AF ran until the lock and pinned wherever the lens was at t = 2 s; `cameraIdList.first { BACK }`
+  was logical camera 0 (main + ultrawide) which may hand off sensors at palm distance; white balance was `AWB_LOCK`ed
+  without recording what it locked to; the vendor `FAST` tone curve was inherited although the ingest inverts sRGB. The
+  standalone recorder was folded into the onboarding app the same day (8fb88ec), so the fix lands in
+  `android/.../recorder/PalmRecorderActivity.kt` (the CameraX version of the same fix is kept on branch
+  `wip/samapalm-recorder-controls` for reference). From this date the recorder: opens the main sensor by id (`"2"`) with
+  zoom pinned at 1.0; sets `CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` for the rig distance (intent extra
+  `distance_cm`, default 17 cm = 5.88 D, clamped to the lens's 13 cm closest focus and flagged) in the *first* request;
+  sends a 64-point sRGB `TONEMAP_CURVE`, `SHADING_MODE_OFF`, aberration OFF; meters AE on the ROI during the settle; goes
+  manual with the shutter capped at 12 ms (light moved into ISO) after one proportional ROI-luma correction; re-sends the
+  settled colour gains and transform as manual white balance; reverts to AE lock if the torch goes out under manual
+  exposure; and logs every control per frame (`<clip>_controls.csv`) and the pre-encoder ROI colour (`<clip>_roi.csv`,
+  16:9 analysis stream at 640x360 so the ROI is the same patch as in the clip). A pre-flight (`PalmControls.preflight`)
+  names a dark/hot ROI, an over-cap shutter, slow frames, a lens that did not reach its plane, an unlit torch and a
+  pulse-free trace; it warns and logs, it never refuses the operator. The phone is the secondary track (D-022) and no
+  participant data exists, so no frozen threshold changes; `frozen_config.yaml` is untouched. Verified on 23 Oct: 15
+  `PalmControls` unit tests against the main sensor's real limits, 6 ingest tests, and — on the CameraX build — the
+  MONITOR binding on physical camera 2 at 5.88 D with the 640x360 tap. **Not yet verified on hardware** for the
+  onboarding recorder: the three-surface session at 1080p, the torch staying lit under `AE_MODE_OFF`, and the HAL
+  honouring tonemap/shading/`AWB_MODE_OFF` — the phone was on its lockscreen, which backgrounds the app and closes the
+  camera. `palmppg/capture/android/dry_run.sh` performs and prints exactly that read-back.

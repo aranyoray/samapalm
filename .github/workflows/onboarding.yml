@@ -23,6 +23,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Shared engine tests (golden fixtures, navigator, Supabase client)
         run: ./gradlew :crf-core:test --console=plain
+      - name: Recorder control arithmetic (PalmControls)
+        run: ./gradlew :app:testDebugUnitTest --console=plain
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --console=plain
       - uses: actions/upload-artifact@v4

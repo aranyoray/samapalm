@@ -42,15 +42,34 @@ What it does per clip:
 
 - Camera2 session over the preview surface, a `MediaRecorder` surface at 1920x1080 / 30 fps / H.264 with AAC
   audio (`setVideoSize(1920, 1080)`, `setVideoFrameRate(30)`, `VideoEncoder.H264`, `AudioSource.MIC`), and a
-  640x480 `ImageReader` for the live palm readout. If the device will not configure all three, the readout is
+  640x360 `ImageReader` for the live palm readout and the pre-encoder ROI log. If the device will not configure all three, the readout is
   dropped and the clip is kept — the clip is the measurement.
-- 2 s auto settle with the torch already in its final state, then exposure, white balance and focus are pinned.
-  Where the camera offers `MANUAL_SENSOR` it sets `CONTROL_AE_MODE_OFF` with explicit `SENSOR_SENSITIVITY`,
-  `SENSOR_EXPOSURE_TIME` and `SENSOR_FRAME_DURATION`; otherwise it falls back to `CONTROL_AE_LOCK`. Either way
-  `CONTROL_AWB_LOCK` is set and `CONTROL_AF_MODE_OFF` holds the measured `LENS_FOCUS_DISTANCE`. OIS and EIS off
-  (`LENS_OPTICAL_STABILIZATION_MODE_OFF`, `CONTROL_VIDEO_STABILIZATION_MODE_OFF`), scene modes, noise reduction
-  and edge enhancement off, `FLASH_MODE_TORCH` per `capture_mode`. `lock_applied` in the clip metadata records
-  which path was taken.
+- The main sensor is opened by id (`"2"` on the OnePlus 12) rather than `cameraIdList.first { BACK }`, which is the
+  logical camera that fuses main and ultrawide and may hand off between them at palm distance; zoom is pinned at 1.0.
+- Focus is a fixed plane from the first frame: `CONTROL_AF_MODE_OFF` + `LENS_FOCUS_DISTANCE` for the rig distance
+  (intent extra `distance_cm`, default 17 cm = 5.88 D; the main lens cannot focus closer than 13 cm, and a request
+  inside that is clamped and flagged). There is no autofocus at any point, so nothing is caught mid-hunt. At f/1.6
+  the depth of field is about a centimetre, so parts of the palm are soft by design: a soft palm that never refocuses
+  is a usable clip, a sharp one that refocuses halfway is not (D-033).
+- An explicit 64-point sRGB `TONEMAP_CURVE` (the ingest inverts sRGB; the vendor `FAST` curve is not sRGB and cannot
+  be recovered), `SHADING_MODE_OFF`, aberration correction off, and AE metered on the palm ROI (`CONTROL_AE_REGIONS`).
+- 2 s auto settle with the torch already in its final state, then a pre-flight on the settled state (dark or hot
+  ROI, shutter over 12 ms, slow frames, lens off its plane, unlit torch, no pulse) is shown and logged — it never
+  refuses the operator — and the controls are pinned. Where the camera offers `MANUAL_SENSOR` it sets
+  `CONTROL_AE_MODE_OFF` with explicit `SENSOR_SENSITIVITY`, `SENSOR_EXPOSURE_TIME` (capped at 12 ms, the lost light
+  moved into ISO, after one proportional ROI-luma correction) and `SENSOR_FRAME_DURATION`; otherwise `CONTROL_AE_LOCK`.
+  Where it offers `MANUAL_POST_PROCESSING` the settled `COLOR_CORRECTION_GAINS` and `_TRANSFORM` are re-sent with
+  `CONTROL_AWB_MODE_OFF`, so what the clip was balanced to is a number in the metadata; otherwise `CONTROL_AWB_LOCK`.
+  If the torch goes out when exposure goes manual the recorder reverts to AE lock so the LED stays lit. OIS and EIS
+  off (`LENS_OPTICAL_STABILIZATION_MODE_OFF`, `CONTROL_VIDEO_STABILIZATION_MODE_OFF`), scene modes, noise reduction
+  and edge enhancement off, `FLASH_MODE_TORCH` per `capture_mode`. `lock_applied` / `awb_applied` in the clip
+  metadata record which path was taken, and `controls` records every request against what the HAL reported.
+- Per recorded frame, `<clip>_controls.csv` (iso, exposure, focus, lens state, zoom, colour gains, AF/AE/AWB/tonemap/
+  shading modes, flash state) alongside `<clip>_frames.csv`; per analysis frame, `<clip>_roi.csv` — the ROI's mean
+  Y/U/V and R/G/B *before* the encoder, with clip fraction and a 3x3 grid — from a 640x360 (16:9) reader so the ROI is
+  the same patch of palm as in the clip. CONTRACTS 3.5; read by `palmppg.ingest.phone_tap`.
+- Verify a build on the phone with `dry_run.sh` in this folder: it records a short clip and prints, from the control
+  log, whether each request was honoured. Accepted request keys on a vendor HAL are not honoured ones.
 - A `CaptureCallback.onCaptureCompleted` writes one row per frame to `<clip>_frames.csv`:
   `frame_idx,sensor_ts_ns,wall_ns,iso,exposure_ns` (CONTRACTS 3.5, same columns as `clip1_frames.csv` in route
   (a) when that route is given a custom recorder). `sensor_ts_ns` is already on the reference clock — see below.

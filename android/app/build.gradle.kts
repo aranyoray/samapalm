@@ -55,4 +55,5 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.security.crypto)
+    testImplementation("junit:junit:4.13.2")   // PalmControlsTest: the camera-control arithmetic, JVM only
 }

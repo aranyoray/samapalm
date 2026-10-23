@@ -68,6 +68,14 @@ class ParticipantPaths:
     def phone_meta(self, clip_id: str = "clip1") -> Path:
         return self.phone / f"{clip_id}_meta.json"
 
+    def phone_roi(self, clip_id: str = "clip1") -> Path:
+        """Optional pre-encoder ROI tap written by SamaPalmRecorder (CONTRACTS 3.5)."""
+        return self.phone / f"{clip_id}_roi.csv"
+
+    def phone_controls(self, clip_id: str = "clip1") -> Path:
+        """Optional per-frame camera control log written by SamaPalmRecorder (CONTRACTS 3.5)."""
+        return self.phone / f"{clip_id}_controls.csv"
+
     def ecg_atc(self) -> Path | None:
         hits = sorted(self.ecg.glob("kardia_*.atc"))
         return hits[0] if hits else None
