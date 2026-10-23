@@ -12,7 +12,11 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.Spinner
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -59,6 +63,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnRecord: Button
     private lateinit var btnTorch: ToggleButton
     private lateinit var studyIdField: EditText
+    private lateinit var softPreview: ImageView
+    private lateinit var distanceSpinner: Spinner
 
     private var rig: CameraRig? = null
     private var ble: BleKardia? = null
@@ -115,6 +121,26 @@ class MainActivity : AppCompatActivity() {
         btnRecord = findViewById(R.id.btnRecord)
         btnTorch = findViewById(R.id.btnTorch)
         studyIdField = findViewById(R.id.studyId)
+        softPreview = findViewById(R.id.softPreview)
+        distanceSpinner = findViewById(R.id.distance)
+
+        // Lens-to-palm distance sets the fixed focus plane. It is part of the bound request set,
+        // so changing it redoes the monitor binding; it is disabled once a session starts.
+        val presets = PalmControls.DISTANCE_PRESETS_CM
+        distanceSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item, presets.map { "${it.toInt()} cm" }
+        )
+        distanceSpinner.setSelection(presets.indexOfFirst { it == PalmControls.DEFAULT_DISTANCE_CM }.coerceAtLeast(0))
+        distanceSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val cm = presets[position]
+                val r = rig ?: return
+                if (r.distanceCm == cm) return
+                r.distanceCm = cm
+                if (state == State.READY) r.bind(this@MainActivity, CameraRig.Mode.MONITOR) { r.setTorch(btnTorch.isChecked) }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
 
         // targetSdk 36 draws edge to edge, so without this the control row sits underneath the
         // gesture navigation bar and the buttons are only half tappable.
@@ -146,7 +172,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onPermissionsGranted() {
-        val rigInstance = CameraRig(this, previewView)
+        val rigInstance = CameraRig(this, previewView, softPreview)
         rig = rigInstance
         traceView.camera = rigInstance
         findViewById<RoiOverlay>(R.id.roi).rig = rigInstance
@@ -197,6 +223,7 @@ class MainActivity : AppCompatActivity() {
         state = State.SETTLING
         btnRecord.text = "settling…"
         studyIdField.isEnabled = false
+        distanceSpinner.isEnabled = false
 
         // Swap to the video binding before settling: the exposure that gets locked must be the
         // one the encoder will actually see, and the two bindings do not share a configuration.
@@ -209,11 +236,18 @@ class MainActivity : AppCompatActivity() {
             rigInstance.setTorch(btnTorch.isChecked)
             ui.postDelayed({
                 if (state != State.SETTLING) return@postDelayed
-                val lock = rigInstance.lockControls()
-                Log.i(TAG, "controls locked: $lock")
+                // Pre-flight runs inside lockControls on the settled state: the ROI must be lit,
+                // the lens on its plane, the shutter under the blur cap. Warnings are shown and
+                // logged, never used to refuse the operator.
+                val lock = rigInstance.lockControls(btnTorch.isChecked)
+                Log.i(TAG, "controls locked: $lock; ${rigInstance.preflight?.line}")
                 ui.postDelayed({
                     if (state != State.SETTLING) return@postDelayed
-                    beginRecording()
+                    if (rigInstance.torchFellBackToAeLock(btnTorch.isChecked)) {
+                        ui.postDelayed({ if (state == State.SETTLING) beginRecording() }, LOCK_SETTLE_MS)
+                    } else {
+                        beginRecording()
+                    }
                 }, LOCK_SETTLE_MS)
             }, SETTLE_MS)
         }
@@ -232,6 +266,8 @@ class MainActivity : AppCompatActivity() {
         val ok = rigInstance.startRecording(
             File(phone, "$CLIP_ID.mp4"),
             File(phone, "${CLIP_ID}_frames.csv"),
+            File(phone, "${CLIP_ID}_controls.csv"),
+            File(phone, "${CLIP_ID}_roi.csv"),
         ) { event -> onVideoEvent(event) }
 
         if (!ok) {
@@ -265,6 +301,7 @@ class MainActivity : AppCompatActivity() {
         btnRecord.isEnabled = true
         btnRecord.text = "● REC"
         studyIdField.isEnabled = true
+        distanceSpinner.isEnabled = true
         sessionDir?.deleteRecursively()
         rig?.bind(this, CameraRig.Mode.MONITOR) { rig?.setTorch(btnTorch.isChecked) }
     }
@@ -416,7 +453,7 @@ class MainActivity : AppCompatActivity() {
             .put("iso", rig?.lastIso ?: -1)
             .put("exposure_ns", rig?.lastExposureNs ?: -1L)
             .put("wb_locked", true)
-            .put("focus_locked", (rig?.lastFocusDistance ?: -1f) >= 0f)
+            .put("focus_locked", rig?.lockApplied?.contains("af_off") ?: false)
             .put("stabilisation", false)
             .put("hdr", false)
             .put("torch", if (btnTorch.isChecked) "on" else "off")
@@ -432,11 +469,21 @@ class MainActivity : AppCompatActivity() {
             .put("audio_track", "AAC mono, carries the rig buzzer markers")
             .put("roi_fraction", CameraRig.ROI_FRACTION)
             .put("negotiated_resolution", rig?.videoResolution ?: "unknown")
+            .put("awb_applied", rig?.awbApplied ?: "none")
+            .put("distance_cm", rig?.distanceCm ?: JSONObject.NULL)
+            .put("controls", rig?.controlsJson() ?: JSONObject.NULL)
+            .put("controls_file", "${CLIP_ID}_controls.csv")
+            .put("roi_file", if (rig?.analysisBound == true) "${CLIP_ID}_roi.csv" else JSONObject.NULL)
+            .put("roi_rows", rig?.roiRows ?: 0L)
             .put(
                 "roi_trace",
-                "live operator aid only, not written: this device cannot bind ImageAnalysis " +
-                    "alongside VideoCapture without the encoder dropping to 720p, so the palm " +
-                    "readout runs between clips and the clip itself is recorded at full resolution"
+                if (rig?.analysisBound == true)
+                    "pre-encoder ROI colour means written during the clip from the YUV analysis stream " +
+                        "(${rig.analysisResolution}); the camera preview is dropped during the clip so the " +
+                        "encoder keeps 1080p and the operator sees the analysis frames instead"
+                else
+                    "not written: two streams negotiated below 1080p on this device, so the clip kept the " +
+                        "preview and dropped the ROI tap"
             )
             .put("n_frames_logged", rig?.frameRows ?: 0L)
             .put("n_frames_in_container", frameCount)
@@ -461,14 +508,14 @@ class MainActivity : AppCompatActivity() {
             .put("offset_drift_during_session_ns", clockDriftNs)
             .put("n_frame_rows", rig?.frameRows ?: 0L)
             .put("n_capture_failures", rig?.droppedFrameRows ?: 0L)
-            .put("n_roi_rows", rig?.ppgRows ?: 0L)
+            .put("n_roi_rows", rig?.roiRows ?: 0L)
             .put("recording_start_ref_ns", rig?.recordingStartRefNs ?: 0L)
 
         val ecg = if (cap == null) JSONObject.NULL else JSONObject()
             .put("t0_ref_ns", cap.t0RefNs)
             .put("sample_period_ns", cap.samplePeriodNs)
             .put("measured_fs_hz", cap.measuredFsHz)
-            .put("nominal_fs_hz", BleKardia.ECG_FS)
+            .put("nominal_fs_hz", ble?.fsHz ?: Math.round(cap.measuredFsHz).toInt())
             .put("timeline_method", cap.envelopeFitUsed)
             .put("n_samples", cap.lead1.size)
             .put("n_packets", cap.packetCount)
@@ -541,6 +588,7 @@ class MainActivity : AppCompatActivity() {
             btnRecord.isEnabled = true
             btnRecord.text = "● REC"
             studyIdField.isEnabled = true
+            distanceSpinner.isEnabled = true
             bumpClipSuffix()
             Toast.makeText(
                 this, "Saved $ok/${files.size} files → Download/SamaPalm/${root.name}",
@@ -596,27 +644,41 @@ class MainActivity : AppCompatActivity() {
 
         if (rigInstance != null) {
             val clock = rigInstance.clock
+            val f = rigInstance.focus
             sb.append(
-                "cam ${rigInstance.hardwareLevel} ${rigInstance.videoResolution} " +
-                    "prev ${rigInstance.previewResolution}  " +
-                    "lock ${rigInstance.lockApplied}  " +
-                    "iso ${rigInstance.lastIso}  exp ${rigInstance.lastExposureNs / 1000}us\n"
+                "cam ${rigInstance.cameraId} ${rigInstance.hardwareLevel} ${rigInstance.videoResolution}  " +
+                    "focus %.0fcm=%.2fD rep %.2fD%s\n".format(
+                        rigInstance.distanceCm, f.appliedDiopters, rigInstance.lastFocusDistance,
+                        if (f.clampedToLens) " (lens limit)" else ""
+                    )
+            )
+            sb.append(
+                "lock ${rigInstance.lockApplied} / ${rigInstance.awbApplied}  iso ${rigInstance.lastIso}  " +
+                    "exp ${rigInstance.lastExposureNs / 1000}us  %.1f fps\n".format(rigInstance.resultFps)
             )
             sb.append(
                 "clock ${clock?.sourceName ?: "?"}" +
                     (if (clock?.sourceIsRealtime == false) " (+offset applied)" else "") +
-                    "   frames ${rigInstance.frameRows}  roi ${rigInstance.ppgRows}\n"
+                    "   frames ${rigInstance.frameRows}  roi ${rigInstance.roiRows}\n"
             )
             if (rigInstance.analysisBound) {
                 val p = rigInstance.pulse
+                val luma = rigInstance.roiLuma
+                val lumaNote = when {
+                    luma.isNaN() -> ""
+                    luma < PalmControls.MIN_ROI_LUMA -> "   ROI Y %.0f DARK — palm not over the box?".format(luma)
+                    luma > PalmControls.MAX_ROI_LUMA -> "   ROI Y %.0f HOT".format(luma)
+                    else -> "   ROI Y %.0f".format(luma)
+                }
                 sb.append(
-                    if (p.bpm > 0) "palm ~%.0f bpm   perfusion %.2f%%   beats %d\n"
-                        .format(p.bpm, p.perfusionPct, p.beats)
-                    else "palm -- no pulse   perfusion %.2f%%  (cover the ROI)\n"
-                        .format(p.perfusionPct)
+                    (if (p.bpm > 0) "palm ~%.0f bpm   perfusion %.2f%%   beats %d".format(p.bpm, p.perfusionPct, p.beats)
+                    else "palm -- no pulse   perfusion %.2f%%".format(p.perfusionPct)) + lumaNote + "\n"
                 )
             } else {
-                sb.append("palm readout paused — the clip needs the stream for 1080p\n")
+                sb.append("palm readout off — preview+video fallback (no ROI tap at 1080p)\n")
+            }
+            if (state == State.SETTLING || state == State.RECORDING) {
+                rigInstance.preflight?.let { sb.append(it.line).append('\n') }
             }
         }
 

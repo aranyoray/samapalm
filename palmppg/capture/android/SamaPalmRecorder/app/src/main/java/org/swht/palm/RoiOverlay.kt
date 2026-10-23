@@ -55,5 +55,15 @@ class RoiOverlay(context: Context, attrs: AttributeSet?) : View(context, attrs) 
         val b = iy + (0.5f + half) * ih
         canvas.drawRect(l, t, r, b, box)
         canvas.drawText("palm ROI", l, (t - 10f).coerceAtLeast(label.textSize), label)
+
+        // During the clip the camera preview is unbound to keep 1080p; what is on screen is the
+        // analysis stream. Say so, or the operator will trust a frozen image as live.
+        val r2 = rig ?: return
+        if (r2.mode == CameraRig.Mode.RECORD) {
+            canvas.drawText(
+                if (r2.analysisBound) "REC · live view from ROI stream" else "REC · preview (no ROI tap at 1080p)",
+                ix + 12f, iy + ih - 14f, label
+            )
+        }
     }
 }

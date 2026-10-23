@@ -50,9 +50,15 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ## Checks
 
 ```
-./gradlew testDebugUnitTest          # writes a real ATC with the production writer
-python3 tools/check_atc_roundtrip.py # parses it with palmppg/ecg/atc.py
+./gradlew testDebugUnitTest          # PalmControls (focus, exposure cap, sRGB curve, pre-flight) + a real ATC
+python3 tools/check_atc_roundtrip.py # parses the ATC with palmppg/ecg/atc.py
+tools/dry_run.sh [seconds]           # on the attached, unlocked phone: REC, record, STOP, pull, print what the HAL did
 ```
+
+`dry_run.sh` is the check that matters for the camera: it prints, from the clip's own control log, whether
+AF/AE/AWB were OFF on every frame, whether the lens sat still on its plane, whether the tone curve, shading
+and zoom requests were honoured, and the mean ROI luma — "accepted" request keys on a vendor HAL are not
+"honoured" ones, and nothing but the read-back settles it.
 
 The round-trip check is the one that matters: it proves the app's `AtcWriter` output is readable by
 the pipeline's own parser (CRC over `id + payload`, 264 B info block, `<BHHBH` fmt), rather than by
@@ -65,10 +71,20 @@ a reimplementation of it.
 2. Set `study_id` in the field. It auto-increments after each clip.
 3. Torch toggle per the rig: on when the box light alone is not enough. Set it **before** pressing
    REC — it changes the scene, and the exposure settle has to happen after it.
-4. Position the palm about 15 cm above the aperture, inside the yellow ROI box. The lower trace is
-   the live ROI mean; a visible pulse there means the geometry is right. The upper trace is lead I.
-5. Press REC. Two seconds of settle, then exposure / white balance / focus lock, then exactly 60 s
-   of recording with a countdown. It stops itself. Pressing STOP early keeps the short clip.
+4. Pick the lens-to-palm distance in the spinner (default 17 cm; 13/15/17/20/25). This sets the fixed
+   focus plane for the whole session — there is no autofocus at any point, so set it to where the
+   palm actually is. The main lens cannot focus closer than 13 cm; closer than that is blur the lens
+   cannot remove, and 17-20 cm gives both more depth of field and a palm that fills the ROI.
+5. Position the palm over the yellow ROI box. The status line shows `ROI Y` — it must read between
+   40 and 215; `DARK` means the palm is not over the box (every clip before this build was recorded
+   that way and said nothing). The lower trace is the live ROI mean; a pulse there means the geometry
+   is right. The upper trace is lead I.
+6. Press REC. Two seconds of settle with AE metered on the ROI, then the pre-flight (dark/hot ROI,
+   shutter over 12 ms, slow frames, lens off its plane, unlit torch, no pulse) is shown and logged,
+   exposure goes manual (shutter capped at 12 ms, light moved into ISO, one proportional ROI
+   correction) and the settled colour gains are re-sent as manual white balance. Then 60 s of
+   recording with a countdown. During the clip the view on screen is the analysis stream, not the
+   camera preview (the label says so), and the ROI readout keeps running. STOP early keeps the clip.
 6. Files are copied to `Download/SamaPalm/<study_id>_<stamp>/` and the private copy is deleted only
    if every file transferred.
 
@@ -80,8 +96,9 @@ Do not touch the preview, the torch or the phone during the clip.
 <study_id>_<stamp>/
   phone/clip1.mp4                  H.264 1080p30, AAC mono — audio carries the rig buzzer markers
   phone/clip1_frames.csv           CONTRACTS 3.5 exactly: frame_idx,sensor_ts_ns,wall_ns,iso,exposure_ns
-  phone/clip1_meta.json            CONTRACTS 3.5 keys, plus what the ingest cannot infer
-  phone/clip1_ppg_roi.csv          t_ref_ns,y_mean,u_mean,v_mean over the centred ROI
+  phone/clip1_controls.csv         per recorded frame: iso, exposure, focus, lens_state, zoom, colour gains, AF/AE/AWB/tonemap/shading modes, flash
+  phone/clip1_roi.csv              per analysis frame, pre-encoder: Y/U/V and R/G/B means over the centred ROI, clip fraction, 3x3 Y grid
+  phone/clip1_meta.json            CONTRACTS 3.5 keys, plus `controls` (requested vs reported) and the pre-flight verdict
   ecg/kardia_0001.atc              CONTRACTS 3.6 ATC v1, written from the live BLE stream
   ecg/kardia_meta.json             CONTRACTS 3.6 keys
   ecg/kardia_0001_samples.csv      t_ref_ns,sample_idx,lead1_raw,lead2_raw,lead1_mv,lead2_mv
@@ -94,19 +111,20 @@ requires; the offset applied is in `clip1_meta.json` (`boottime_minus_monotonic_
 sensor value is recoverable. Aligning ECG to video is then
 `frames.sensor_ts_ns` against `samples.t_ref_ns`, directly.
 
-`clip1_ppg_roi.csv` is a coarse on-device convenience trace from the `ImageAnalysis` stream
-(subsampled, frames dropped under load — every row is timestamped, so gaps are explicit). It is for
-operator feedback and sync checking. The mp4 is the measurement.
+`clip1_roi.csv` is the measurement's sensor-side record: the same ROI the clip shows, read from the
+camera's YUV stream before the encoder, so there is a series with no H.264 quantisation to compare the
+decoded means against. It is 8-bit sRGB code values as the camera delivered them; the ingest does not
+linearise or flat-field it (`palmppg.ingest.phone_tap`), and writes it as `mean_intensity_tap.parquet`
+*beside* the decoded means, never instead of them. Every row carries the video frames' own
+`SENSOR_TIMESTAMP`, so it joins to `clip1_frames.csv` exactly, dropped frames included.
 
-**On the OnePlus 12 this file is not produced.** Measured: binding Preview + VideoCapture +
-ImageAnalysis together makes CameraX negotiate the encoder down to 720p, even though the camera is
-LEVEL_3 and 1080p is available with two streams. Constraining the preview stream to 720p does not
-recover it, so it is a stream-count limit rather than a resolution budget. Since protocol section 5
-requires 1080p and the ROI trace is only an aid, the app checks the negotiated resolution after
-binding and rebinds without `ImageAnalysis` if the clip would be short of
-`MIN_VIDEO_SHORT_SIDE`. When that happens the status line and `clip1_meta.json`
-(`roi_dropped_reason`) both say so, and `roi_trace_file` is null. Devices that can carry all three
-streams at 1080p keep the trace.
+**Streams on the OnePlus 12.** Measured on 18 Oct: Preview + VideoCapture + ImageAnalysis together make
+CameraX negotiate the encoder to 720p; it is a stream-count limit. The first build kept the preview and
+dropped the ROI tap for the clip — and lost the readout at the one moment it mattered. This build drops
+the *preview* instead: VideoCapture + ImageAnalysis, with the 640x360 analysis frames painted to the
+screen in its place (16:9, so the ROI box is the same patch of palm as in the clip). If even two
+streams negotiate below 1080p the rig rebinds Preview + VideoCapture, `roi_file` is null and
+`roi_trace` in the metadata says why.
 
 ## Known limitations
 
@@ -118,12 +136,16 @@ streams at 1080p keep the trace.
 - Dropped BLE notifications are detected as arrival-time gaps and zero-filled so sample index stays
   proportional to time; the count is in `sync.json` as `missing_samples_zero_filled`. A clip with a
   non-zero count has flat segments in the ECG by construction.
-- The ROI trace is dropped whenever keeping it would cost video resolution (see above) or the
-  three-stream bind fails outright; the clip still records and `roi_trace_file` is then null. On the
-  OnePlus 12 this is the normal path, so plan to position the palm from the preview image rather
-  than from a live pulse trace.
-- Exposure lock falls back from true manual sensor control to `CONTROL_AE_LOCK` on devices without
-  the `MANUAL_SENSOR` capability. `lock_applied` in `clip1_meta.json` says which was used.
+- The ROI tap is dropped only if two streams negotiate below 1080p; `roi_file` is then null and the
+  clip keeps the camera preview. The pre-flight then reports "framing unchecked".
+- Exposure lock falls back from manual sensor control to `CONTROL_AE_LOCK` on devices without the
+  `MANUAL_SENSOR` capability, and white balance from manual gains to `CONTROL_AWB_LOCK` without
+  `MANUAL_POST_PROCESSING`. `lock_applied` / `awb_applied` in `clip1_meta.json` say which was used.
+- If the torch goes out when exposure goes manual (a vendor HAL may tie the LED to AE), the rig
+  reverts to `AE_LOCK` so the torch stays lit; `lock_applied` reads `ae_lock(torch_fallback)`.
+- Focus is a fixed plane, not a sharp image: at f/1.6 and 17 cm the depth of field is about a
+  centimetre, so parts of the palm will be soft. That is intended — a soft palm that never
+  refocuses is a usable clip; a sharp one that refocuses halfway is not.
 - No participant data has been captured with this app. Nothing here is validated against a
   reference clock or a reference ECG.
 
@@ -144,4 +166,24 @@ A 60 s dry run with no ECG connected, scene dark, recording to the app's own exp
 
 The ECG columns of this table are still empty: the KardiaMobile only advertises while its
 electrodes are held, so the BLE path has not been exercised end to end on hardware.
+
+## Build of 2026-10-23: what the ten clips so far showed, and what is verified
+
+Decoded ROI of every exported clip (18 and 22-23 Oct): mean Y 2-11 of 255. The 23 Oct clip is black at
+2 s and 15 s and a soft-focus hand enters at 28 s. The lock itself held — one ISO and one exposure
+across all 1071 frames at 30.01 fps — but AE metered the whole frame, AF was continuous until the lock,
+and the readout was unbound during the clip, so nothing said the palm was not there. This build fixes
+the focus plane, meters the ROI, keeps the readout live and reads every control back. Verified so far:
+
+| check | result |
+|---|---|
+| unit tests | 16 pass (`PalmControls` against the OnePlus 12 main sensor's limits, `AtcWriter`) |
+| camera selection | `bound MONITOR via direct:2 (id 2)` — the main sensor by id, not logical camera 0 |
+| focus | `5.882353D (17.0 cm, clamped=false)` in the first request, no AF |
+| analysis stream | 640x360 (16:9), bound alongside the 1600x1200 preview in MONITOR |
+| **RECORD binding at 1080p with two streams** | **not yet run on hardware** |
+| **torch under `AE_MODE_OFF`, tonemap curve, shading off, `AWB_MODE_OFF` honoured** | **not yet read back** |
+
+The last two rows are what `tools/dry_run.sh` prints. It needs the phone unlocked: on the lockscreen
+Android backgrounds the app and closes the camera, which is where the 23 Oct verification stopped.
 

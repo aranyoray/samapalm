@@ -273,6 +273,14 @@ def ingest_phone(participant_paths: ParticipantPaths, clip_id: str, unit_dir: st
     per_frame = pd.DataFrame({"frame_idx": ft["frame_idx"].to_numpy(), "pts_s": ft["pts_s"].to_numpy(), "t_ref_s": t,
                               "mean_R": means["R"], "mean_G": means["G"], "mean_B": means["B"], "sat_frac": sat})
     per_frame.to_parquet(out_dir / "mean_intensity.parquet", index=False)
+
+    # Optional SamaPalmRecorder files: the pre-encoder ROI tap and the per-frame control log. Additive to the
+    # decoded path above (the frozen features key off the decoded means); absent on the Open Camera route.
+    from palmppg.ingest.phone_tap import ingest_tap_files
+
+    roi_tap = ingest_tap_files(Path(participant_paths.phone_mp4(clip_id)).parent, clip_id, out_dir, frame_times=ft) \
+        if camera == "phone" else None
+
     grid_df = _grid_series(t, {"mean_G": means["G"], "mean_R": means["R"], "mean_B": means["B"]}, grid_fs, nominal_fs, drop_factor)
     grid_df.to_parquet(out_dir / "mean_intensity_grid.parquet", index=False)
 
@@ -309,7 +317,10 @@ def ingest_phone(participant_paths: ParticipantPaths, clip_id: str, unit_dir: st
         "proxy": {"path": str(writer.path), "size": [pw, ph], "n_frames": n},
         "colour_space": "inverted_srgb", "linearised_from_srgb": True,
         "linearisation_note": "compressed phone video cannot be truly linearised (tone curve, denoise, chroma subsampling)",
+        "roi_tap": roi_tap,
         "qc": qc,
     }
+    if roi_tap is not None and roi_tap.get("tap_path"):
+        result["paths"]["mean_intensity_tap"] = roi_tap["tap_path"]
     _json_dump({k: v for k, v in result.items() if k != "qc"}, out_dir / "ingest.json")
     return result

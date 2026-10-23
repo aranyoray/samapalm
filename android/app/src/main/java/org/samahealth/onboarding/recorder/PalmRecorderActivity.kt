@@ -3,8 +3,12 @@
  * clip screen of the onboarding survey. Adapted from palmppg/capture/android/PalmRecorder.kt with a layout built in
  * code (no XML resources) and a result returned to the survey.
  *
- * 1920x1080 / 30 fps / H.264 / AAC audio (the sync beep is in the audio); 2 s auto settle, then AE, AWB and AF locked;
- * OIS and EIS off; scene modes, noise reduction and edge enhancement off; torch only in sequential capture mode.
+ * 1920x1080 / 30 fps / H.264 / AAC audio (the sync beep is in the audio). Focus is fixed at the rig distance from the
+ * first frame (no AF hunt to catch mid-sweep); the main sensor is opened by id so the logical camera cannot hand off to
+ * the ultrawide at palm distance; zoom pinned at 1.0; sRGB tone curve, lens shading and aberration correction off; AE
+ * metered on the palm ROI. 2 s auto settle, then manual exposure (capped at 12 ms, light moved into ISO) and the
+ * settled colour gains re-sent as manual white balance; OIS and EIS off; scene modes, noise reduction and edge
+ * enhancement off; torch only in sequential capture mode. Mirrors palmppg/capture/android/SamaPalmRecorder/CameraRig.kt.
  * Writes <clip>.mp4, <clip>_frames.csv (frame_idx, sensor_ts_ns = SENSOR_TIMESTAMP, wall_ns, iso, exposure_ns) and
  * <clip>_meta.json under Android/data/org.samahealth.onboarding/files/<PID>/. It must pass the bench acceptance
  * (protocol 4.5) before it is used for study clips.
@@ -23,6 +27,13 @@ import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
+import android.hardware.camera2.params.ColorSpaceTransform
+import android.hardware.camera2.params.MeteringRectangle
+import android.hardware.camera2.params.RggbChannelVector
+import android.hardware.camera2.params.TonemapCurve
+import android.graphics.Rect
+import kotlin.math.pow
+import kotlin.math.roundToInt
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.Bundle
@@ -46,6 +57,13 @@ class PalmRecorderActivity : Activity() {
         const val EXTRA_CLIP_ID = "clip_id"
         const val EXTRA_CAPTURE_MODE = "capture_mode"
         const val EXTRA_MP4 = "mp4_path"
+        /** OnePlus 12 main sensor. Logical camera 0 fuses it with the ultrawide and may hand off at palm distance. */
+        const val PREFERRED_PHYSICAL_ID = "2"
+        /** Lens-to-palm distance the rig is built for; sets the fixed focus plane (1/m = diopters). */
+        const val DISTANCE_CM = 17f
+        /** Longest shutter during capture; light lost to the cap is restored as sensitivity. */
+        const val MAX_EXPOSURE_NS = 12_000_000L
+        const val ROI_FRACTION = 0.40f
     }
 
     private val studyId: String get() = intent.getStringExtra(EXTRA_STUDY_ID) ?: "SWHT-PP-003-0000"
@@ -65,7 +83,21 @@ class PalmRecorderActivity : Activity() {
     private var lockedIso = -1
     private var lockedExposureNs = -1L
     private var lockedFocusDistance = -1f
+    private var manualSensor = false
+    private var manualPost = false
+    private var minFocusDiopters = Float.POSITIVE_INFINITY
+    private var isoRange: Range<Int> = Range(100, 6400)
+    private var exposureRange: Range<Long> = Range(100_000L, 100_000_000L)
+    private var activeArray: Rect? = null
+    private var settledGains: RggbChannelVector? = null
+    private var settledTransform: ColorSpaceTransform? = null
+    private var requestedIso = -1
+    private var requestedExposureNs = -1L
+    private var exposureCapped = false
+    private var lockApplied = "none"
+    private var awbApplied = "none"
     private var surfaceReady = false
+    private var backCameraIdUsed = "?"
     private val thread = HandlerThread("camera").apply { start() }
     private val handler = Handler(thread.looper)
 
@@ -90,11 +122,49 @@ class PalmRecorderActivity : Activity() {
         recordButton.setOnClickListener { if (recording) stopRecording(cancelled = false) else startRecording() }
     }
 
+    /** The main sensor by id when the HAL lists it; otherwise the first back camera. */
     private fun backCameraId(): String {
         val cm = getSystemService(CAMERA_SERVICE) as CameraManager
-        return cm.cameraIdList.first { id ->
-            cm.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+        val ids = cm.cameraIdList
+        val id = if (PREFERRED_PHYSICAL_ID in ids) PREFERRED_PHYSICAL_ID else ids.first { candidate ->
+            cm.getCameraCharacteristics(candidate).get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
         }
+        val c = cm.getCameraCharacteristics(id)
+        val caps = c.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
+        manualSensor = caps.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR)
+        manualPost = caps.contains(CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING)
+        minFocusDiopters = c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)?.takeIf { it > 0f } ?: Float.POSITIVE_INFINITY
+        c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)?.let { isoRange = it }
+        c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)?.let { exposureRange = it }
+        activeArray = c.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
+        return id
+    }
+
+    /** Requested focus plane, pinned to the lens's closest focus when the rig distance is inside it. */
+    private fun focusDiopters(): Float = (100f / DISTANCE_CM).coerceAtMost(minFocusDiopters)
+
+    /** Centre-ROI metering rectangle on the active array for the 16:9 field the clip records. */
+    private fun roiMeteringRegion(): MeteringRectangle? {
+        val a = activeArray ?: return null
+        val w = a.width().toFloat()
+        val cropH = minOf(a.height().toFloat(), w * 9f / 16f)
+        val cx = a.left + w / 2f
+        val cy = a.top + a.height() / 2f
+        val half = ROI_FRACTION / 2f
+        val l = (cx - half * w).toInt(); val t = (cy - half * cropH).toInt()
+        return MeteringRectangle(l, t, ((cx + half * w).toInt() - l), ((cy + half * cropH).toInt() - t), MeteringRectangle.METERING_WEIGHT_MAX)
+    }
+
+    /** sRGB OETF at 64 points as Camera2's interleaved (in, out) curve; the ingest inverts exactly this. */
+    private fun srgbCurve(): FloatArray {
+        val n = 64
+        val out = FloatArray(n * 2)
+        for (i in 0 until n) {
+            val x = i.toFloat() / (n - 1)
+            out[2 * i] = x
+            out[2 * i + 1] = if (x <= 0.0031308f) 12.92f * x else (1.055 * x.toDouble().pow(1.0 / 2.4) - 0.055).toFloat()
+        }
+        return out
     }
 
     private fun buildRecorder(): MediaRecorder {
@@ -122,16 +192,58 @@ class PalmRecorderActivity : Activity() {
         b.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF)
         b.set(CaptureRequest.NOISE_REDUCTION_MODE, CameraMetadata.NOISE_REDUCTION_MODE_OFF)
         b.set(CaptureRequest.EDGE_MODE, CameraMetadata.EDGE_MODE_OFF)
-        b.set(CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_FAST)
+        if (manualPost) {
+            val curve = srgbCurve()
+            b.set(CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_CONTRAST_CURVE)
+            b.set(CaptureRequest.TONEMAP_CURVE, TonemapCurve(curve, curve, curve))
+            b.set(CaptureRequest.SHADING_MODE, CameraMetadata.SHADING_MODE_OFF)
+            b.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CameraMetadata.COLOR_CORRECTION_ABERRATION_MODE_OFF)
+        } else {
+            b.set(CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_FAST)
+        }
+        if (Build.VERSION.SDK_INT >= 30) b.set(CaptureRequest.CONTROL_ZOOM_RATIO, 1.0f)
+        roiMeteringRegion()?.let { b.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(it)) }
         b.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(30, 30))
         b.set(CaptureRequest.FLASH_MODE, if (torchOn) CameraMetadata.FLASH_MODE_TORCH else CameraMetadata.FLASH_MODE_OFF)
-        b.set(CaptureRequest.CONTROL_AE_LOCK, lock)
-        b.set(CaptureRequest.CONTROL_AWB_LOCK, lock)
-        if (lock && lockedFocusDistance >= 0f) {
-            b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
-            b.set(CaptureRequest.LENS_FOCUS_DISTANCE, lockedFocusDistance)
+        // Fixed focus from the first frame: nothing to hunt, nothing to catch mid-sweep.
+        b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF)
+        b.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDiopters())
+        if (!lock) {
+            b.set(CaptureRequest.CONTROL_AE_LOCK, false)
+            b.set(CaptureRequest.CONTROL_AWB_LOCK, false)
+            return
+        }
+        // Exposure: manual at the settled value, shutter capped, the lost light moved into gain.
+        if (manualSensor && lockedIso > 0 && lockedExposureNs > 0) {
+            var exp = lockedExposureNs.coerceIn(exposureRange.lower, exposureRange.upper)
+            var iso = lockedIso
+            exposureCapped = exp > MAX_EXPOSURE_NS
+            if (exposureCapped) {
+                iso = (lockedIso * (exp.toDouble() / MAX_EXPOSURE_NS)).roundToInt()
+                exp = MAX_EXPOSURE_NS
+            }
+            iso = iso.coerceIn(isoRange.lower, isoRange.upper)
+            requestedIso = iso; requestedExposureNs = exp
+            b.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
+            b.set(CaptureRequest.SENSOR_SENSITIVITY, iso)
+            b.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exp)
+            b.set(CaptureRequest.SENSOR_FRAME_DURATION, 1_000_000_000L / 30)
+            lockApplied = "manual_sensor" + (if (exposureCapped) "+exposure_capped" else "") + "+af_off_fixed"
         } else {
-            b.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO)
+            b.set(CaptureRequest.CONTROL_AE_LOCK, true)
+            lockApplied = "ae_lock+af_off_fixed"
+        }
+        // White balance: the settled gains and transform re-sent as numbers, so they are known afterwards.
+        val g = settledGains; val t = settledTransform
+        if (manualPost && g != null && t != null) {
+            b.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_OFF)
+            b.set(CaptureRequest.COLOR_CORRECTION_MODE, CameraMetadata.COLOR_CORRECTION_MODE_TRANSFORM_MATRIX)
+            b.set(CaptureRequest.COLOR_CORRECTION_GAINS, g)
+            b.set(CaptureRequest.COLOR_CORRECTION_TRANSFORM, t)
+            awbApplied = "manual_gains_from_settle"
+        } else {
+            b.set(CaptureRequest.CONTROL_AWB_LOCK, true)
+            awbApplied = "awb_lock"
         }
     }
 
@@ -141,7 +253,14 @@ class PalmRecorderActivity : Activity() {
             val iso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: -1
             val exp = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: -1L
             val focus = result.get(CaptureResult.LENS_FOCUS_DISTANCE) ?: -1f
-            if (!recording) { lockedIso = iso; lockedExposureNs = exp; lockedFocusDistance = focus; return }
+            if (!recording) {
+                lockedIso = iso; lockedExposureNs = exp; lockedFocusDistance = focus
+                if (result.get(CaptureResult.CONTROL_AWB_MODE) != CameraMetadata.CONTROL_AWB_MODE_OFF) {
+                    result.get(CaptureResult.COLOR_CORRECTION_GAINS)?.let { settledGains = it }
+                    result.get(CaptureResult.COLOR_CORRECTION_TRANSFORM)?.let { settledTransform = it }
+                }
+                return
+            }
             val wallNs = System.currentTimeMillis() * 1_000_000L
             framesCsv?.write("$frameIdx,$ts,$wallNs,$iso,$exp\n")
             frameIdx += 1
@@ -152,7 +271,8 @@ class PalmRecorderActivity : Activity() {
         if (!surfaceReady) return
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
         val cm = getSystemService(CAMERA_SERVICE) as CameraManager
-        cm.openCamera(backCameraId(), object : CameraDevice.StateCallback() {
+        val id = backCameraId().also { backCameraIdUsed = it }
+        cm.openCamera(id, object : CameraDevice.StateCallback() {
             override fun onOpened(dev: CameraDevice) { camera = dev; configureSession(dev) }
             override fun onDisconnected(dev: CameraDevice) { dev.close(); camera = null }
             override fun onError(dev: CameraDevice, error: Int) { dev.close(); camera = null }
@@ -169,7 +289,6 @@ class PalmRecorderActivity : Activity() {
                 val settle = dev.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
                 surfaces.forEach { settle.addTarget(it) }
                 applyFixedControls(settle, lock = false)
-                settle.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START)
                 s.setRepeatingRequest(settle.build(), frameLogger, handler)
                 handler.postDelayed({ lockAndRecord(dev, s, surfaces) }, 2_000L)
             }
@@ -199,10 +318,27 @@ class PalmRecorderActivity : Activity() {
             .put("resolution", JSONArray(listOf(1920, 1080)))
             .put("fps_nominal", 30)
             .put("bitrate_mbps", 100)
-            .put("iso", lockedIso)
-            .put("exposure_ns", lockedExposureNs)
+            .put("iso", if (requestedIso > 0) requestedIso else lockedIso)
+            .put("exposure_ns", if (requestedExposureNs > 0) requestedExposureNs else lockedExposureNs)
             .put("wb_locked", true)
-            .put("focus_locked", lockedFocusDistance >= 0f)
+            .put("focus_locked", true)
+            // --- beyond CONTRACTS 3.5: what was actually asked of the camera ---
+            .put("lock_applied", lockApplied)
+            .put("awb_applied", awbApplied)
+            .put("camera_id", backCameraIdUsed)
+            .put("focus_distance_cm", DISTANCE_CM)
+            .put("focus_diopters_applied", focusDiopters())
+            .put("focus_diopters_reported_at_lock", lockedFocusDistance)
+            .put("lens_minimum_focus_distance_diopters", if (minFocusDiopters.isFinite()) minFocusDiopters else JSONObject.NULL)
+            .put("exposure_settled_ns", lockedExposureNs)
+            .put("iso_settled", lockedIso)
+            .put("exposure_capped_to_ns", if (exposureCapped) MAX_EXPOSURE_NS else JSONObject.NULL)
+            .put("tonemap", if (manualPost) "CONTRAST_CURVE(sRGB,64pt)" else "FAST")
+            .put("shading_mode", if (manualPost) "OFF" else "device_default")
+            .put("zoom_ratio", 1.0)
+            .put("ae_metered_on_roi", activeArray != null)
+            .put("manual_sensor_supported", manualSensor)
+            .put("manual_post_processing_supported", manualPost)
             .put("stabilisation", false)
             .put("hdr", false)
             .put("torch", if (torchOn) "on" else "off")

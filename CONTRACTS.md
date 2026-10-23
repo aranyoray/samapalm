@@ -104,6 +104,25 @@ Columns: `event_id, kind, pattern, mono_ns, wall_ns, gpio_ok`. `kind` in {`start
   exposure_ns, wb_locked, focus_locked, stabilisation, hdr, torch, capture_mode, start_wall_ns, led_block {x,y,w,h} | null,
   study_id, clip_id`.
 * `phone/clip1_frames.csv` (optional, custom recorder only): `frame_idx, sensor_ts_ns, wall_ns, iso, exposure_ns`.
+* `phone/clip1_controls.csv` (optional, SamaPalmRecorder): `frame_idx, sensor_ts_ns, iso, exposure_ns, focus_diopters,
+  lens_state, zoom_ratio, gain_r, gain_g_even, gain_g_odd, gain_b, awb_mode, ae_mode, af_mode, tonemap_mode, shading_mode,
+  flash_state` — what the camera reported on every recorded frame, same `frame_idx`/`sensor_ts_ns` as `clip1_frames.csv`;
+  Camera2 enum values as integers (AF/AE/AWB `0` = OFF, lens_state `0` = STATIONARY, tonemap `0` = CONTRAST_CURVE,
+  shading `0` = OFF, flash_state `3` = FIRED). A pinned clip has one ISO, one exposure, one focus value and no MOVING frames.
+* `phone/clip1_roi.csv` (optional, SamaPalmRecorder): `roi_idx, sensor_ts_ns_raw, t_ref_ns, n_px, y_mean, u_mean, v_mean,
+  r_mean, g_mean, b_mean, clip_frac, g00 .. g22` — mean colour of the centred 40 % ROI taken from the camera's YUV stream
+  *before* H.264, one row per analysis frame, plus a 3x3 grid of Y means. `sensor_ts_ns_raw` is bit-identical to the video
+  frames' `SENSOR_TIMESTAMP`, so it joins to `clip1_frames.csv`. 8-bit sRGB code values (BT.601 full-range YUV -> RGB on the
+  means); not linearised, not flat-fielded. Read with `palmppg.ingest.phone_tap`; `ingest_phone` writes it alongside the
+  decoded means as `mean_intensity_tap.parquet` and never in their place.
+* `clip1_meta.json` additional keys (SamaPalmRecorder): `lock_applied, awb_applied, distance_cm, controls_file, roi_file,
+  roi_rows, controls {camera_id, camera_selection, focus {distance_cm, requested_diopters, applied_diopters, clamped_to_lens,
+  reported_diopters, af_mode_reported, lens_state_reported}, exposure {settled_ns, settled_iso, requested_ns, requested_iso,
+  capped_to_ns, was_capped, reported_ns, reported_iso, ae_mode_reported}, white_balance {applied, awb_mode_reported,
+  gains_rggb, transform_row_major}, tonemap_mode_reported, shading_mode_reported, aberration_mode_reported,
+  zoom_ratio_reported, flash_state_reported, preflight {ok, warnings, exposure_correction_factor}}`. The onboarding
+  recorder writes the flat subset `lock_applied, awb_applied, camera_id, focus_distance_cm, focus_diopters_applied,
+  focus_diopters_reported_at_lock, exposure_settled_ns, iso_settled, exposure_capped_to_ns, tonemap, shading_mode, zoom_ratio`.
 * Per-frame PTS from ffprobe (`-show_frames -select_streams v:0` -> `pts_time`, `pkt_pts_time` fallback).
 
 ### 3.6 ECG

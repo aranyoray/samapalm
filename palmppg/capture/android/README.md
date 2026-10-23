@@ -17,6 +17,11 @@ Unlike (b) it is built and its ATC output is checked against `palmppg/ecg/atc.py
 (`tools/check_atc_roundtrip.py`). Like (b) it has **not** been through the bench acceptance and has captured no
 participant data.
 
+From 2026-10-23 (D-033) both (b) and (c) fix focus at the rig distance instead of locking an autofocus result, open the
+main sensor by id, meter exposure on the ROI, send an explicit sRGB tone curve with lens shading off, and freeze white
+balance as logged gains; (c) also writes `clip1_controls.csv` and the pre-encoder `clip1_roi.csv` during the clip
+(CONTRACTS 3.5). Verify a build with `SamaPalmRecorder/tools/dry_run.sh` before any pilot use.
+
 Route (b) is now also built into the onboarding app as
 `android/app/src/main/java/org/samahealth/onboarding/recorder/PalmRecorderActivity.kt`, launched from each clip
 screen of the survey and compiled by Gradle in GitHub Actions (see `android/README.md`). `PalmRecorder.kt` in this

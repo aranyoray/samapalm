@@ -15,6 +15,17 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- Shown during the clip, painted from the ROI analysis stream: the camera preview
+             stream is dropped then so the encoder keeps 1080p. -->
+        <ImageView
+            android:id="@+id/softPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#000000"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:contentDescription="Live view during recording" />
+
         <org.swht.palm.RoiOverlay
             android:id="@+id/roi"
             android:layout_width="match_parent"
@@ -59,11 +70,20 @@
             android:importantForAutofill="no"
             android:text="SWHT-PP-003-0001" />
 
+        <!-- Lens-to-palm distance; sets the fixed focus plane. Change it before REC. -->
+        <Spinner
+            android:id="@+id/distance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:minWidth="0dp"
+            android:contentDescription="Palm distance" />
+
         <ToggleButton
             android:id="@+id/btnTorch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:minWidth="0dp"
             android:textSize="12sp"
             android:textOn="TORCH"
@@ -74,7 +94,7 @@
             android:id="@+id/btnRecord"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:text="● REC"
             android:textColor="#FFFFFF"
             android:backgroundTint="#B71C1C" />
