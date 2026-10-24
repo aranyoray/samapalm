@@ -17,6 +17,8 @@
     <application
         android:name=".App"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:label="SamaHealth Onboarding"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -35,5 +37,28 @@
             android:name=".recorder.PalmRecorderActivity"
             android:exported="false"
             android:screenOrientation="landscape" />
+
+        <!-- "Share" in the Kardia app lands here, to be attached to an open scan record -->
+        <activity
+            android:name=".ecg.EcgShareActivity"
+            android:exported="true"
+            android:label="Attach to SamaHealth visit">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

@@ -1,6 +1,7 @@
 package org.samahealth.onboarding.ui
 
 import android.app.Activity
+import android.view.WindowManager
 import android.app.Application
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -61,6 +63,14 @@ import org.samahealth.crf.num
 import org.samahealth.crf.str
 import org.samahealth.crf.valueEquals
 import org.samahealth.onboarding.container
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.samahealth.onboarding.quality.QualityRunner
+import org.samahealth.onboarding.quality.toJson
+import org.samahealth.onboarding.ecg.ParticipantSummary
 import org.samahealth.onboarding.recorder.PalmRecorderActivity
 import java.time.LocalDate
 
@@ -76,6 +86,14 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit) {
     LaunchedEffect(done) { if (done) onExit() }
     val s = ui ?: run { Text("Loading...", Modifier.padding(24.dp)); return }
     val readOnly = s.status != "draft"
+
+    // the scan part runs the camera and the Kardia: the screen must not lock part way through a clip
+    val ctx = LocalContext.current
+    DisposableEffect(s.part) {
+        val window = (ctx as? android.app.Activity)?.window
+        if (s.part == "scan") window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -98,7 +116,7 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit) {
                 OutlinedButton(onClick = vm::reopen) { Text("Re-open for correction") }
             }
             for (q in s.questions) {
-                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid)
+                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid)
             }
             if (s.screenId == "review") ReviewSummary(s, vm)
         }
@@ -140,7 +158,7 @@ private fun ReviewSummary(s: SurveyUi, vm: SurveyViewModel) {
 }
 
 @Composable
-private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?) {
+private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?, visitUuid: String) {
     val err = if (showErrors) q.errors.firstOrNull()?.message else null
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (q.type != "info") {
@@ -165,7 +183,7 @@ private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean,
             "multi" -> MultiChoice(q, vm.engine, readOnly, set)
             "mst" -> MstPicker(q, readOnly, set)
             "bp" -> BpInput(q, readOnly, set)
-            "clip" -> ClipInput(q, readOnly, pid, set)
+            "clip" -> ClipInput(q, readOnly, pid, visitUuid, vm.engine, set)
             "computed" -> Text(formatDerived(q.id, q.derived, restSeconds), style = MaterialTheme.typography.bodyLarge)
         }
         q.warning?.let { Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall) }
@@ -301,21 +319,73 @@ private fun BpInput(q: QuestionUi, readOnly: Boolean, set: (JsonElement?) -> Uni
 }
 
 @Composable
-private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (JsonElement?) -> Unit) {
+private fun ClipInput(
+    q: QuestionUi,
+    readOnly: Boolean,
+    pid: String?,
+    visitUuid: String,
+    engine: CrfEngine,
+    set: (JsonElement?) -> Unit,
+) {
     val ctx = LocalContext.current
+    val c = ctx.container
+    val scope = rememberCoroutineScope()
     val o = (q.value as? JsonObject) ?: JsonObject(emptyMap())
-    fun put(k: String, v: JsonElement) = set(JsonObject(o + (k to v)))
+    val latest = rememberUpdatedState(o)
+    fun put(k: String, v: JsonElement) = set(JsonObject(latest.value + (k to v)))
+    var grading by remember(q.id) { mutableStateOf(false) }
+    var notes by remember(q.id) { mutableStateOf<List<String>>(emptyList()) }
+    val clipSeconds = if (c.prefs.clipPlan == "2x30") 30.0 else 60.0
+
+    /** Runs both grades for this clip and folds them into the clip record. */
+    fun grade(reason: String) {
+        val id = pid ?: return
+        scope.launch {
+            grading = true
+            val g = try {
+                QualityRunner.gradeClip(ctx, id, q.id, clipSeconds)
+            } catch (e: Exception) {
+                notes = listOf("The quality check could not run: ${e.message}")
+                grading = false
+                return@launch
+            }
+            var next: Map<String, JsonElement> = latest.value
+            g.video?.let {
+                next = next + ("video_grade" to JsonPrimitive(it.level)) +
+                    ("video_reasons" to JsonArray(it.reasons.map { r -> JsonPrimitive(r) })) +
+                    ("video_metrics" to (it.toJson()["metrics"] ?: JsonObject(emptyMap())))
+            }
+            g.ecg?.let {
+                next = next + ("ecg_grade" to JsonPrimitive(it.level)) +
+                    ("ecg_reasons" to JsonArray(it.reasons.map { r -> JsonPrimitive(r) })) +
+                    ("ecg_metrics" to (it.toJson()["metrics"] ?: JsonObject(emptyMap())))
+            }
+            g.source?.let { next = next + ("ecg_source" to JsonPrimitive(it)) }
+            g.ecgFile?.let { next = next + ("ecg_file" to JsonPrimitive(QualityRunner.appFile(ctx, it).absolutePath)) }
+            g.rhythm?.let { r ->
+                next = next + ("rhythm_sentences" to JsonArray(r.sentences.map { sline -> JsonPrimitive(sline) }))
+            }
+            // the grades pre-fill the operator's decision; the operator can still change it
+            val bad = g.video?.level == "retake" || g.ecg?.level == "retake" ||
+                bool(latest.value["phone_interrupted"]) == true
+            next = next + ("quality" to JsonPrimitive(if (bad) "fail" else "pass"))
+            set(JsonObject(next))
+            notes = g.notes + if (reason.isEmpty()) emptyList() else listOf(reason)
+            grading = false
+        }
+    }
+
     val recorder = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
         if (r.resultCode == Activity.RESULT_OK) {
             val path = r.data?.getStringExtra(PalmRecorderActivity.EXTRA_MP4) ?: return@rememberLauncherForActivityResult
             val samples = r.data?.getIntExtra(PalmRecorderActivity.EXTRA_ECG_SAMPLES, 0) ?: 0
             val seconds = r.data?.getDoubleExtra(PalmRecorderActivity.EXTRA_ECG_SECONDS, 0.0) ?: 0.0
             // the recorder captures the Kardia itself, so this is measured rather than self-reported
-            var next = o + ("phone_file" to JsonPrimitive(path)) + ("ecg_samples" to JsonPrimitive(samples))
+            var next = latest.value + ("phone_file" to JsonPrimitive(path)) + ("ecg_samples" to JsonPrimitive(samples))
             if (samples > 0) {
                 next = next + ("kardia_on" to JsonPrimitive(true)) + ("ecg_seconds" to JsonPrimitive(seconds))
             }
-            // the recorder now reports when the clip rolled and stopped, and whether it stopped early
+            // the recorder reports when the clip rolled and stopped, and whether it stopped early
             r.data?.getStringExtra(PalmRecorderActivity.EXTRA_STARTED_AT)?.let { next = next + ("started_at" to JsonPrimitive(it)) }
             r.data?.getStringExtra(PalmRecorderActivity.EXTRA_ENDED_AT)?.let { next = next + ("ended_at" to JsonPrimitive(it)) }
             val dur = r.data?.getDoubleExtra(PalmRecorderActivity.EXTRA_DURATION_S, -1.0) ?: -1.0
@@ -324,8 +394,35 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
             next = next + ("phone_interrupted" to JsonPrimitive(interrupted))
             if (interrupted) next = next + ("quality" to JsonPrimitive("fail"))
             set(JsonObject(next))
+            grade("")
         }
     }
+
+    val importEcg = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val id = pid
+        if (uri == null || id == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            grading = true
+            try {
+                withContext(Dispatchers.IO) { QualityRunner.importEcg(ctx, uri, id, q.id) }
+                grading = false
+                grade("Kardia recording imported.")
+            } catch (e: Exception) {
+                notes = listOf("The Kardia file could not be imported: ${e.message}")
+                grading = false
+            }
+        }
+    }
+
+    // files shared in from the Kardia app land in the inbox; the survey is the only writer of the answers
+    val inbox by remember(visitUuid) { c.repo.observeEcgInbox(visitUuid) }.collectAsState(initial = emptyList())
+    LaunchedEffect(inbox, q.id) {
+        val mine = inbox.filter { it.clipId == q.id }
+        if (mine.isEmpty()) return@LaunchedEffect
+        mine.forEach { c.repo.consumeEcgInbox(it.id) }
+        grade("Kardia recording attached from the Kardia app.")
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Button(enabled = !readOnly && o["started_at"] == null, onClick = { put("started_at", SurveyNavigator.nowIso()) }) { Text("Clip started") }
@@ -345,6 +442,57 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
                 Text(label)
             }
         }
+
+        if (!readOnly) {
+            OutlinedButton(enabled = pid != null, onClick = {
+                recorder.launch(Intent(ctx, PalmRecorderActivity::class.java)
+                    .putExtra(PalmRecorderActivity.EXTRA_STUDY_ID, pid)
+                    .putExtra(PalmRecorderActivity.EXTRA_CLIP_ID, q.id)
+                    .putExtra(PalmRecorderActivity.EXTRA_CAPTURE_MODE, c.prefs.captureMode)
+                    .putExtra(PalmRecorderActivity.EXTRA_SECONDS, clipSeconds.toInt()))
+            }) { Text("Record phone clip on this device") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(enabled = pid != null, onClick = {
+                    importEcg.launch(arrayOf("application/pdf", "application/octet-stream", "*/*"))
+                }) { Text("Import Kardia ECG") }
+                OutlinedButton(enabled = pid != null && !grading, onClick = { grade("") }) { Text("Re-check quality") }
+            }
+        }
+        str(o["phone_file"])?.let { Text("Phone clip: $it", style = MaterialTheme.typography.bodySmall) }
+        if (bool(o["phone_interrupted"]) == true) {
+            Text("Recording stopped early (${num(o["phone_duration_s"])?.let { "%.0f s".format(it) } ?: "?"}): re-shoot this clip.",
+                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+
+        if (grading) Text("Checking the recording…", style = MaterialTheme.typography.bodySmall)
+        GradeLine("Palm video", str(o["video_grade"]), o["video_reasons"])
+        GradeLine("ECG", str(o["ecg_grade"]), o["ecg_reasons"])
+        for (n in notes) Text(n, style = MaterialTheme.typography.bodySmall)
+
+        Text("What the Kardia app showed")
+        val kardiaChoices = remember { engine.choices(JsonObject(mapOf("choices" to JsonPrimitive("kardia")))) }
+        for ((value, label) in kardiaChoices) {
+            Row(Modifier.fillMaxWidth().clickable(enabled = !readOnly) { put("kardia_determination", JsonPrimitive(value)) },
+                verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = str(o["kardia_determination"]) == value, enabled = !readOnly,
+                    onClick = { put("kardia_determination", JsonPrimitive(value)) })
+                Text(label)
+            }
+        }
+        var kardiaHr by remember(q.id) { mutableStateOf(num(o["kardia_hr"])?.let { "%.0f".format(it) } ?: "") }
+        OutlinedTextField(
+            value = kardiaHr,
+            onValueChange = { t ->
+                kardiaHr = t.filter { ch -> ch.isDigit() }
+                val n = kardiaHr.toIntOrNull()
+                if (n == null) set(JsonObject(latest.value - "kardia_hr")) else put("kardia_hr", JsonPrimitive(n))
+            },
+            label = { Text("Heart rate shown by the Kardia app (bpm)") },
+            singleLine = true, enabled = !readOnly,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
         Text("Live quality check")
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             for ((v, label) in listOf("pass" to "Pass", "fail" to "Fail (re-shoot once)")) {
@@ -354,25 +502,45 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
                 }
             }
         }
-        var notes by remember(q.id) { mutableStateOf(str(o["notes"]) ?: "") }
-        OutlinedTextField(value = notes, onValueChange = { notes = it; put("notes", JsonPrimitive(it)) }, label = { Text("Notes") },
+        var clipNotes by remember(q.id) { mutableStateOf(str(o["notes"]) ?: "") }
+        OutlinedTextField(value = clipNotes, onValueChange = { clipNotes = it; put("notes", JsonPrimitive(it)) }, label = { Text("Notes") },
             enabled = !readOnly, modifier = Modifier.fillMaxWidth())
-        if (!readOnly) {
-            OutlinedButton(enabled = pid != null, onClick = {
-                recorder.launch(Intent(ctx, PalmRecorderActivity::class.java)
-                    .putExtra(PalmRecorderActivity.EXTRA_STUDY_ID, pid)
-                    .putExtra(PalmRecorderActivity.EXTRA_CLIP_ID, q.id)
-                    .putExtra(PalmRecorderActivity.EXTRA_CAPTURE_MODE, ctx.container.prefs.captureMode)
-                    .putExtra(PalmRecorderActivity.EXTRA_SECONDS, if (ctx.container.prefs.clipPlan == "2x30") 30 else 60))
-            }) { Text("Record phone clip on this device (optional)") }
-        }
-        str(o["phone_file"])?.let { Text("Phone clip: $it", style = MaterialTheme.typography.bodySmall) }
-        if (bool(o["phone_interrupted"]) == true) {
-            Text("Recording stopped early (${num(o["phone_duration_s"])?.let { "%.0f s".format(it) } ?: "?"}): re-shoot this clip.",
-                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+
+        if (pid != null && (o["ecg_grade"] != null || o["kardia_determination"] != null)) {
+            OutlinedButton(onClick = {
+                scope.launch {
+                    try {
+                        val f = withContext(Dispatchers.IO) {
+                            ParticipantSummary.write(ctx, pid, latest.value, clinicianReviewed = false)
+                        }
+                        ctx.startActivity(Intent.createChooser(ParticipantSummary.shareIntent(ctx, f), "Share the summary"))
+                    } catch (e: Exception) {
+                        notes = listOf("The summary could not be made: ${e.message}")
+                    }
+                }
+            }) { Text("ECG summary for participant") }
         }
         Spacer(Modifier.height(4.dp))
     }
+}
+
+/** One grade line with its plain-English reasons. */
+@Composable
+private fun GradeLine(what: String, level: String?, reasons: JsonElement?) {
+    if (level == null) return
+    val words = when (level) {
+        "good" -> "Good"
+        "borderline" -> "Borderline"
+        "retake" -> "Retake"
+        else -> level
+    }
+    val colour = when (level) {
+        "retake" -> MaterialTheme.colorScheme.error
+        "borderline" -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    Text("$what: $words", color = colour, style = MaterialTheme.typography.bodyMedium)
+    (reasons as? JsonArray)?.forEach { r -> str(r)?.let { Text("· $it", style = MaterialTheme.typography.bodySmall) } }
 }
 
 private fun formatDerived(id: String, v: JsonElement?, restSeconds: Int): String {

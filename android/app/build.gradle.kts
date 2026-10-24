@@ -57,5 +57,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.security.crypto)
-    testImplementation("junit:junit:4.13.2")   // PalmControlsTest: the camera-control arithmetic, JVM only
+    testImplementation("junit:junit:4.13.2")   // JVM-only logic: camera controls, YUV maths, the participant page
+    testImplementation(kotlin("test-junit"))
+    testImplementation("org.xerial:sqlite-jdbc:3.46.1.3")   // runs the Room migration SQL on a throwaway database
 }

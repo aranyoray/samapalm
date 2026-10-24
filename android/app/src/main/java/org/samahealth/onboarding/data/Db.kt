@@ -136,38 +136,37 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         /**
-         * v1 -> v2: the visits table is rebuilt with the part columns (existing rows become the legacy part
-         * "full"), the identity table goes away with the names it held, and the ECG inbox is added. Phones may
-         * still hold un-uploaded v1 rows, so nothing is dropped from them.
+         * v1 -> v2, as plain SQL so it can be run against a throwaway database in a test: the visits table is
+         * rebuilt with the part columns (existing rows become the legacy part "full"), the identity table goes
+         * away with the names it held, and the ECG inbox is added. Phones may still hold un-uploaded v1 rows,
+         * so every column of those rows is carried across.
          */
+        val MIGRATION_1_2_SQL: List<String> = listOf(
+            """CREATE TABLE visits_new (
+                visitUuid TEXT NOT NULL PRIMARY KEY, pid TEXT, part TEXT NOT NULL,
+                answersJson TEXT NOT NULL, screenLogJson TEXT NOT NULL, currentScreen TEXT NOT NULL,
+                settingsJson TEXT NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL,
+                updatedAt TEXT NOT NULL, submittedAt TEXT, screenFailReason TEXT, crfJson TEXT,
+                syncState TEXT NOT NULL, syncError TEXT, serverAccepted INTEGER NOT NULL,
+                everSubmitted INTEGER NOT NULL)""",
+            """INSERT INTO visits_new SELECT visitUuid, pid, 'full', answersJson, screenLogJson,
+                currentScreen, '{}', status, createdAt, updatedAt, submittedAt, screenFailReason, crfJson,
+                syncState, syncError,
+                CASE WHEN syncState = 'synced' THEN 1 ELSE 0 END,
+                CASE WHEN status != 'draft' OR submittedAt IS NOT NULL THEN 1 ELSE 0 END
+               FROM visits""",
+            "DROP TABLE visits",
+            "ALTER TABLE visits_new RENAME TO visits",
+            "DROP TABLE IF EXISTS identity",
+            """CREATE TABLE IF NOT EXISTS ecg_inbox (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, visitUuid TEXT NOT NULL,
+                clipId TEXT NOT NULL, relPath TEXT NOT NULL, createdAt TEXT NOT NULL,
+                consumed INTEGER NOT NULL)""",
+        )
+
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    """CREATE TABLE visits_new (
-                        visitUuid TEXT NOT NULL PRIMARY KEY, pid TEXT, part TEXT NOT NULL,
-                        answersJson TEXT NOT NULL, screenLogJson TEXT NOT NULL, currentScreen TEXT NOT NULL,
-                        settingsJson TEXT NOT NULL, status TEXT NOT NULL, createdAt TEXT NOT NULL,
-                        updatedAt TEXT NOT NULL, submittedAt TEXT, screenFailReason TEXT, crfJson TEXT,
-                        syncState TEXT NOT NULL, syncError TEXT, serverAccepted INTEGER NOT NULL,
-                        everSubmitted INTEGER NOT NULL)""",
-                )
-                db.execSQL(
-                    """INSERT INTO visits_new SELECT visitUuid, pid, 'full', answersJson, screenLogJson,
-                        currentScreen, '{}', status, createdAt, updatedAt, submittedAt, screenFailReason, crfJson,
-                        syncState, syncError,
-                        CASE WHEN syncState = 'synced' THEN 1 ELSE 0 END,
-                        CASE WHEN status != 'draft' OR submittedAt IS NOT NULL THEN 1 ELSE 0 END
-                       FROM visits""",
-                )
-                db.execSQL("DROP TABLE visits")
-                db.execSQL("ALTER TABLE visits_new RENAME TO visits")
-                db.execSQL("DROP TABLE IF EXISTS identity")
-                db.execSQL(
-                    """CREATE TABLE IF NOT EXISTS ecg_inbox (
-                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, visitUuid TEXT NOT NULL,
-                        clipId TEXT NOT NULL, relPath TEXT NOT NULL, createdAt TEXT NOT NULL,
-                        consumed INTEGER NOT NULL)""",
-                )
+                MIGRATION_1_2_SQL.forEach { db.execSQL(it) }
             }
         }
 

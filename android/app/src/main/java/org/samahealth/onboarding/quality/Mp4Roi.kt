@@ -35,7 +35,7 @@ object Yuv {
 }
 
 /** One frame's ROI means, accumulated pixel by pixel. */
-internal class FrameStats {
+class FrameStats {
     var n = 0
     var sy = 0.0
     var sr = 0.0
