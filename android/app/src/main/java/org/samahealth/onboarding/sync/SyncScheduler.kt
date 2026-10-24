@@ -20,7 +20,8 @@ object SyncScheduler {
             .setConstraints(online)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork("sync-now", ExistingWorkPolicy.REPLACE, req)
+        // KEEP, not REPLACE: a submission while an upload runs must not cancel it mid-flight
+        WorkManager.getInstance(context).enqueueUniqueWork("sync-now", ExistingWorkPolicy.KEEP, req)
     }
 
     fun schedulePeriodic(context: Context) {

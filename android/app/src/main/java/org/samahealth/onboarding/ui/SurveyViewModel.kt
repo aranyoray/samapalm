@@ -23,6 +23,7 @@ import org.samahealth.crf.SurveyNavigator
 import org.samahealth.crf.bool
 import org.samahealth.crf.str
 import org.samahealth.onboarding.container
+import org.samahealth.onboarding.data.VisitEntity
 import org.samahealth.onboarding.sync.SyncScheduler
 
 data class QuestionUi(
@@ -56,15 +57,24 @@ data class SurveyUi(
     val message: String?,
     val restSeconds: Int,
     val pid: String?,
+    val pidLocked: Boolean,
+    val part: String,
 )
 
 /** Holds one participant's survey: the shared engine, the navigator, autosave, PID checks and submission. */
 class SurveyViewModel(app: Application, private val visitUuid: String) : ViewModel() {
     private val c = app.container
-    val engine: CrfEngine = c.engine()
 
-    /** Which record this visit is: the engine's part, or "full" for a legacy single-record visit. */
-    val part: String = str(engine.settings["part"]) ?: "enrol"
+    /** Built from the snapshot the record was created with, so a visit always re-opens on the flow it started on. */
+    lateinit var engine: CrfEngine
+        private set
+
+    /** Which record this is: "enrol", "scan", or "full" for a legacy v1 row. */
+    var part: String = VisitEntity.PART_ENROL
+        private set
+
+    /** The server has the row: the PID is settled and the operator may no longer change it. */
+    private var pidLocked = false
     private var nav: SurveyNavigator? = null
     private var showErrors = false
     private var message: String? = null
@@ -82,7 +92,13 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
     init {
         viewModelScope.launch {
             val v = c.repo.visit(visitUuid)
+            part = v?.part ?: VisitEntity.PART_ENROL
+            pidLocked = v?.serverAccepted == true
             val saved = c.repo.loadAnswers(visitUuid)
+            engine = withContext(Dispatchers.Default) {
+                val snap = c.repo.settingsOf(visitUuid)
+                CrfEngine.fromJson(c.schemaText, snap.ifEmpty { c.prefs.engineSettings(part) })
+            }
             val n = SurveyNavigator(engine, if (saved.isEmpty()) engine.initialAnswers() else saved)
             if (v != null && saved.isNotEmpty()) {
                 n.resume(v.currentScreen, SurveyNavigator.parseLog(CrfJson.parseToJsonElement(v.screenLogJson)))
@@ -91,7 +107,7 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
             nav = n
             refresh()
             launch(Dispatchers.IO) {
-                pendingDraft.filterNotNull().collect { d -> c.repo.saveDraft(visitUuid, engine, d.answers, d.log, d.screen) }
+                pendingDraft.filterNotNull().collect { d -> c.repo.saveDraft(visitUuid, d.answers, d.log, d.screen) }
             }
             ticker = viewModelScope.launch {
                 while (isActive) { delay(1000); if (_ui.value?.questions?.any { it.type == "computed" } == true) refresh() }
@@ -117,6 +133,7 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
             submissionStatus = n.submissionStatus(), errorCountByScreen = ev.errors.groupingBy { it.screen }.eachCount(),
             screenTitles = vis.map { it to (str(engine.screens[it]!!["title"]) ?: it) }, warnings = ev.warnings, status = status,
             message = message, restSeconds = c.prefs.restSeconds, pid = str(n.answers["study_id"]),
+            pidLocked = pidLocked, part = part,
         )
     }
 
@@ -127,6 +144,10 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
 
     fun set(id: String, value: JsonElement?) {
         if (status != "draft") return
+        if (id == "study_id" && pidLocked) {
+            message = "The server already has this record, so the PID can no longer be changed."
+            refresh(); return
+        }
         nav?.set(id, value)
         message = null
         refresh(); save()
@@ -134,13 +155,14 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
 
     fun next() {
         val n = nav ?: return
-        if (n.current == "enrolment") {
+        // the screen that carries the PID: in v2 the two parts share one, so only the same part may clash
+        if (engine.questions["study_id"]?.first == n.current) {
             val pid = str(n.answers["study_id"])
             if (pid != null) {
                 viewModelScope.launch {
-                    val clash = withContext(Dispatchers.IO) { c.repo.pidUsedLocally(pid, visitUuid) }
+                    val clash = withContext(Dispatchers.IO) { c.repo.pidUsedLocally(pid, part, visitUuid) }
                     if (clash) {
-                        message = "PID $pid is already used by another participant on this tablet."
+                        message = "PID $pid already has a $part record on this tablet."
                         showErrors = true; refresh()
                     } else {
                         advance(n)
@@ -196,7 +218,7 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
         val reason = if (st == "screen_fail") n.stopped()?.message else null
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                c.repo.saveDraft(visitUuid, engine, n.answers, n.screenLogJson(), n.current)
+                c.repo.saveDraft(visitUuid, n.answers, n.screenLogJson(), n.current)
                 c.repo.submit(visitUuid, st, ex.crf, reason)
             }
             SyncScheduler.syncNow(c.context)
@@ -212,10 +234,16 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
         }
     }
 
+    /** Only a draft that was never submitted goes; anything else stays so an uploaded record cannot vanish. */
     fun discardDraft() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { c.repo.deleteDraft(visitUuid) }
-            _done.value = true
+            val gone = withContext(Dispatchers.IO) { c.repo.deleteDraft(visitUuid) }
+            if (gone) {
+                _done.value = true
+            } else {
+                message = "This record was already submitted, so it cannot be discarded."
+                refresh()
+            }
         }
     }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.samahealth.onboarding.container
+import org.samahealth.onboarding.data.Prefs
 
 /** Per-tablet configuration, entered once by the study admin. */
 @Composable
@@ -40,7 +41,7 @@ fun SettingsScreen(onDone: () -> Unit) {
     var rest by remember { mutableStateOf(p.restSeconds.toString()) }
     var stream by remember { mutableStateOf(p.defaultStream) }
     var mode by remember { mutableStateOf(p.captureMode) }
-    var purge by remember { mutableStateOf(p.purgeIdentityAfterUpload) }
+    var station by remember { mutableStateOf(p.station) }
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -69,7 +70,16 @@ fun SettingsScreen(onDone: () -> Unit) {
         for (v in listOf("simultaneous", "sequential")) {
             Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(mode == v, { mode = v }); Text(v) }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(purge, { purge = it }); Text("Remove names from this tablet after upload") }
+        Text("Station on this phone")
+        for ((v, label) in listOf(
+            Prefs.STATION_ENROL to "Enrol and history only",
+            Prefs.STATION_SCAN to "Scan only",
+            Prefs.STATION_BOTH to "Both on this phone",
+        )) {
+            Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(station == v, { station = v }); Text(label) }
+        }
+        Text("The station chooses which tab opens first, and whether this phone hands out new PIDs.",
+            style = MaterialTheme.typography.bodySmall)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Button(onClick = {
             val s = start.toIntOrNull()
@@ -86,7 +96,7 @@ fun SettingsScreen(onDone: () -> Unit) {
             if (error == null) {
                 p.supabaseUrl = url; p.supabaseAnonKey = key; p.deviceCode = device; p.unitId = unit
                 p.pidBlockStart = s!!; p.pidBlockEnd = e!!; p.clipPlan = plan; p.restSeconds = r!!
-                p.defaultStream = stream; p.captureMode = mode; p.purgeIdentityAfterUpload = purge
+                p.defaultStream = stream; p.captureMode = mode; p.station = station
                 onDone()
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Save") }

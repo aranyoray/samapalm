@@ -34,9 +34,13 @@ class Prefs(context: Context) {
     var restSeconds: Int get() = sp.getInt("rest_seconds", 300); set(v) = sp.edit().putInt("rest_seconds", v).apply()
     var defaultStream: String get() = s("stream") ?: "pilot"; set(v) = put("stream", v)
     var captureMode: String get() = s("capture_mode") ?: "simultaneous"; set(v) = put("capture_mode", v)
-    var purgeIdentityAfterUpload: Boolean
-        get() = sp.getBoolean("purge_identity", true)
-        set(v) = sp.edit().putBoolean("purge_identity", v).apply()
+    /** Which station this phone is on: "enrol", "scan" or "both" (which tab opens first, and who may take a PID). */
+    var station: String get() = s("station") ?: STATION_BOTH; set(v) = put("station", v)
+
+    /** Set when the server refused the sign-in, so the UI can show a "Sign in again" banner instead of retrying. */
+    var signInRequired: Boolean
+        get() = sp.getBoolean("sign_in_required", false)
+        set(v) = sp.edit().putBoolean("sign_in_required", v).apply()
 
     var operatorCode: String? get() = s("operator_code"); set(v) = put("operator_code", v)
     var operatorRole: String? get() = s("operator_role"); set(v) = put("operator_role", v)
@@ -60,11 +64,20 @@ class Prefs(context: Context) {
     val isConfigured: Boolean get() = !supabaseUrl.isNullOrBlank() && !supabaseAnonKey.isNullOrBlank()
 
     /** Settings the survey engine reads (`settings_defaults` overrides in configs/crf_schema.json). */
-    fun engineSettings(): Map<String, JsonElement> = mapOf(
+    fun engineSettings(part: String = PART_ENROL): Map<String, JsonElement> = mapOf(
+        "part" to JsonPrimitive(part),
         "clip_plan" to JsonPrimitive(clipPlan),
         "rest_seconds" to JsonPrimitive(restSeconds),
         "stream" to JsonPrimitive(defaultStream),
         "unit_id" to JsonPrimitive(unitId),
         "capture_mode" to JsonPrimitive(captureMode),
     )
+
+    companion object {
+        const val STATION_ENROL = "enrol"
+        const val STATION_SCAN = "scan"
+        const val STATION_BOTH = "both"
+        const val PART_ENROL = "enrol"
+        const val PART_SCAN = "scan"
+    }
 }

@@ -35,12 +35,14 @@ android {
 
 val copyCrfSchema by tasks.registering(Copy::class) {
     from(rootProject.layout.projectDirectory.file("../configs/crf_schema.json"))
+    from(rootProject.layout.projectDirectory.file("../configs/recruitment_targets.json"))
     into(layout.buildDirectory.dir("generated/crfAssets"))
 }
 tasks.named("preBuild") { dependsOn(copyCrfSchema) }
 
 dependencies {
     implementation(project(":crf-core"))
+    implementation(project(":quality-core"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

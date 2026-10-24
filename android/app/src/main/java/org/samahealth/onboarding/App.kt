@@ -20,7 +20,13 @@ class AppContainer(val context: Context) {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "dev" } catch (e: Exception) { "dev" }
     }
 
-    fun engine(): CrfEngine = CrfEngine.fromJson(schemaText, prefs.engineSettings())
+    /** The engine for a new record of [part]; an open visit rebuilds its own from the snapshot it was created with. */
+    fun engine(part: String = Prefs.PART_ENROL): CrfEngine = CrfEngine.fromJson(schemaText, prefs.engineSettings(part))
+
+    /** Recruitment targets bundled with the app; the server copy wins when it has been fetched. */
+    val targetsText: String by lazy {
+        context.assets.open("recruitment_targets.json").bufferedReader().use { it.readText() }
+    }
 
     fun client(): SupabaseClient? {
         val url = prefs.supabaseUrl
