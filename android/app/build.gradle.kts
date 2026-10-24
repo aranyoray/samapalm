@@ -36,6 +36,10 @@ android {
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
     // The survey schema is the repository's configs/crf_schema.json, copied into the APK assets at build time.
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/crfAssets"))
 }
@@ -69,4 +73,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")   // JVM-only logic: camera controls, YUV maths, the participant page
     testImplementation(kotlin("test-junit"))
     testImplementation("org.xerial:sqlite-jdbc:3.46.1.3")   // runs the Room migration SQL on a throwaway database
+    testImplementation("org.robolectric:robolectric:4.14.1")   // opens the real Room database to check the migration
+    testImplementation("androidx.test:core:1.6.1")
 }
