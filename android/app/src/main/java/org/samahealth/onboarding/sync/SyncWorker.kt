@@ -58,7 +58,8 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val crf = v.crfJson?.let { CrfJson.parseToJsonElement(it).jsonObject } ?: return SyncResult.Rejected(0, "no frozen CRF")
         val pid = v.pid ?: str(crf["study_id"]) ?: return SyncResult.Rejected(0, "no PID")
         val payload = VisitPayload(
-            visitUuid = v.visitUuid, pid = pid, status = v.status, crf = crf,
+            // v1 rows carry no part; the server treats "full" as a single legacy record
+            visitUuid = v.visitUuid, pid = pid, part = str(crf["part"]) ?: "full", status = v.status, crf = crf,
             schemaVersion = str(crf["schema_version"]) ?: "unknown", appVer = str(crf["app_ver"]) ?: c.appVersion,
             deviceCode = str(crf["device_code"]) ?: c.prefs.deviceCode,
             operatorCode = str(crf["operator"]) ?: c.prefs.operatorCode ?: "unknown", stream = str(crf["stream"]), createdAt = v.createdAt,

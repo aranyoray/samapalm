@@ -9,7 +9,7 @@ import pytest
 
 from palmppg.capture.crf_pull import CONTEXT as CONTEXT_KEYS
 from palmppg.capture.crf_pull import PullError, pull
-from palmppg.core.crf import validate_crf
+from palmppg.core.crf import covariate_columns, derive, validate_crf
 
 ROOT = Path(__file__).resolve().parents[1]
 # a v1 single-visit export (schema 2026-10-20.1, part 'full'), as v1 phones uploaded it
@@ -72,6 +72,13 @@ def server():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{srv.server_port}", state
     srv.shutdown()
+
+
+# v1-only columns, and v2 follow-ups that only exist when the matching condition is ticked
+V1_ONLY = ("arr_type", "haem_type", "antihtn_today", "handedness", "hdp_status", "urine_protein", "arr_status")
+V2_OPTIONAL = ("dm_type", "dm_treatment", "on_insulin", "on_dialysis", "htn_meds", "htn_meds_today", "af_pattern",
+               "anticoagulant", "arrhythmia_type", "cardiac_device", "thal_type", "thal_transfusions",
+               "iron_therapy", "hplc_result")
 
 
 def test_pull_writes_submitted_crfs_and_lists_screen_failures(server, tmp_path):
@@ -184,3 +191,9 @@ def test_real_engine_exports_of_both_parts_merge_without_clashes():
     fields = lambda c: {k for k in c if k not in CONTEXT_KEYS}
     assert set(rec) == fields(enrol) | fields(scan) | {"parts"}
     assert rec["parts"]["enrol"]["operator"] == enrol["operator"] and rec["parts"]["scan"]["schema_version"] == scan["schema_version"]
+    # the merged record is what the pipeline reads: it must pass validation and derive its covariates
+    assert validate_crf(rec) == []
+    d = derive(rec)
+    assert d["operator"] == scan["operator"] and d["unit_id"] == scan["unit_id"]   # context from the scan part
+    assert d["sex"] == enrol["sex"] and d["bp_target_sbp"] is not None
+    assert [c for c in covariate_columns() if c not in d and c not in V1_ONLY + V2_OPTIONAL] == []

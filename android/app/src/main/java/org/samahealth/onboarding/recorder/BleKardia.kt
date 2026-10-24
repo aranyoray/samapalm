@@ -96,6 +96,39 @@ class BleKardia(private val context: Context) {
     private var pendingDevice: BluetoothDevice? = null
     @Volatile private var servicesDiscovered = false
     @Volatile private var connecting = false
+    /** Arrival time of the last ECG notification, for the stall watchdog. */
+    @Volatile private var lastPacketNs = 0L
+    @Volatile var stallRestarts = 0; private set
+    private var gotPacketSinceConnect = false
+
+    /**
+     * The Card can stop notifying while the link stays up (it sleeps when the electrodes lose contact, and a
+     * phone doze can starve the connection). A silent stream used to leave the clip with a flat ECG. Every
+     * second: >3 s of silence re-sends the unlock command, >8 s tears the link down and rescans.
+     */
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (!started) return
+            val g = gatt
+            if (g != null && servicesDiscovered && gotPacketSinceConnect) {
+                val quietMs = (SystemClock.elapsedRealtimeNanos() - lastPacketNs) / 1_000_000L
+                if (quietMs > 8_000) {
+                    Log.w(TAG, "ECG silent ${quietMs} ms, reconnecting")
+                    stallRestarts++
+                    streaming = false
+                    statusLine = "BLE: stream stalled, reconnecting"
+                    gotPacketSinceConnect = false
+                    g.disconnect()
+                } else if (quietMs > 3_000 && streaming) {
+                    Log.w(TAG, "ECG silent ${quietMs} ms, re-sending unlock")
+                    streaming = false
+                    statusLine = "BLE: stream stalled, restarting"
+                    writeModeCommand(g, modeUsed ?: "M2")
+                }
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
 
     // ---- session capture state (guarded by logLock; BLE callbacks arrive on binder threads) ----
     private val logLock = Any()
@@ -117,6 +150,7 @@ class BleKardia(private val context: Context) {
     fun start() {
         if (started) return
         started = true
+        handler.postDelayed(watchdog, 1000)
         startScan()
     }
 
@@ -405,6 +439,8 @@ class BleKardia(private val context: Context) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 statusLine = "BLE: discovering…"
                 servicesDiscovered = false
+                gotPacketSinceConnect = false
+                g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                 g.requestMtu(64)
                 handler.postDelayed({ if (!servicesDiscovered) g.discoverServices() }, 3000)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -532,6 +568,8 @@ class BleKardia(private val context: Context) {
         if (ch != ecgChar) return
         val recvNs = SystemClock.elapsedRealtimeNanos()
         packetCount += 1
+        lastPacketNs = recvNs
+        gotPacketSinceConnect = true
         streaming = true
         statusLine = "BLE: streaming ${deviceName ?: ""} ($modeUsed)"
 

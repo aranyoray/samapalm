@@ -62,6 +62,9 @@ data class SurveyUi(
 class SurveyViewModel(app: Application, private val visitUuid: String) : ViewModel() {
     private val c = app.container
     val engine: CrfEngine = c.engine()
+
+    /** Which record this visit is: the engine's part, or "full" for a legacy single-record visit. */
+    val part: String = str(engine.settings["part"]) ?: "enrol"
     private var nav: SurveyNavigator? = null
     private var showErrors = false
     private var message: String? = null
@@ -162,7 +165,7 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
         val session = c.prefs.session ?: return
         viewModelScope.launch {
             val taken = withContext(Dispatchers.IO) {
-                try { client.pidTakenElsewhere(session.accessToken, pid, visitUuid) } catch (e: Exception) { false }
+                try { client.pidTakenElsewhere(session.accessToken, pid, part, visitUuid) } catch (e: Exception) { false }
             }
             if (taken) { message = "PID $pid already exists on the server. Go back and correct it before submitting."; refresh() }
         }
