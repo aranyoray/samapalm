@@ -19,6 +19,7 @@ dependencyResolutionManagement {
 }
 rootProject.name = "samahealth-onboarding"
 include(":crf-core")
+include(":quality-core")
 
 val localProps = java.util.Properties().apply {
     val f = file("local.properties")

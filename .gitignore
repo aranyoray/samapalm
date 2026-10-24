@@ -17,3 +17,4 @@ android/local.properties
 android/.idea/
 *.apk
 .DS_Store
+android/.kotlin/

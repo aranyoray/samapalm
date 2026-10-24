@@ -1,0 +1,1794 @@
+{
+ "targets_version": "2026-10-24.1",
+ "cases": [
+  {
+   "name": "no_keys",
+   "keys": [],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.0,
+    "level": "none",
+    "reasons": []
+   }
+  },
+  {
+   "name": "only_unknown_keys",
+   "keys": [
+    "mst:2",
+    "mstgrp:light",
+    "dm:no_known",
+    "preg:yes"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.0,
+    "level": "none",
+    "reasons": []
+   }
+  },
+  {
+   "name": "empty_counts_male_dark_af",
+   "keys": [
+    "sex:M",
+    "mst:8",
+    "mstgrp:dark",
+    "cond:af",
+    "dm:no_known",
+    "sex_mst:M:8",
+    "cond_mstgrp:af:dark"
+   ],
+   "counts": {},
+   "expected": {
+    "score": 1.0,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "cond:af",
+      "label": "Atrial fibrillation",
+      "group": "condition",
+      "n": 0,
+      "target": 300,
+      "contribution": 1.0
+     },
+     {
+      "key": "mst:8",
+      "label": "MST 8",
+      "group": "mst",
+      "n": 0,
+      "target": 200,
+      "contribution": 1.0
+     },
+     {
+      "key": "sex:M",
+      "label": "Male",
+      "group": "sex",
+      "n": 0,
+      "target": 1000,
+      "contribution": 1.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "all_met",
+   "keys": [
+    "sex:F",
+    "mst:6",
+    "mstgrp:medium"
+   ],
+   "counts": {
+    "sex:F": 1000,
+    "sex:M": 1000,
+    "mst:4": 200,
+    "mst:5": 200,
+    "mst:6": 200,
+    "mst:7": 200,
+    "mst:8": 200,
+    "mst:9": 200,
+    "mst:10": 200
+   },
+   "expected": {
+    "score": 0.0,
+    "level": "met",
+    "reasons": [
+     {
+      "key": "mst:6",
+      "label": "MST 6",
+      "group": "mst",
+      "n": 200,
+      "target": 200,
+      "contribution": 0.0
+     },
+     {
+      "key": "sex:F",
+      "label": "Female",
+      "group": "sex",
+      "n": 1000,
+      "target": 1000,
+      "contribution": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "midway_female_mst8_af",
+   "keys": [
+    "sex:F",
+    "mst:8",
+    "mstgrp:dark",
+    "cond:af",
+    "dm:no_known",
+    "sex_mst:F:8",
+    "cond_mstgrp:af:dark"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.95,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "mst:8",
+      "label": "MST 8",
+      "group": "mst",
+      "n": 10,
+      "target": 200,
+      "contribution": 0.95
+     },
+     {
+      "key": "cond:af",
+      "label": "Atrial fibrillation",
+      "group": "condition",
+      "n": 40,
+      "target": 300,
+      "contribution": 0.867
+     },
+     {
+      "key": "sex_mst:F:8",
+      "label": "Female, MST 8",
+      "group": "sex_mst",
+      "n": 5,
+      "target": 100,
+      "contribution": 0.665
+     }
+    ]
+   }
+  },
+  {
+   "name": "midway_male_mst5_htn",
+   "keys": [
+    "sex:M",
+    "mst:5",
+    "mstgrp:medium",
+    "cond:htn",
+    "dm:no_known",
+    "sex_mst:M:5",
+    "cond_mstgrp:htn:medium"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.475,
+    "level": "medium",
+    "reasons": [
+     {
+      "key": "cond:htn",
+      "label": "High blood pressure",
+      "group": "condition",
+      "n": 210,
+      "target": 400,
+      "contribution": 0.475
+     },
+     {
+      "key": "sex:M",
+      "label": "Male",
+      "group": "sex",
+      "n": 700,
+      "target": 1000,
+      "contribution": 0.3
+     },
+     {
+      "key": "mst:5",
+      "label": "MST 5",
+      "group": "mst",
+      "n": 180,
+      "target": 200,
+      "contribution": 0.1
+     }
+    ]
+   }
+  },
+  {
+   "name": "medium_level",
+   "keys": [
+    "sex:M",
+    "mst:4",
+    "mstgrp:light"
+   ],
+   "counts": {
+    "sex:M": 700,
+    "mst:4": 150
+   },
+   "expected": {
+    "score": 0.30000000000000004,
+    "level": "medium",
+    "reasons": [
+     {
+      "key": "sex:M",
+      "label": "Male",
+      "group": "sex",
+      "n": 700,
+      "target": 1000,
+      "contribution": 0.3
+     },
+     {
+      "key": "mst:4",
+      "label": "MST 4",
+      "group": "mst",
+      "n": 150,
+      "target": 200,
+      "contribution": 0.25
+     }
+    ]
+   }
+  },
+  {
+   "name": "low_level",
+   "keys": [
+    "sex:M",
+    "mst:4",
+    "mstgrp:light"
+   ],
+   "counts": {
+    "sex:M": 900,
+    "mst:4": 190
+   },
+   "expected": {
+    "score": 0.09999999999999998,
+    "level": "low",
+    "reasons": [
+     {
+      "key": "sex:M",
+      "label": "Male",
+      "group": "sex",
+      "n": 900,
+      "target": 1000,
+      "contribution": 0.1
+     },
+     {
+      "key": "mst:4",
+      "label": "MST 4",
+      "group": "mst",
+      "n": 190,
+      "target": 200,
+      "contribution": 0.05
+     }
+    ]
+   }
+  },
+  {
+   "name": "high_boundary_exact",
+   "keys": [
+    "sex:F"
+   ],
+   "counts": {
+    "sex:F": 500
+   },
+   "expected": {
+    "score": 0.5,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "sex:F",
+      "label": "Female",
+      "group": "sex",
+      "n": 500,
+      "target": 1000,
+      "contribution": 0.5
+     }
+    ]
+   }
+  },
+  {
+   "name": "medium_boundary_float_rounding",
+   "keys": [
+    "sex:F"
+   ],
+   "counts": {
+    "sex:F": 800
+   },
+   "expected": {
+    "score": 0.19999999999999996,
+    "level": "low",
+    "reasons": [
+     {
+      "key": "sex:F",
+      "label": "Female",
+      "group": "sex",
+      "n": 800,
+      "target": 1000,
+      "contribution": 0.2
+     }
+    ]
+   }
+  },
+  {
+   "name": "only_the_weighted_cell_unfilled",
+   "keys": [
+    "sex:F",
+    "mst:7",
+    "sex_mst:F:7"
+   ],
+   "counts": {
+    "sex:F": 1000,
+    "mst:7": 200,
+    "sex_mst:F:7": 0
+   },
+   "expected": {
+    "score": 0.7,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "sex_mst:F:7",
+      "label": "Female, MST 7",
+      "group": "sex_mst",
+      "n": 0,
+      "target": 100,
+      "contribution": 0.7
+     },
+     {
+      "key": "mst:7",
+      "label": "MST 7",
+      "group": "mst",
+      "n": 200,
+      "target": 200,
+      "contribution": 0.0
+     },
+     {
+      "key": "sex:F",
+      "label": "Female",
+      "group": "sex",
+      "n": 1000,
+      "target": 1000,
+      "contribution": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "tie_ordering_by_key",
+   "keys": [
+    "mst:9",
+    "mst:10",
+    "mst:4"
+   ],
+   "counts": {
+    "mst:9": 100,
+    "mst:10": 100,
+    "mst:4": 100
+   },
+   "expected": {
+    "score": 0.5,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "mst:10",
+      "label": "MST 10",
+      "group": "mst",
+      "n": 100,
+      "target": 200,
+      "contribution": 0.5
+     },
+     {
+      "key": "mst:4",
+      "label": "MST 4",
+      "group": "mst",
+      "n": 100,
+      "target": 200,
+      "contribution": 0.5
+     },
+     {
+      "key": "mst:9",
+      "label": "MST 9",
+      "group": "mst",
+      "n": 100,
+      "target": 200,
+      "contribution": 0.5
+     }
+    ]
+   }
+  },
+  {
+   "name": "over_target_counts_clip_at_zero",
+   "keys": [
+    "sex:F",
+    "haem:ida"
+   ],
+   "counts": {
+    "sex:F": 1200,
+    "haem:ida": 400
+   },
+   "expected": {
+    "score": 0.0,
+    "level": "met",
+    "reasons": [
+     {
+      "key": "haem:ida",
+      "label": "Iron-deficiency anaemia",
+      "group": "condition",
+      "n": 400,
+      "target": 150,
+      "contribution": 0.0
+     },
+     {
+      "key": "sex:F",
+      "label": "Female",
+      "group": "sex",
+      "n": 1200,
+      "target": 1000,
+      "contribution": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "thal_trait_dark",
+   "keys": [
+    "sex:F",
+    "mst:9",
+    "mstgrp:dark",
+    "cond:thal",
+    "haem:thal_trait",
+    "dm:no_known",
+    "sex_mst:F:9",
+    "cond_mstgrp:thal:dark",
+    "haem_mstgrp:thal_trait:dark"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.99,
+    "level": "high",
+    "reasons": [
+     {
+      "key": "mst:9",
+      "label": "MST 9",
+      "group": "mst",
+      "n": 2,
+      "target": 200,
+      "contribution": 0.99
+     },
+     {
+      "key": "haem_mstgrp:thal_trait:dark",
+      "label": "Thalassaemia or HbE trait, MST 7-10",
+      "group": "condition_dark",
+      "n": 0,
+      "target": 50,
+      "contribution": 0.7
+     },
+     {
+      "key": "sex_mst:F:9",
+      "label": "Female, MST 9",
+      "group": "sex_mst",
+      "n": 0,
+      "target": 100,
+      "contribution": 0.7
+     }
+    ]
+   }
+  },
+  {
+   "name": "scan_keys_weight_zero",
+   "keys": [
+    "rhythm:af",
+    "scan:done"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.0,
+    "level": "low",
+    "reasons": [
+     {
+      "key": "rhythm:af",
+      "label": "Kardia: possible AF",
+      "group": "scan",
+      "n": 30,
+      "target": 300,
+      "contribution": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "duplicate_keys_counted_once",
+   "keys": [
+    "cond:htn",
+    "cond:htn",
+    "sex:M"
+   ],
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "expected": {
+    "score": 0.475,
+    "level": "medium",
+    "reasons": [
+     {
+      "key": "cond:htn",
+      "label": "High blood pressure",
+      "group": "condition",
+      "n": 210,
+      "target": 400,
+      "contribution": 0.475
+     },
+     {
+      "key": "sex:M",
+      "label": "Male",
+      "group": "sex",
+      "n": 700,
+      "target": 1000,
+      "contribution": 0.3
+     }
+    ]
+   }
+  }
+ ],
+ "tables": [
+  {
+   "name": "midway",
+   "counts": {
+    "sex:F": 400,
+    "sex:M": 700,
+    "mst:4": 150,
+    "mst:5": 180,
+    "mst:6": 90,
+    "mst:7": 40,
+    "mst:8": 10,
+    "mst:9": 2,
+    "cond:htn": 210,
+    "cond:af": 40,
+    "cond:diabetes": 330,
+    "haem:thal_trait": 75,
+    "haem:ida": 149,
+    "haem:non_anaemic": 300,
+    "sex_mst:F:8": 5,
+    "sex_mst:M:5": 100,
+    "cond_mstgrp:af:dark": 12,
+    "haem_mstgrp:ida:dark": 50,
+    "rhythm:af": 30,
+    "rhythm:nsr": 480
+   },
+   "k": 5,
+   "cell_table": [
+    {
+     "group": "sex",
+     "key": "sex:F",
+     "label": "Female",
+     "n": 400,
+     "target": 1000,
+     "fill": 0.4
+    },
+    {
+     "group": "sex",
+     "key": "sex:M",
+     "label": "Male",
+     "n": 700,
+     "target": 1000,
+     "fill": 0.7
+    },
+    {
+     "group": "mst",
+     "key": "mst:4",
+     "label": "MST 4",
+     "n": 150,
+     "target": 200,
+     "fill": 0.75
+    },
+    {
+     "group": "mst",
+     "key": "mst:5",
+     "label": "MST 5",
+     "n": 180,
+     "target": 200,
+     "fill": 0.9
+    },
+    {
+     "group": "mst",
+     "key": "mst:6",
+     "label": "MST 6",
+     "n": 90,
+     "target": 200,
+     "fill": 0.45
+    },
+    {
+     "group": "mst",
+     "key": "mst:7",
+     "label": "MST 7",
+     "n": 40,
+     "target": 200,
+     "fill": 0.2
+    },
+    {
+     "group": "mst",
+     "key": "mst:8",
+     "label": "MST 8",
+     "n": 10,
+     "target": 200,
+     "fill": 0.05
+    },
+    {
+     "group": "mst",
+     "key": "mst:9",
+     "label": "MST 9",
+     "n": 2,
+     "target": 200,
+     "fill": 0.01
+    },
+    {
+     "group": "mst",
+     "key": "mst:10",
+     "label": "MST 10",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:htn",
+     "label": "High blood pressure",
+     "n": 210,
+     "target": 400,
+     "fill": 0.525
+    },
+    {
+     "group": "condition",
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "n": 40,
+     "target": 300,
+     "fill": 0.13333333333333333
+    },
+    {
+     "group": "condition",
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "n": 330,
+     "target": 400,
+     "fill": 0.825
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_trait",
+     "label": "Thalassaemia or HbE trait",
+     "n": 75,
+     "target": 150,
+     "fill": 0.5
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_disease",
+     "label": "Thalassaemia or HbE disease",
+     "n": 0,
+     "target": 60,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:ida",
+     "label": "Iron-deficiency anaemia",
+     "n": 149,
+     "target": 150,
+     "fill": 0.9933333333333333
+    },
+    {
+     "group": "condition",
+     "key": "haem:anaemia_other",
+     "label": "Other anaemia",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:non_anaemic",
+     "label": "Not anaemic (comparator)",
+     "n": 300,
+     "target": 300,
+     "fill": 1.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:4",
+     "label": "Female, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:5",
+     "label": "Female, MST 5",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:6",
+     "label": "Female, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:7",
+     "label": "Female, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:8",
+     "label": "Female, MST 8",
+     "n": 5,
+     "target": 100,
+     "fill": 0.05
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:9",
+     "label": "Female, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:10",
+     "label": "Female, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:4",
+     "label": "Male, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:5",
+     "label": "Male, MST 5",
+     "n": 100,
+     "target": 100,
+     "fill": 1.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:6",
+     "label": "Male, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:7",
+     "label": "Male, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:8",
+     "label": "Male, MST 8",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:9",
+     "label": "Male, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:10",
+     "label": "Male, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:htn:dark",
+     "label": "High blood pressure, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:af:dark",
+     "label": "Atrial fibrillation, MST 7-10",
+     "n": 12,
+     "target": 120,
+     "fill": 0.1
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:diabetes:dark",
+     "label": "Diabetes, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:thal_trait:dark",
+     "label": "Thalassaemia or HbE trait, MST 7-10",
+     "n": 0,
+     "target": 50,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:ida:dark",
+     "label": "Iron-deficiency anaemia, MST 7-10",
+     "n": 50,
+     "target": 50,
+     "fill": 1.0
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:af",
+     "label": "Kardia: possible AF",
+     "n": 30,
+     "target": 300,
+     "fill": 0.1
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:nsr",
+     "label": "Kardia: normal sinus rhythm",
+     "n": 480,
+     "target": 500,
+     "fill": 0.96
+    }
+   ],
+   "most_needed": [
+    {
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "group": "condition",
+     "n": 0,
+     "target": 150,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "group": "condition",
+     "n": 0,
+     "target": 150,
+     "contribution": 1.0
+    },
+    {
+     "key": "haem:anaemia_other",
+     "label": "Other anaemia",
+     "group": "condition",
+     "n": 0,
+     "target": 100,
+     "contribution": 1.0
+    },
+    {
+     "key": "haem:thal_disease",
+     "label": "Thalassaemia or HbE disease",
+     "group": "condition",
+     "n": 0,
+     "target": 60,
+     "contribution": 1.0
+    },
+    {
+     "key": "mst:10",
+     "label": "MST 10",
+     "group": "mst",
+     "n": 0,
+     "target": 200,
+     "contribution": 1.0
+    }
+   ]
+  },
+  {
+   "name": "empty",
+   "counts": {},
+   "k": 3,
+   "cell_table": [
+    {
+     "group": "sex",
+     "key": "sex:F",
+     "label": "Female",
+     "n": 0,
+     "target": 1000,
+     "fill": 0.0
+    },
+    {
+     "group": "sex",
+     "key": "sex:M",
+     "label": "Male",
+     "n": 0,
+     "target": 1000,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:4",
+     "label": "MST 4",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:5",
+     "label": "MST 5",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:6",
+     "label": "MST 6",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:7",
+     "label": "MST 7",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:8",
+     "label": "MST 8",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:9",
+     "label": "MST 9",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:10",
+     "label": "MST 10",
+     "n": 0,
+     "target": 200,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:htn",
+     "label": "High blood pressure",
+     "n": 0,
+     "target": 400,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "n": 0,
+     "target": 400,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_trait",
+     "label": "Thalassaemia or HbE trait",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_disease",
+     "label": "Thalassaemia or HbE disease",
+     "n": 0,
+     "target": 60,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:ida",
+     "label": "Iron-deficiency anaemia",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:anaemia_other",
+     "label": "Other anaemia",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:non_anaemic",
+     "label": "Not anaemic (comparator)",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:4",
+     "label": "Female, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:5",
+     "label": "Female, MST 5",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:6",
+     "label": "Female, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:7",
+     "label": "Female, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:8",
+     "label": "Female, MST 8",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:9",
+     "label": "Female, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:10",
+     "label": "Female, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:4",
+     "label": "Male, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:5",
+     "label": "Male, MST 5",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:6",
+     "label": "Male, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:7",
+     "label": "Male, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:8",
+     "label": "Male, MST 8",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:9",
+     "label": "Male, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:10",
+     "label": "Male, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:htn:dark",
+     "label": "High blood pressure, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:af:dark",
+     "label": "Atrial fibrillation, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:diabetes:dark",
+     "label": "Diabetes, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:thal_trait:dark",
+     "label": "Thalassaemia or HbE trait, MST 7-10",
+     "n": 0,
+     "target": 50,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:ida:dark",
+     "label": "Iron-deficiency anaemia, MST 7-10",
+     "n": 0,
+     "target": 50,
+     "fill": 0.0
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:af",
+     "label": "Kardia: possible AF",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:nsr",
+     "label": "Kardia: normal sinus rhythm",
+     "n": 0,
+     "target": 500,
+     "fill": 0.0
+    }
+   ],
+   "most_needed": [
+    {
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "group": "condition",
+     "n": 0,
+     "target": 300,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "group": "condition",
+     "n": 0,
+     "target": 150,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "group": "condition",
+     "n": 0,
+     "target": 400,
+     "contribution": 1.0
+    }
+   ]
+  },
+  {
+   "name": "full_sex_mst",
+   "counts": {
+    "sex:F": 1000,
+    "sex:M": 1000,
+    "mst:4": 200,
+    "mst:5": 200,
+    "mst:6": 200,
+    "mst:7": 200,
+    "mst:8": 200,
+    "mst:9": 200,
+    "mst:10": 200
+   },
+   "k": 4,
+   "cell_table": [
+    {
+     "group": "sex",
+     "key": "sex:F",
+     "label": "Female",
+     "n": 1000,
+     "target": 1000,
+     "fill": 1.0
+    },
+    {
+     "group": "sex",
+     "key": "sex:M",
+     "label": "Male",
+     "n": 1000,
+     "target": 1000,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:4",
+     "label": "MST 4",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:5",
+     "label": "MST 5",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:6",
+     "label": "MST 6",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:7",
+     "label": "MST 7",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:8",
+     "label": "MST 8",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:9",
+     "label": "MST 9",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "mst",
+     "key": "mst:10",
+     "label": "MST 10",
+     "n": 200,
+     "target": 200,
+     "fill": 1.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:htn",
+     "label": "High blood pressure",
+     "n": 0,
+     "target": 400,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "n": 0,
+     "target": 400,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_trait",
+     "label": "Thalassaemia or HbE trait",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:thal_disease",
+     "label": "Thalassaemia or HbE disease",
+     "n": 0,
+     "target": 60,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:ida",
+     "label": "Iron-deficiency anaemia",
+     "n": 0,
+     "target": 150,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:anaemia_other",
+     "label": "Other anaemia",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition",
+     "key": "haem:non_anaemic",
+     "label": "Not anaemic (comparator)",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:4",
+     "label": "Female, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:5",
+     "label": "Female, MST 5",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:6",
+     "label": "Female, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:7",
+     "label": "Female, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:8",
+     "label": "Female, MST 8",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:9",
+     "label": "Female, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:F:10",
+     "label": "Female, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:4",
+     "label": "Male, MST 4",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:5",
+     "label": "Male, MST 5",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:6",
+     "label": "Male, MST 6",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:7",
+     "label": "Male, MST 7",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:8",
+     "label": "Male, MST 8",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:9",
+     "label": "Male, MST 9",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "sex_mst",
+     "key": "sex_mst:M:10",
+     "label": "Male, MST 10",
+     "n": 0,
+     "target": 100,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:htn:dark",
+     "label": "High blood pressure, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:af:dark",
+     "label": "Atrial fibrillation, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "cond_mstgrp:diabetes:dark",
+     "label": "Diabetes, MST 7-10",
+     "n": 0,
+     "target": 120,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:thal_trait:dark",
+     "label": "Thalassaemia or HbE trait, MST 7-10",
+     "n": 0,
+     "target": 50,
+     "fill": 0.0
+    },
+    {
+     "group": "condition_dark",
+     "key": "haem_mstgrp:ida:dark",
+     "label": "Iron-deficiency anaemia, MST 7-10",
+     "n": 0,
+     "target": 50,
+     "fill": 0.0
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:af",
+     "label": "Kardia: possible AF",
+     "n": 0,
+     "target": 300,
+     "fill": 0.0
+    },
+    {
+     "group": "scan",
+     "key": "rhythm:nsr",
+     "label": "Kardia: normal sinus rhythm",
+     "n": 0,
+     "target": 500,
+     "fill": 0.0
+    }
+   ],
+   "most_needed": [
+    {
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "group": "condition",
+     "n": 0,
+     "target": 300,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "group": "condition",
+     "n": 0,
+     "target": 150,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "group": "condition",
+     "n": 0,
+     "target": 400,
+     "contribution": 1.0
+    },
+    {
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "group": "condition",
+     "n": 0,
+     "target": 150,
+     "contribution": 1.0
+    }
+   ]
+  }
+ ]
+}

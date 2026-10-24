@@ -26,11 +26,13 @@ data class Evaluation(
     fun errorsOn(screen: String): List<Issue> = errors.filter { it.screen == screen }
 }
 
-data class Exported(val crf: JsonObject, val identity: JsonObject)
+/** The CRF record of one part. Names stay on the paper consent form, so there is no identity record. */
+data class Exported(val crf: JsonObject)
 
 /**
  * Schema-driven CRF engine; semantics are identical to palmppg/core/crf_schema.py and are pinned by the shared
- * golden fixtures (configs/crf_fixtures/golden.json). See that module's docstring for the rules.
+ * golden fixtures (configs/crf_fixtures/golden.json). See that module's docstring for the rules. `settings.part`
+ * (enrol | scan) and `settings.clip_plan` pick the flow.
  */
 class CrfEngine(val schema: JsonObject, settingsOverrides: Map<String, JsonElement> = emptyMap()) {
     val settings: Map<String, JsonElement> =
@@ -55,12 +57,13 @@ class CrfEngine(val schema: JsonObject, settingsOverrides: Map<String, JsonEleme
         questions = q
     }
 
-    fun flow(): List<String> {
-        val plan = str(settings["clip_plan"])
-        val flows = schema["flows"]!!.jsonObject
-        val f = flows[plan] ?: throw IllegalArgumentException("unknown clip_plan $plan; schema flows: ${flows.keys.sorted()}")
-        return f.jsonArray.map { str(it)!! }
-    }
+    /** The part this engine runs (`settings.part`, default enrol). */
+    val part: String get() = str(settings["part"])?.takeIf { it.isNotEmpty() } ?: "enrol"
+
+    /** `part` when the schema has a flow of that name, else `part_clipplan` (design section 2.1). */
+    fun flowKey(): String = flowKey(schema["flows"]!!.jsonObject, settings)
+
+    fun flow(): List<String> = schema["flows"]!!.jsonObject[flowKey()]!!.jsonArray.map { str(it)!! }
 
     fun question(id: String): JsonObject = questions[id]?.second ?: throw IllegalArgumentException("unknown question $id")
 
@@ -189,12 +192,11 @@ class CrfEngine(val schema: JsonObject, settingsOverrides: Map<String, JsonEleme
         return emptyList()
     }
 
-    /** (CRF record, identity record). The CRF never contains identity-store answers (name and PID kept apart). */
-    fun export(answers: Map<String, JsonElement>, context: Map<String, JsonElement> = emptyMap(), identityName: String? = null,
+    /** The CRF record of this part: exported answers, exported derivations, context, part, schema version, clip plan. */
+    fun export(answers: Map<String, JsonElement>, context: Map<String, JsonElement> = emptyMap(),
                now: OffsetDateTime = OffsetDateTime.now(ZoneId.systemDefault())): Exported {
         val ev = evaluate(answers, now)
         val crf = LinkedHashMap<String, JsonElement>()
-        val ident = LinkedHashMap<String, JsonElement>()
         for (sid in ev.visibleScreens) for (id in ev.visibleQuestions[sid]!!) {
             val q = question(id)
             val t = type(q)
@@ -205,24 +207,40 @@ class CrfEngine(val schema: JsonObject, settingsOverrides: Map<String, JsonEleme
                 continue
             }
             if (t == "info" || id !in ev.effective) continue
+            if (bool(q["export"]) == false || str(q["store"]) == "identity") continue
             var v = ev.effective[id]!!
-            if (str(q["store"]) == "identity") { ident[id] = v; continue }
-            if (bool(q["export"]) == false) continue
             if (str(q["export_as"]) == "bool_yes_no") v = when (str(v)) { "yes" -> JsonPrimitive(true); "no" -> JsonPrimitive(false); else -> JsonNull }
             crf[key] = v
         }
-        val name = identityName ?: str(ident["name"])
-        if (!name.isNullOrBlank()) crf["initials"] = JsonPrimitive(Derive.initials(name))
-        ident["pid"] = ev.effective["study_id"] ?: JsonNull
         for ((k, v) in context) if (v !is JsonNull) crf[k] = v
+        val key = flowKey()
+        crf["part"] = JsonPrimitive(part)
         crf["schema_version"] = JsonPrimitive(schemaVersion)
-        crf["clip_plan"] = settings["clip_plan"] ?: JsonNull
-        return Exported(JsonObject(crf), JsonObject(ident))
+        if (key != part) crf["clip_plan"] = JsonPrimitive(clipPlan(settings))
+        return Exported(JsonObject(crf))
     }
 
     /** Static checks mirrored from Python `lint_schema`. */
     fun lint(): List<String> {
         val problems = ArrayList<String>()
+        val flows = schema["flows"]!!.jsonObject
+        val allowed = PARTS.toSet() + PARTS.flatMap { p -> CLIP_PLANS.map { "${p}_$it" } }
+        for (k in flows.keys) if (k !in allowed) problems.add("flow $k: not a part or part_clipplan key")
+        val usedBy = sortedMapOf<String, MutableSet<String>>()
+        for (p in PARTS) for (c in CLIP_PLANS) {
+            val key = try {
+                flowKey(flows, mapOf("part" to JsonPrimitive(p), "clip_plan" to JsonPrimitive(c)))
+            } catch (e: IllegalArgumentException) {
+                problems.add(e.message ?: "unknown flow"); continue
+            }
+            for (sid in flows[key]!!.jsonArray.drop(1)) usedBy.getOrPut(str(sid)!!) { HashSet() }.add(p)
+        }
+        for ((sid, parts) in usedBy) if (parts.size > 1) problems.add("screen $sid is used by both parts")
+        val defaults = schema["settings_defaults"]?.jsonObject ?: JsonObject(emptyMap())
+        try { flowKey(flows, defaults) } catch (e: IllegalArgumentException) { problems.add("settings_defaults: ${e.message}") }
+        schema["choices"]!!.jsonObject["conditions"]?.let { lst ->
+            if (lst.jsonArray.map { str(it.jsonObject["value"]) } != Derive.CONDITION_ORDER) problems.add("choices conditions must be ${Derive.CONDITION_ORDER}")
+        }
         for ((id, p) in questions) {
             val q = p.second
             val ch = q["choices"]
@@ -249,6 +267,19 @@ class CrfEngine(val schema: JsonObject, settingsOverrides: Map<String, JsonEleme
 
     companion object {
         val NO_VALUE_TYPES = setOf("computed", "info")
+        val PARTS = listOf("enrol", "scan")
+        val CLIP_PLANS = listOf("1x60", "2x30")
+
+        private fun clipPlan(settings: Map<String, JsonElement>): String = str(settings["clip_plan"])?.takeIf { it.isNotEmpty() } ?: "1x60"
+
+        /** Python `flow_key`: `part` when the schema has that flow, else `part_clipplan`; unknown keys raise. */
+        fun flowKey(flows: JsonObject, settings: Map<String, JsonElement>): String {
+            val part = str(settings["part"])?.takeIf { it.isNotEmpty() } ?: "enrol"
+            val plan = clipPlan(settings)
+            val key = if (part in flows) part else "${part}_$plan"
+            if (key !in flows) throw IllegalArgumentException("unknown flow $key (part $part, clip_plan $plan); schema flows: ${flows.keys.sorted()}")
+            return key
+        }
         val BP_LIMITS = linkedMapOf("sbp" to (50 to 300), "dbp" to (20 to 200), "hr" to (20 to 250))
 
         fun fromJson(text: String, settings: Map<String, JsonElement> = emptyMap()): CrfEngine =

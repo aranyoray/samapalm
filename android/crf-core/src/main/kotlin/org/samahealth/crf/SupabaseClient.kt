@@ -21,10 +21,14 @@ data class SupabaseConfig(val url: String, val anonKey: String) {
 
 data class Session(val accessToken: String, val refreshToken: String, val expiresAtEpochS: Long, val userId: String, val email: String?)
 
-/** Row sent to `public.visits` (one per participant; `visit_uuid` is generated on the tablet, so retries are idempotent). */
+/**
+ * Row sent to `public.visits`: one per participant and part (unique (pid, part) on the server); `visit_uuid` is generated
+ * on the phone, so retries are idempotent.
+ */
 data class VisitPayload(
     val visitUuid: String,
     val pid: String,
+    val part: String,                 // enrol | scan (full = a v1 single record)
     val status: String,               // draft | submitted | screen_fail
     val crf: JsonObject,
     val schemaVersion: String,
@@ -38,7 +42,8 @@ data class VisitPayload(
     val screenFailReason: String?,
 ) {
     fun toJson(): JsonObject = JsonObject(mapOf(
-        "visit_uuid" to JsonPrimitive(visitUuid), "pid" to JsonPrimitive(pid), "status" to JsonPrimitive(status), "crf" to crf,
+        "visit_uuid" to JsonPrimitive(visitUuid), "pid" to JsonPrimitive(pid), "part" to JsonPrimitive(part),
+        "status" to JsonPrimitive(status), "crf" to crf,
         "schema_version" to JsonPrimitive(schemaVersion), "app_ver" to JsonPrimitive(appVer), "device_code" to JsonPrimitive(deviceCode),
         "operator_code" to JsonPrimitive(operatorCode), "stream" to (stream?.let { JsonPrimitive(it) } ?: JsonNull),
         "created_at" to JsonPrimitive(createdAt), "updated_at" to JsonPrimitive(updatedAt),
@@ -57,14 +62,22 @@ sealed class SyncResult {
 
 class SupabaseException(val code: Int, msg: String) : IOException(msg)
 
+/** The refresh token was refused (expired, revoked or already used): the operator must sign in again. Not an IOException. */
+class AuthFailedException(val code: Int, msg: String) : Exception(msg)
+
+/** One row of `scan_queue()`: a recent submitted enrol part whose PID has no submitted scan part yet. */
+data class ScanQueueItem(val pid: String, val enrolledAt: String, val sex: String?, val age: Int?, val mstBand: Int?,
+                         val conditions: List<String>)
+
 /**
  * Minimal Supabase client over OkHttp (GoTrue auth + PostgREST). No Supabase SDK, so the same code is tested on the
  * JVM (MockWebServer) and runs on Android.
  *  - sign in / refresh: POST /auth/v1/token?grant_type=password|refresh_token
- *  - upsert visit: POST /rest/v1/visits?on_conflict=visit_uuid (merge-duplicates); a different visit with the same PID
- *    violates the unique PID constraint and comes back as HTTP 409 -> DuplicatePid
- *  - identity: POST /rest/v1/rpc/submit_identity (operators cannot read the identity table)
+ *  - upsert visit: POST /rest/v1/visits?on_conflict=visit_uuid (merge-duplicates); a different visit with the same PID and
+ *    part violates unique (pid, part) and comes back as HTTP 409 / 23505 -> DuplicatePid
+ *  - identity: POST /rest/v1/rpc/submit_identity (v1 only; the v2 app keeps names on paper and never calls it)
  *  - PID: POST /rest/v1/rpc/allocate_pid; existence check GET /rest/v1/visits?pid=eq.X
+ *  - targets: GET /rest/v1/recruitment_targets, POST /rest/v1/rpc/strata_counts; scan station: POST /rest/v1/rpc/scan_queue
  */
 class SupabaseClient(private val cfg: SupabaseConfig, private val http: OkHttpClient = defaultHttp()) {
     private val jsonType = "application/json; charset=utf-8".toMediaType()
@@ -92,12 +105,19 @@ class SupabaseClient(private val cfg: SupabaseConfig, private val http: OkHttpCl
         }
     }
 
+    /**
+     * New session from a refresh token. HTTP 400/401 means the token itself was refused (GoTrue answers invalid_grant,
+     * or refresh_token_not_found / refresh_token_already_used / session_expired in newer versions) -> AuthFailedException.
+     * Network trouble and other HTTP errors (429, 5xx) -> IOException (SupabaseException), worth retrying later.
+     */
     fun refresh(refreshToken: String): Session {
         val body = CrfJson.encodeToString(JsonObject.serializer(), JsonObject(mapOf("refresh_token" to JsonPrimitive(refreshToken))))
         http.newCall(req("/auth/v1/token?grant_type=refresh_token", null).post(body.toRequestBody(jsonType)).build()).execute().use { r ->
             val t = bodyOf(r)
+            if (r.code == 400 || r.code == 401) throw AuthFailedException(r.code, "sign-in expired: ${r.code} $t")
             if (!r.isSuccessful) throw SupabaseException(r.code, "refresh failed: ${r.code} $t")
-            return parseSession(t)
+            // a cut-off or captive-portal body is network trouble too
+            return try { parseSession(t) } catch (e: Exception) { throw SupabaseException(r.code, "refresh returned ${t.take(200)}") }
         }
     }
 
@@ -122,6 +142,7 @@ class SupabaseClient(private val cfg: SupabaseConfig, private val http: OkHttpCl
     fun upsertVisit(token: String, v: VisitPayload): SyncResult =
         post("/rest/v1/visits?on_conflict=visit_uuid", token, v.toJson(), "resolution=merge-duplicates,return=minimal", v.pid)
 
+    /** v1 identity upload. Unused by v2 (names stay on paper); kept while v1 phones may still sync. */
     fun submitIdentity(token: String, identity: JsonObject): SyncResult {
         val p = JsonObject(mapOf(
             "p_pid" to (identity["pid"] ?: JsonNull), "p_name" to (identity["name"] ?: JsonNull),
@@ -138,14 +159,70 @@ class SupabaseClient(private val cfg: SupabaseConfig, private val http: OkHttpCl
         }
     }
 
-    /** True when the server already has a visit with this PID under a different visit_uuid. */
-    fun pidTakenElsewhere(token: String, pid: String, visitUuid: String): Boolean {
-        val url = "/rest/v1/visits?select=visit_uuid&pid=eq." + java.net.URLEncoder.encode(pid, "UTF-8")
-        http.newCall(req(url, token).get().build()).execute().use { r ->
+    /**
+     * True when the server already has another visit (different visit_uuid) that this one would clash with: the same
+     * PID and part, or a v1 'full' record against a split part (the server refuses both with 23505).
+     */
+    fun pidTakenElsewhere(token: String, pid: String, part: String, visitUuid: String): Boolean {
+        val url = "/rest/v1/visits?select=visit_uuid,part&pid=eq." + java.net.URLEncoder.encode(pid, "UTF-8")
+        val arr = getArray(url, token, "lookup") ?: return false
+        return arr.any {
+            val o = it.jsonObject
+            val other = str(o["part"]) ?: "full"
+            str(o["visit_uuid"]) != visitUuid && (other == part || (other == "full") != (part == "full"))
+        }
+    }
+
+    private fun getArray(path: String, token: String, what: String): JsonArray? {
+        http.newCall(req(path, token).get().build()).execute().use { r ->
             val t = bodyOf(r)
-            if (!r.isSuccessful) throw SupabaseException(r.code, "lookup failed: ${r.code} $t")
-            val arr = CrfJson.parseToJsonElement(t) as? JsonArray ?: return false
-            return arr.any { str(it.jsonObject["visit_uuid"]) != visitUuid }
+            if (!r.isSuccessful) throw SupabaseException(r.code, "$what failed: ${r.code} $t")
+            return CrfJson.parseToJsonElement(t) as? JsonArray
+        }
+    }
+
+    private fun rpcArray(fn: String, token: String, args: JsonObject): JsonArray {
+        val body = CrfJson.encodeToString(JsonObject.serializer(), args)
+        http.newCall(req("/rest/v1/rpc/$fn", token).post(body.toRequestBody(jsonType)).build()).execute().use { r ->
+            val t = bodyOf(r)
+            if (!r.isSuccessful) throw SupabaseException(r.code, "$fn failed: ${r.code} $t")
+            return CrfJson.parseToJsonElement(t) as? JsonArray ?: throw SupabaseException(r.code, "$fn returned $t")
+        }
+    }
+
+    /** Server-wide strata counts (distinct PIDs over submitted records), optionally for one stream: key -> n. */
+    fun strataCounts(token: String, stream: String?): Map<String, Int> {
+        val arr = rpcArray("strata_counts", token, JsonObject(mapOf("p_stream" to (stream?.let { JsonPrimitive(it) } ?: JsonNull))))
+        return arr.mapNotNull { e ->
+            val o = e.jsonObject
+            val k = str(o["key"]) ?: return@mapNotNull null
+            k to (num(o["n"])?.toInt() ?: 0)
+        }.toMap()
+    }
+
+    /** Submitted enrol parts of the last [days] x 24 h without a submitted scan part, newest first. */
+    fun scanQueue(token: String, days: Int): List<ScanQueueItem> =
+        rpcArray("scan_queue", token, JsonObject(mapOf("p_days" to JsonPrimitive(days)))).mapNotNull { e ->
+            val o = e.jsonObject
+            ScanQueueItem(
+                pid = str(o["pid"]) ?: return@mapNotNull null, enrolledAt = str(o["enrolled_at"]) ?: "",
+                sex = str(o["sex"]), age = num(o["age"])?.toInt(), mstBand = num(o["mst_band"])?.toInt(),
+                conditions = (o["conditions"] as? JsonArray)?.mapNotNull { str(it) } ?: emptyList(),
+            )
+        }
+
+    /**
+     * Active rows of public.recruitment_targets as the raw JSON array (key, group_id, group_label, label, target, weight,
+     * sort_order, active, updated_at), in display order; null when the server has none (or no such table: 404).
+     */
+    fun targets(token: String): String? {
+        val path = "/rest/v1/recruitment_targets?select=*&active=eq.true&order=sort_order.asc,key.asc"
+        http.newCall(req(path, token).get().build()).execute().use { r ->
+            val t = bodyOf(r)
+            if (r.code == 404) return null
+            if (!r.isSuccessful) throw SupabaseException(r.code, "targets failed: ${r.code} $t")
+            val arr = CrfJson.parseToJsonElement(t) as? JsonArray ?: throw SupabaseException(r.code, "targets returned $t")
+            return if (arr.isEmpty()) null else t
         }
     }
 

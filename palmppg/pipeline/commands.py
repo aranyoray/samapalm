@@ -39,6 +39,19 @@ def dispatch(args) -> int:
         print(json.dumps({k: (len(v) if isinstance(v, list) else v) for k, v in r.items()}, indent=1, default=str))
         return 3 if r["problems"] else 0
 
+    if cmd == "ecg" and sub == "founder":
+        from palmppg.ecg import founder
+
+        model = founder.load_model(args.weights, trust_pickle=args.trust_pickle)
+        if args.atc:
+            r = founder.run_file(model, args.atc, filtered=not args.unfiltered, out_dir=args.out)
+            print(json.dumps({k: r[k] for k in ("output", "n_windows", "filtered", "polarity_flipped", "weights_sha256")}
+                             | {"rhythm": {k: v["prob"] for k, v in r["labels"].items()}}, indent=1))
+            return 0 if r["n_windows"] else 3
+        rows = founder.run_participants(model, args.participants, filtered=not args.unfiltered, out_root=args.out)
+        print(json.dumps(rows, indent=1))
+        return 3 if not rows or any(r["error"] for r in rows) else 0
+
     if cmd == "synth" and sub == "cohort":
         from palmppg.synth.cohort import make_cohort
 

@@ -138,7 +138,14 @@ Columns: `event_id, kind, pattern, mono_ns, wall_ns, gpio_ok`. `kind` in {`start
   `adverse_event` (str|null), `reader_id, read_date`.
 
 ### 3.7 `crf.json`
-Section 3.1 field names verbatim; bp1/bp2/bp3 are objects `{sbp, dbp, hr, wall_ts}`; `flags`, `acute_30m` are lists.
+One file per participant, `participants/<PID>/crf.json`. v2 (schema `2026-10-24.1`, `docs/onboarding_v2_design.md`
+section 7): `palmppg crf pull` merges the enrol and scan parts of a PID; the questions of both parts sit at top level
+(ids are unique across parts) and `parts: {enrol: {...}, scan: {...}}` holds each part's context (`part`, `operator`,
+`unit_id`, `app_ver`, `device_code`, `capture_mode`, `schema_version`, `status`, `submitted_at`; scan also
+`clip_plan`). bp1/bp2/bp3 are objects `{sbp, dbp, hr, wall_ts}`; `conditions`, `acute_30m`, `strata`, `scan_strata`
+are lists; clips are the records of design section 2.4. No name, phone or hospital number ever appears.
+v1 files (schema `2026-10-20.1`, section 3.1 names, `flags`, `hba1c`, boolean `pregnant`) are still read:
+`palmppg.core.crf.derive` maps v1 flags onto conditions and fills the same covariates for both.
 
 ### 3.8 `clock_sync_log.csv`
 `date, time_utc, device, offset_ms_vs_phone, method, operator`. `device` in {`pi_unit_01`, `kardia_tablet`, ...}.
@@ -222,14 +229,26 @@ described as product results in reports.
 
 `qc.json` gained `qc_series_source` (`whole_palm_trace` or `whole_frame`, D-019).
 
-## 9. Onboarding app and backend (2026-10-20)
+## 9. Onboarding app and backend (2026-10-20; v2 2026-10-24)
 
-* `configs/crf_schema.json` is the CRF definition shared by the Android app and the pipeline; the export of a submitted
-  visit is the `crf.json` of CONTRACTS section 3.7 plus the add-on keys listed in `docs/hypotheses_crf_map.md`,
-  `screen_log`, `schema_version`, `clip_plan`, `device_code` and `capture_mode`. Clip records are objects
-  `{started_at, ended_at, quality, kardia_on, beep_heard, notes, phone_file?}`.
-* Supabase: `public.visits` (one row per participant: visit_uuid, pid, status draft|submitted|screen_fail|void, crf
-  jsonb, ...), `public.identity` (pid, name, hospital_reg_no, phone), `public.visit_audit`, `public.devices`,
-  `public.operators`, view `public.crf_export` (flat, no identity). Schema: `supabase/migrations/0001_init.sql`.
-* `palmppg crf pull --study-root <dir>` writes `participants/<PID>/crf.json` for submitted visits and
-  `onboarding/{screen_failures.csv, crf_export_<UTC>.csv, pull_log.jsonl}`.
+* `configs/crf_schema.json` (schema_version `2026-10-24.1`) is the CRF definition shared by the Android app and the
+  pipeline. `settings.part` (enrol | scan) and `settings.clip_plan` (1x60 | 2x30) pick the flow: `flows[part]` when it
+  exists, else `flows[part_clipplan]` (flows `enrol`, `scan_1x60`, `scan_2x30`; the `pid` screen is shared). Engines:
+  `palmppg/core/crf_schema.py` and `org.samahealth.crf.CrfEngine`, identical on `configs/crf_fixtures/golden.json`.
+* Export of one part (`CrfEngine.export` returns the CRF only; Kotlin `Exported(crf)`): answered visible questions
+  (consent is not exported; `irregular_pulse` as a boolean), the exported derivations (`bmi`, `trimester`,
+  `mentzer`, `hplc_reflex`, `anaemia_grade`, `haem_cell`, `dm_label`, `strata` for enrol; `recovery`,
+  `bracket_flag`, `scan_strata` for scan), the context keys (`operator`, `unit_id`, `app_ver`, `device_code`,
+  `capture_mode`, `screen_log`), `part`, `schema_version` and, for the scan part only, `clip_plan`. Names stay on the
+  paper consent form: there is no identity record and no `initials`. Clip records are objects
+  `{started_at, ended_at, quality, kardia_on, beep_heard, notes, phone_file?, ..., kardia_determination?}` (design 2.4).
+* Strata keys (`sex:F`, `mst:7`, `mstgrp:dark`, `cond:htn`, `haem:ida`, `dm:no_known`, `preg:yes`, `sex_mst:F:7`,
+  `cond_mstgrp:htn:dark`, `haem_mstgrp:ida:dark`, `rhythm:af`, `scan:done`) are the cell keys of
+  `configs/recruitment_targets.json`; priority and cell fill: `palmppg/core/strata.py` and `org.samahealth.crf.Strata`,
+  identical on `configs/crf_fixtures/strata_golden.json` (design section 3).
+* Supabase: `public.visits` (one row per PID and part: visit_uuid, pid, part, status draft|submitted|screen_fail|void,
+  crf jsonb, ...), `public.visit_audit`, `public.devices`, `public.operators`, `public.recruitment_targets`, view
+  `public.participant_export` (one row per PID, both parts) and legacy `public.crf_export`. `public.identity` is kept
+  for legacy rows only. Schema: `supabase/migrations/0001_init.sql`, `0002_two_parts.sql`.
+* `palmppg crf pull --study-root <dir>` writes the merged `participants/<PID>/crf.json` (section 3.7) for submitted
+  parts and `onboarding/{screen_failures.csv, crf_export_<UTC>.csv, pull_log.jsonl}`.

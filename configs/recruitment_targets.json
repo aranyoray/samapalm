@@ -1,0 +1,252 @@
+{
+ "version": "2026-10-24.1",
+ "note": "Defaults derived from the concept note; the PI must confirm these numbers before they are used to steer recruitment.",
+ "levels": {
+  "high": 0.5,
+  "medium": 0.2
+ },
+ "groups": [
+  {
+   "id": "sex",
+   "label": "Sex",
+   "weight": 1.0,
+   "cells": [
+    {
+     "key": "sex:F",
+     "label": "Female",
+     "target": 1000
+    },
+    {
+     "key": "sex:M",
+     "label": "Male",
+     "target": 1000
+    }
+   ]
+  },
+  {
+   "id": "mst",
+   "label": "Skin tone (MST band)",
+   "weight": 1.0,
+   "cells": [
+    {
+     "key": "mst:4",
+     "label": "MST 4",
+     "target": 200
+    },
+    {
+     "key": "mst:5",
+     "label": "MST 5",
+     "target": 200
+    },
+    {
+     "key": "mst:6",
+     "label": "MST 6",
+     "target": 200
+    },
+    {
+     "key": "mst:7",
+     "label": "MST 7",
+     "target": 200
+    },
+    {
+     "key": "mst:8",
+     "label": "MST 8",
+     "target": 200
+    },
+    {
+     "key": "mst:9",
+     "label": "MST 9",
+     "target": 200
+    },
+    {
+     "key": "mst:10",
+     "label": "MST 10",
+     "target": 200
+    }
+   ]
+  },
+  {
+   "id": "condition",
+   "label": "Condition",
+   "weight": 1.0,
+   "cells": [
+    {
+     "key": "cond:htn",
+     "label": "High blood pressure",
+     "target": 400
+    },
+    {
+     "key": "cond:af",
+     "label": "Atrial fibrillation",
+     "target": 300
+    },
+    {
+     "key": "cond:arrhythmia_other",
+     "label": "Other rhythm problem",
+     "target": 150
+    },
+    {
+     "key": "cond:heart_other",
+     "label": "Other heart disease",
+     "target": 150
+    },
+    {
+     "key": "cond:diabetes",
+     "label": "Diabetes",
+     "target": 400
+    },
+    {
+     "key": "haem:thal_trait",
+     "label": "Thalassaemia or HbE trait",
+     "target": 150
+    },
+    {
+     "key": "haem:thal_disease",
+     "label": "Thalassaemia or HbE disease",
+     "target": 60
+    },
+    {
+     "key": "haem:ida",
+     "label": "Iron-deficiency anaemia",
+     "target": 150
+    },
+    {
+     "key": "haem:anaemia_other",
+     "label": "Other anaemia",
+     "target": 100
+    },
+    {
+     "key": "haem:non_anaemic",
+     "label": "Not anaemic (comparator)",
+     "target": 300
+    }
+   ]
+  },
+  {
+   "id": "sex_mst",
+   "label": "Sex by skin tone",
+   "weight": 0.7,
+   "cells": [
+    {
+     "key": "sex_mst:F:4",
+     "label": "Female, MST 4",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:5",
+     "label": "Female, MST 5",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:6",
+     "label": "Female, MST 6",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:7",
+     "label": "Female, MST 7",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:8",
+     "label": "Female, MST 8",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:9",
+     "label": "Female, MST 9",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:F:10",
+     "label": "Female, MST 10",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:4",
+     "label": "Male, MST 4",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:5",
+     "label": "Male, MST 5",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:6",
+     "label": "Male, MST 6",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:7",
+     "label": "Male, MST 7",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:8",
+     "label": "Male, MST 8",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:9",
+     "label": "Male, MST 9",
+     "target": 100
+    },
+    {
+     "key": "sex_mst:M:10",
+     "label": "Male, MST 10",
+     "target": 100
+    }
+   ]
+  },
+  {
+   "id": "condition_dark",
+   "label": "Condition in darker skin (MST 7-10)",
+   "weight": 0.7,
+   "cells": [
+    {
+     "key": "cond_mstgrp:htn:dark",
+     "label": "High blood pressure, MST 7-10",
+     "target": 120
+    },
+    {
+     "key": "cond_mstgrp:af:dark",
+     "label": "Atrial fibrillation, MST 7-10",
+     "target": 120
+    },
+    {
+     "key": "cond_mstgrp:diabetes:dark",
+     "label": "Diabetes, MST 7-10",
+     "target": 120
+    },
+    {
+     "key": "haem_mstgrp:thal_trait:dark",
+     "label": "Thalassaemia or HbE trait, MST 7-10",
+     "target": 50
+    },
+    {
+     "key": "haem_mstgrp:ida:dark",
+     "label": "Iron-deficiency anaemia, MST 7-10",
+     "target": 50
+    }
+   ]
+  },
+  {
+   "id": "scan",
+   "label": "Rhythm at the scan (dashboard only)",
+   "weight": 0.0,
+   "cells": [
+    {
+     "key": "rhythm:af",
+     "label": "Kardia: possible AF",
+     "target": 300
+    },
+    {
+     "key": "rhythm:nsr",
+     "label": "Kardia: normal sinus rhythm",
+     "target": 500
+    }
+   ]
+  }
+ ]
+}

@@ -3,8 +3,11 @@
     SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_EXPORTER_EMAIL=... SUPABASE_EXPORTER_PASSWORD=... \\
         palmppg crf pull --study-root data/study
 
-Signs in as the read-only exporter account, pages through public.visits (1000 rows a request), and for every
-submitted visit writes participants/<PID>/crf.json when its content changed. Screen failures go to
+Signs in as the read-only exporter account, pages through public.visits (1000 rows a request), and for every PID with
+a submitted record writes participants/<PID>/crf.json when its content changed. A v2 PID has up to two records
+(parts `enrol` and `scan`, design section 7): their fields are merged at top level (question ids are unique across
+parts) and each part's context goes under `parts: {enrol: {...}, scan: {...}}`. A v1 record (part `full`) is written
+as it is. Screen failures go to
 onboarding/screen_failures.csv (STARD flow counts); every pull writes onboarding/crf_export_<UTC>.csv as a snapshot
 (the free Supabase plan keeps no backups) and appends onboarding/pull_log.jsonl. Identity is never requested: the
 exporter account cannot read it and the CRF table refuses identity keys.
@@ -24,7 +27,12 @@ from typing import Any
 from palmppg.core.crf import validate_crf
 
 PAGE = 1000
-SELECT = "visit_uuid,pid,status,crf,schema_version,app_ver,device_code,operator_code,stream,created_at,updated_at,submitted_at,screen_fail_reason,server_received_at,locked"
+SELECT = "visit_uuid,pid,part,status,crf,schema_version,app_ver,device_code,operator_code,stream,created_at,updated_at,submitted_at,screen_fail_reason,server_received_at,locked"
+
+
+# Per-part context kept under parts.<part>; everything else in a part's CRF goes to the top level.
+CONTEXT = ("part", "operator", "unit_id", "app_ver", "device_code", "capture_mode", "schema_version", "status", "submitted_at")
+_ROW_COLUMN = {"operator": "operator_code", "app_ver": "app_ver", "device_code": "device_code", "schema_version": "schema_version"}
 
 
 class PullError(RuntimeError):
@@ -72,28 +80,72 @@ def _sha(obj: Any) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def merge_parts(parts: dict[str, dict]) -> tuple[dict, list[str]]:
+    """One participant record from its submitted v2 rows ({"enrol": row, "scan": row}, either may be missing).
+
+    Part fields go to the top level (enrol first; a key both parts carry with different values keeps the enrol value
+    and is reported), and each part's context keys go under record["parts"][part].
+    """
+    record: dict[str, Any] = {}
+    ctx: dict[str, dict] = {}
+    probs: list[str] = []
+    for name in ("enrol", "scan"):
+        row = parts.get(name)
+        if row is None:
+            continue
+        crf = row.get("crf") or {}
+        c = {"part": name, "status": row.get("status"), "submitted_at": row.get("submitted_at")}
+        for k in CONTEXT[1:7]:
+            c[k] = crf.get(k, row.get(_ROW_COLUMN[k]) if k in _ROW_COLUMN else None)
+        ctx[name] = {k: c[k] for k in CONTEXT if c.get(k) is not None}
+        for k, v in crf.items():
+            if k in CONTEXT:
+                continue
+            if k in record and record[k] != v:
+                probs.append(f"{k} differs between the enrol and scan parts")
+                continue
+            record[k] = v
+    record["parts"] = ctx
+    return record, probs
+
+
 def write_study_tree(rows: list[dict], study_root: str | Path, now: dt.datetime | None = None) -> dict:
-    """Write crf.json per submitted visit (only when changed), the screen-failure list and a CSV snapshot."""
+    """Write crf.json per PID with a submitted record (only when changed), the screen-failure list and a CSV snapshot."""
     now = now or dt.datetime.now(dt.timezone.utc)
     root = Path(study_root)
     onboarding = root / "onboarding"
     onboarding.mkdir(parents=True, exist_ok=True)
     summary = {"pulled_utc": now.isoformat(), "n_rows": len(rows), "written": [], "unchanged": 0, "screen_fail": 0,
-               "draft": 0, "void": 0, "problems": {}}
+               "draft": 0, "void": 0, "problems": {}, "incomplete": {}}
     fails = []
+    submitted: dict[str, dict[str, dict]] = {}                 # pid -> part -> row, in server (pid) order
     for r in rows:
         status, pid, crf = r.get("status"), r.get("pid"), r.get("crf") or {}
         if any(k in crf for k in ("name", "phone", "hospital_reg_no")):
             raise PullError(f"{pid}: identity keys found in a CRF; refusing to write")
         if status == "screen_fail":
             summary["screen_fail"] += 1
-            fails.append({"pid": pid, "dept": crf.get("dept"), "stream": r.get("stream"), "created_at": r.get("created_at"),
-                          "reason": r.get("screen_fail_reason"), "operator_code": r.get("operator_code")})
+            fails.append({"pid": pid, "part": r.get("part") or "full", "dept": crf.get("dept"), "stream": r.get("stream"),
+                          "created_at": r.get("created_at"), "reason": r.get("screen_fail_reason"),
+                          "operator_code": r.get("operator_code")})
             continue
         if status in ("draft", "void"):
             summary[status] += 1
             continue
-        probs = validate_crf(crf)
+        submitted.setdefault(pid, {})[r.get("part") or "full"] = r
+    for pid, parts in submitted.items():
+        if "enrol" in parts or "scan" in parts:
+            crf, probs = merge_parts(parts)
+            if "full" in parts:
+                probs.append("a v1 full record also exists; the enrol/scan parts were used")
+            missing = [p for p in ("enrol", "scan") if p not in parts]
+            if missing:
+                summary["incomplete"][pid] = f"no submitted {missing[0]} part yet"
+            else:
+                probs += validate_crf(crf)
+        else:
+            crf = parts["full"].get("crf") or {}
+            probs = validate_crf(crf)
         if probs:
             summary["problems"][pid] = probs
         path = root / "participants" / pid / "crf.json"
@@ -104,7 +156,7 @@ def write_study_tree(rows: list[dict], study_root: str | Path, now: dt.datetime 
         path.write_text(json.dumps(crf, indent=1, ensure_ascii=False), encoding="utf-8")
         summary["written"].append(pid)
     with open(onboarding / "screen_failures.csv", "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=["pid", "dept", "stream", "created_at", "reason", "operator_code"])
+        w = csv.DictWriter(fh, fieldnames=["pid", "dept", "stream", "created_at", "reason", "operator_code", "part"])
         w.writeheader()
         w.writerows(fails)
     snap = onboarding / f"crf_export_{now.strftime('%Y%m%dT%H%M%SZ')}.csv"

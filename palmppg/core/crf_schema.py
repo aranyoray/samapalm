@@ -5,7 +5,8 @@ that both engines must reproduce exactly (tests/test_core_crf_schema.py and the 
 
 Semantics (keep in step with android/crf-core/src/main/kotlin/org/samahealth/crf/CrfEngine.kt):
 
-* Flow: `flows[settings.clip_plan]` gives the screen order. A screen is visible when its `show_if` holds.
+* Flow: `settings.part` (enrol | scan) and `settings.clip_plan` pick the flow: `flows[part]` when it exists, else
+  `flows[part + "_" + clip_plan]`; unknown keys raise. A screen is visible when its `show_if` holds.
 * Effective answers: one forward pass over visible screens and their questions in order; a question is visible when
   its `show_if` holds on the effective answers collected so far. Answers to hidden questions are dropped, so a changed
   branch never leaks stale answers into the export. Conditions may only refer to earlier questions (schema lint).
@@ -14,11 +15,12 @@ Semantics (keep in step with android/crf-core/src/main/kotlin/org/samahealth/crf
   Numeric ops are false for non-numbers; `ne` is true when the value is missing.
 * Validation codes: required, type, min, max, choice, exclusive, pattern, date, future, bp_range, bp_order, bp_time,
   clip_incomplete, clip_order, stop. Warnings (non-blocking) come from `warn_if`.
-* Derived values: bmi, cuff_suggestion, trimester, rest_elapsed_s, recovery, bracket_flag, bp1_outlier, eligible,
-  initials (see `derive`).
-* Export: answered effective questions with store "crf" (default) and `export` not false, transformed by
-  `export_as`; computed questions marked `export: true`; plus context and `initials`. Identity questions go to a
-  separate record keyed by PID (name and PID are stored apart).
+* Derived values (see `derive`): bmi, cuff_suggestion, trimester, rest_elapsed(_s), recovery, bracket_flag,
+  bp1_outlier, eligible, anaemia_grade, anaemic, mentzer_index, mentzer_pattern, hplc_reflex,
+  days_since_transfusion, transfusion_30d, haem_cell, dm_label, strata, scan_strata.
+* Export: answered effective questions with `export` not false, transformed by `export_as`; computed questions marked
+  `export: true`; plus the context keys, `part`, `schema_version` and, for a flow chosen by clip plan (the scan
+  part), `clip_plan`. There is no identity record: names stay on the paper consent form.
 """
 from __future__ import annotations
 
@@ -33,6 +35,15 @@ from typing import Any, Mapping
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "configs" / "crf_schema.json"
 NO_VALUE_TYPES = {"computed", "info"}
 BP_LIMITS = {"sbp": (50, 300), "dbp": (20, 200), "hr": (20, 250)}
+PARTS = ("enrol", "scan")
+CLIP_PLANS = ("1x60", "2x30")
+# Order of the `conditions` choice list; `strata` lists cond:* keys in this order (the lint checks the schema agrees).
+CONDITION_ORDER = ("htn", "af", "arrhythmia_other", "heart_other", "diabetes", "thal", "ida", "anaemia_other", "ckd", "none")
+KNOWN_DERIVED = frozenset({
+    "bmi", "cuff_suggestion", "trimester", "rest_elapsed", "rest_elapsed_s", "recovery", "bracket_flag", "bp1_outlier",
+    "eligible", "anaemic", "anaemia_grade", "mentzer_index", "mentzer_pattern", "hplc_reflex", "days_since_transfusion",
+    "transfusion_30d", "haem_cell", "dm_label", "strata", "scan_strata",
+})
 
 
 def load_schema(path: str | Path | None = None) -> dict:
@@ -113,6 +124,15 @@ def eval_condition(cond: Mapping | None, answers: Mapping, settings: Mapping, de
     raise ValueError(f"unknown condition operator: {cond}")
 
 
+def flow_key(flows: Mapping, settings: Mapping) -> str:
+    """`part` when the schema has a flow of that name, else `part_clipplan` (section 2.1 of the v2 design)."""
+    part, plan = settings.get("part") or "enrol", settings.get("clip_plan") or "1x60"
+    key = part if part in flows else f"{part}_{plan}"
+    if key not in flows:
+        raise ValueError(f"unknown flow {key!r} (part {part!r}, clip_plan {plan!r}); schema flows: {sorted(flows)}")
+    return key
+
+
 def resolve_default(q: Mapping, settings: Mapping) -> Any:
     d = q.get("default")
     if isinstance(d, str) and d.startswith("$settings."):
@@ -156,11 +176,11 @@ class CrfEngine:
         self.pid_re = re.compile(self.schema["pid_pattern"])
 
     # ------------------------------------------------------------------ helpers
+    def flow_key(self) -> str:
+        return flow_key(self.schema["flows"], self.settings)
+
     def flow(self) -> list[str]:
-        plan = self.settings.get("clip_plan")
-        if plan not in self.schema["flows"]:
-            raise ValueError(f"unknown clip_plan {plan!r}; schema flows: {sorted(self.schema['flows'])}")
-        return list(self.schema["flows"][plan])
+        return list(self.schema["flows"][self.flow_key()])
 
     def choice_values(self, q: Mapping) -> list[str]:
         ch = q.get("choices")
@@ -280,12 +300,10 @@ class CrfEngine:
         return []
 
     # ------------------------------------------------------------------ export
-    def export(self, answers: Mapping, context: Mapping | None = None, identity_name: str | None = None,
-               now: dt.datetime | None = None) -> tuple[dict, dict]:
-        """(crf record, identity record). The CRF never contains identity-store answers."""
+    def export(self, answers: Mapping, context: Mapping | None = None, now: dt.datetime | None = None) -> dict:
+        """The CRF record of this part. Names never enter the app, so there is no identity record."""
         ev = self.evaluate(answers, now)
         crf: dict[str, Any] = {}
-        ident: dict[str, Any] = {}
         for sid in ev.visible_screens:
             for qid in ev.visible_questions[sid]:
                 q = self.questions[qid][1]
@@ -295,31 +313,22 @@ class CrfEngine:
                     continue
                 if q["type"] == "info" or qid not in ev.effective:
                     continue
+                if q.get("export") is False or q.get("store") == "identity":
+                    continue
                 v = ev.effective[qid]
-                if q.get("store") == "identity":
-                    ident[qid] = v
-                    continue
-                if q.get("export") is False:
-                    continue
                 if q.get("export_as") == "bool_yes_no":
                     v = {"yes": True, "no": False}.get(v)
                 crf[q.get("export_key", qid)] = v
-        name = identity_name if identity_name is not None else ident.get("name")
-        if name:
-            crf["initials"] = initials(name)
-        ident["pid"] = ev.effective.get("study_id")
         crf.update({k: v for k, v in dict(context or {}).items() if v is not None})
+        key = self.flow_key()
+        crf["part"] = self.settings.get("part") or "enrol"
         crf["schema_version"] = self.schema["schema_version"]
-        crf["clip_plan"] = self.settings.get("clip_plan")
-        return crf, ident
+        if key != crf["part"]:
+            crf["clip_plan"] = self.settings.get("clip_plan") or "1x60"
+        return crf
 
 
 # ---------------------------------------------------------------------- derivations
-def initials(name: str) -> str:
-    parts = [p for p in re.split(r"\s+", name.strip()) if p]
-    return "".join(p[0].upper() for p in parts[:3])
-
-
 def cuff_suggestion(circ: Any) -> str | None:
     if not _is_num(circ):
         return None
@@ -371,14 +380,168 @@ def derive(eff: Mapping, settings: Mapping, now: dt.datetime | None = None) -> d
     age, consent = eff.get("age"), eff.get("consent")
     out["eligible"] = (consent == "yes" and age >= 18) if (consent is not None and _is_num(age)) else None
     out["rest_elapsed"] = out["rest_elapsed_s"]
+    # v2 enrol derivations (design section 2.5)
+    out["anaemia_grade"] = anaemia_grade(eff.get("hb_gdl"), eff.get("sex"), eff.get("pregnant"), out["trimester"])
+    out["anaemic"] = None if out["anaemia_grade"] is None else out["anaemia_grade"] != "none"
+    mcv = eff.get("mcv_fl")
+    out["mentzer_index"] = round(mcv / eff["rbc_mill"], 1) if _is_num(mcv) and _is_num(eff.get("rbc_mill")) and eff["rbc_mill"] > 0 else None
+    if out["mentzer_index"] is None:
+        out["mentzer_pattern"] = None
+    else:
+        out["mentzer_pattern"] = "not_microcytic" if mcv >= 80 else ("thal_trait_pattern" if out["mentzer_index"] < 13 else "iron_deficiency_pattern")
+    out["hplc_reflex"] = hplc_reflex(mcv, eff.get("mch_pg"))
+    last_tx = parse_date(eff.get("last_transfusion_date"))
+    out["days_since_transfusion"] = (now.date() - last_tx).days if last_tx else None
+    out["transfusion_30d"] = None if last_tx is None else out["days_since_transfusion"] <= 30
+    out["haem_cell"] = haem_cell(eff, out["anaemic"], _setting_num(settings, "ferritin_id_cutoff", 15.0))
+    out["dm_label"] = dm_label(eff.get("conditions"), eff.get("hba1c_pct"), _setting_num(settings, "hba1c_dm_cutoff", 6.5))
+    out["strata"] = strata(eff, out["haem_cell"], out["dm_label"])
+    out["scan_strata"] = scan_strata(eff)
     return out
+
+
+def _setting_num(settings: Mapping, key: str, default: float) -> float:
+    v = settings.get(key)
+    return float(v) if _is_num(v) else default
+
+
+# WHO 2024 haemoglobin cut-offs (g/dL) for people aged 15 and over: lowest value graded none, mild, moderate.
+HB_CUTOFFS = {"F": (12.0, 11.0, 8.0), "M": (13.0, 11.0, 8.0), "pregnant_t13": (11.0, 10.0, 7.0), "pregnant_t2": (10.5, 9.5, 7.0)}
+
+
+def anaemia_grade(hb: Any, sex: Any, pregnant: Any, trimester: Any) -> str | None:
+    """none | mild | moderate | severe; pregnant with unknown trimester uses the trimester 1/3 cut-offs."""
+    if not _is_num(hb) or sex not in ("F", "M"):
+        return None
+    if sex == "F" and pregnant == "yes":
+        cut = HB_CUTOFFS["pregnant_t2" if trimester == 2 else "pregnant_t13"]
+    else:
+        cut = HB_CUTOFFS[sex]
+    return "none" if hb >= cut[0] else "mild" if hb >= cut[1] else "moderate" if hb >= cut[2] else "severe"
+
+
+def hplc_reflex(mcv: Any, mch: Any) -> bool | None:
+    """True when MCV < 80 fL or MCH < 27 pg; None when both are missing."""
+    has_mcv, has_mch = _is_num(mcv), _is_num(mch)
+    if not has_mcv and not has_mch:
+        return None
+    return bool((has_mcv and mcv < 80) or (has_mch and mch < 27))
+
+
+def _conditions(eff: Mapping) -> list:
+    c = eff.get("conditions")
+    return c if isinstance(c, list) else []
+
+
+def haem_cell(eff: Mapping, anaemic: bool | None, ferritin_cutoff: float) -> str | None:
+    """Recruitment cell for the haematology strata; the first matching rule wins."""
+    conds, tt, hp = _conditions(eff), eff.get("thal_type"), eff.get("hplc_result")
+    fer = eff.get("ferritin_ngml")
+    if tt in ("beta_major_intermedia", "hbe_beta", "hbe_disease") or hp in ("beta_major_intermedia", "hbe_beta"):
+        return "thal_disease"
+    if tt in ("beta_trait", "hbe_trait") or hp in ("beta_trait", "hbe_trait"):
+        return "thal_trait"
+    if "thal" in conds:
+        return "thal_unspecified"
+    if "ida" in conds or (anaemic is True and _is_num(fer) and fer < ferritin_cutoff):
+        return "ida"
+    if anaemic is True or "anaemia_other" in conds:
+        return "anaemia_other"
+    if anaemic is False:
+        return "non_anaemic"
+    return None
+
+
+def dm_label(conds: Any, hba1c: Any, cutoff: float) -> str | None:
+    """documented_hba1c | documented | hba1c_only | no_known; None before the conditions are answered."""
+    if not isinstance(conds, list):
+        return None
+    high = _is_num(hba1c) and hba1c >= cutoff
+    if "diabetes" in conds:
+        return "documented_hba1c" if high else "documented"
+    return "hba1c_only" if high else "no_known"
+
+
+def mst_group(band: int) -> str:
+    return "light" if band <= 4 else "medium" if band <= 6 else "dark"
+
+
+def strata(eff: Mapping, haem: str | None, dm: str | None) -> list[str] | None:
+    """Recruitment strata keys of an enrol record in the contract order (design section 2.5); None when empty."""
+    sex = eff.get("sex") if isinstance(eff.get("sex"), str) and answered(eff.get("sex")) else None
+    v = eff.get("mst_band")
+    band = v if isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 10 else None
+    grp = mst_group(band) if band is not None else None
+    ticked = [c for c in CONDITION_ORDER if c in _conditions(eff)]
+    out: list[str] = []
+    if sex:
+        out.append(f"sex:{sex}")
+    if band is not None:
+        out += [f"mst:{band}", f"mstgrp:{grp}"]
+    out += [f"cond:{c}" for c in ticked]
+    if haem:
+        out.append(f"haem:{haem}")
+    if dm:
+        out.append(f"dm:{dm}")
+    if eff.get("pregnant") == "yes":
+        out.append("preg:yes")
+    if sex and band is not None:
+        out.append(f"sex_mst:{sex}:{band}")
+    if band is not None:
+        out += [f"cond_mstgrp:{c}:{grp}" for c in ticked if c != "none"]
+    if haem and band is not None:
+        out.append(f"haem_mstgrp:{haem}:{grp}")
+    return out or None
+
+
+def _kardia(clip: Any) -> str | None:
+    v = clip.get("kardia_determination") if isinstance(clip, Mapping) else None
+    return v if isinstance(v, str) and v.strip() != "" else None
+
+
+def scan_strata(eff: Mapping) -> list[str] | None:
+    """rhythm:<Kardia determination> of clip1b (when present with a determination) else clip1, then scan:done."""
+    out: list[str] = []
+    det = _kardia(eff.get("clip1b")) or _kardia(eff.get("clip1"))
+    if det:
+        out.append(f"rhythm:{det}")
+    if answered(eff.get("bp3")):
+        out.append("scan:done")
+    return out or None
 
 
 def lint_schema(schema: Mapping) -> list[str]:
     """Static checks: unique ids, known choice lists, flows reference known screens, conditions refer to earlier
-    questions in every flow (so one forward pass is enough), computed questions name a known derivation."""
+    questions in every flow (so one forward pass is enough), computed questions name a known derivation, every part
+    resolves to a flow for every clip plan, only a flow's first screen is shared between parts, and the `conditions`
+    list has the order the strata derivation uses."""
     problems = []
-    known_derived = {"bmi", "cuff_suggestion", "trimester", "rest_elapsed", "rest_elapsed_s", "recovery", "bracket_flag", "bp1_outlier", "eligible"}
+    known_derived = KNOWN_DERIVED
+    flows = schema["flows"]
+    allowed = set(PARTS) | {f"{p}_{c}" for p in PARTS for c in CLIP_PLANS}
+    for k in flows:
+        if k not in allowed:
+            problems.append(f"flow {k}: not a part or part_clipplan key")
+    used_by: dict[str, set[str]] = {}
+    for p in PARTS:
+        for c in CLIP_PLANS:
+            try:
+                key = flow_key(flows, {"part": p, "clip_plan": c})
+            except ValueError as e:
+                problems.append(str(e))
+                continue
+            for sid in flows[key][1:]:
+                used_by.setdefault(sid, set()).add(p)
+    for sid, parts in sorted(used_by.items()):
+        if len(parts) > 1:
+            problems.append(f"screen {sid} is used by both parts")
+    d = schema.get("settings_defaults", {})
+    try:
+        flow_key(flows, d)
+    except ValueError as e:
+        problems.append(f"settings_defaults: {e}")
+    if "conditions" in schema["choices"] and tuple(c["value"] for c in schema["choices"]["conditions"]) != CONDITION_ORDER:
+        problems.append(f"choices conditions must be {list(CONDITION_ORDER)}")
     screens = {s["id"]: s for s in schema["screens"]}
     seen = set()
     for s in schema["screens"]:

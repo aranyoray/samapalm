@@ -1,50 +1,51 @@
 {
- "schema_version": "2026-10-20.1",
+ "schema_version": "2026-10-24.1",
  "study": "SWHT-PP-003-2026",
  "pid_pattern": "^SWHT-PP-003-[0-9]{4}$",
  "settings_defaults": {
+  "part": "enrol",
   "clip_plan": "1x60",
   "rest_seconds": 300,
   "bracket_mmhg": 10,
   "bp1_outlier_mmhg": 15,
   "stream": "pilot",
   "unit_id": "unit_01",
-  "capture_mode": "simultaneous"
+  "capture_mode": "simultaneous",
+  "imaged_hand": "left",
+  "ferritin_id_cutoff": 15,
+  "hba1c_dm_cutoff": 6.5
  },
  "flows": {
-  "1x60": [
-   "enrolment",
-   "identity",
+  "enrol": [
+   "pid",
+   "e_consent",
+   "e_basics",
+   "e_conditions",
+   "e_labs",
+   "e_today",
+   "e_review"
+  ],
+  "scan_1x60": [
+   "pid",
+   "s_setup",
    "bp1",
-   "demographics",
-   "pregnancy",
-   "skin",
-   "history",
-   "chart_values",
-   "acute",
    "bp2",
    "clip1",
    "clip1b",
    "bp3",
-   "review"
+   "s_review"
   ],
-  "2x30": [
-   "enrolment",
-   "identity",
+  "scan_2x30": [
+   "pid",
+   "s_setup",
    "bp1",
-   "demographics",
-   "pregnancy",
-   "skin",
-   "history",
-   "chart_values",
-   "acute",
    "clip1",
    "clip1b",
    "bp2",
    "clip2",
    "clip2b",
    "bp3",
-   "review"
+   "s_review"
   ]
  },
  "choices": {
@@ -69,7 +70,7 @@
    },
    {
     "value": "unknown",
-    "label": "Unknown"
+    "label": "Don't know"
    }
   ],
   "stream": [
@@ -136,28 +137,6 @@
     "label": "Other"
    }
   ],
-  "cohort": [
-   {
-    "value": "core",
-    "label": "Core cohort"
-   },
-   {
-    "value": "af_nested",
-    "label": "Nested: AF present"
-   },
-   {
-    "value": "hard_control_nested",
-    "label": "Nested: hard non-AF control (ectopy, flutter, PSVT, brady/tachy)"
-   },
-   {
-    "value": "anaemia_nested",
-    "label": "Nested: anaemia / thalassaemia stratum"
-   },
-   {
-    "value": "antenatal_addon",
-    "label": "Antenatal add-on"
-   }
-  ],
   "sex": [
    {
     "value": "F",
@@ -170,20 +149,6 @@
    {
     "value": "Other",
     "label": "Other"
-   }
-  ],
-  "handedness": [
-   {
-    "value": "right",
-    "label": "Right"
-   },
-   {
-    "value": "left",
-    "label": "Left"
-   },
-   {
-    "value": "ambidextrous",
-    "label": "Ambidextrous"
    }
   ],
   "hand": [
@@ -214,244 +179,258 @@
     "label": "Thigh / extra large (42-52 cm)"
    }
   ],
-  "ga_source": [
+  "conditions": [
    {
-    "value": "usg",
-    "label": "Ultrasound"
+    "value": "htn",
+    "label": "High blood pressure"
    },
    {
-    "value": "lmp",
-    "label": "Last menstrual period"
+    "value": "af",
+    "label": "Atrial fibrillation"
    },
    {
-    "value": "clinical",
-    "label": "Clinical estimate"
-   }
-  ],
-  "hdp_status": [
-   {
-    "value": "none",
-    "label": "None"
+    "value": "arrhythmia_other",
+    "label": "Other rhythm problem (flutter, ectopics, SVT)"
    },
    {
-    "value": "gestational hypertension",
-    "label": "Gestational hypertension"
-   },
-   {
-    "value": "preeclampsia",
-    "label": "Preeclampsia"
-   },
-   {
-    "value": "preeclampsia severe",
-    "label": "Preeclampsia with severe features"
-   },
-   {
-    "value": "chronic hypertension",
-    "label": "Chronic hypertension"
-   },
-   {
-    "value": "chronic with superimposed preeclampsia",
-    "label": "Chronic hypertension with superimposed preeclampsia"
-   },
-   {
-    "value": "unknown",
-    "label": "Unknown"
-   }
-  ],
-  "urine_protein": [
-   {
-    "value": "negative",
-    "label": "Negative"
-   },
-   {
-    "value": "trace",
-    "label": "Trace"
-   },
-   {
-    "value": "1+",
-    "label": "1+"
-   },
-   {
-    "value": "2+",
-    "label": "2+"
-   },
-   {
-    "value": "3+",
-    "label": "3+"
-   },
-   {
-    "value": "4+",
-    "label": "4+"
-   },
-   {
-    "value": "not done",
-    "label": "Not done"
-   }
-  ],
-  "flags": [
-   {
-    "value": "none",
-    "label": "None of these"
-   },
-   {
-    "value": "hypertension",
-    "label": "Hypertension"
+    "value": "heart_other",
+    "label": "Other heart disease (heart attack, angina, heart failure, valve)"
    },
    {
     "value": "diabetes",
     "label": "Diabetes"
    },
    {
-    "value": "chronic kidney disease",
-    "label": "Chronic kidney disease"
+    "value": "thal",
+    "label": "Thalassaemia or HbE (trait or disease)"
    },
    {
-    "value": "arrhythmia",
-    "label": "Arrhythmia"
-   },
-   {
-    "value": "anaemia/thalassaemia",
-    "label": "Anaemia / thalassaemia"
-   }
-  ],
-  "antihtn_today": [
-   {
-    "value": "yes <=2 h",
-    "label": "Yes, within 2 h"
-   },
-   {
-    "value": "yes >2 h",
-    "label": "Yes, more than 2 h ago"
-   },
-   {
-    "value": "no",
-    "label": "No"
-   }
-  ],
-  "dm_type": [
-   {
-    "value": "type 1",
-    "label": "Type 1"
-   },
-   {
-    "value": "type 2",
-    "label": "Type 2"
-   },
-   {
-    "value": "gestational",
-    "label": "Gestational"
-   },
-   {
-    "value": "unknown",
-    "label": "Unknown"
-   }
-  ],
-  "arr_type": [
-   {
-    "value": "af",
-    "label": "Atrial fibrillation"
-   },
-   {
-    "value": "aflutter",
-    "label": "Atrial flutter"
-   },
-   {
-    "value": "frequent pac",
-    "label": "Frequent PACs"
-   },
-   {
-    "value": "frequent pvc",
-    "label": "Frequent PVCs"
-   },
-   {
-    "value": "psvt",
-    "label": "PSVT"
-   },
-   {
-    "value": "sinus bradycardia",
-    "label": "Sinus bradycardia"
-   },
-   {
-    "value": "sinus tachycardia",
-    "label": "Sinus tachycardia"
-   },
-   {
-    "value": "paced",
-    "label": "Paced rhythm"
-   },
-   {
-    "value": "heart block",
-    "label": "Heart block"
-   },
-   {
-    "value": "other",
-    "label": "Other / unknown"
-   }
-  ],
-  "arr_status": [
-   {
-    "value": "present today",
-    "label": "Present today (ECG)"
-   },
-   {
-    "value": "history only",
-    "label": "History only"
-   },
-   {
-    "value": "unknown",
-    "label": "Unknown"
-   }
-  ],
-  "haem_type": [
-   {
-    "value": "beta thal trait",
-    "label": "Beta-thalassaemia trait"
-   },
-   {
-    "value": "thal disease",
-    "label": "Thalassaemia major / intermedia"
-   },
-   {
-    "value": "hbe",
-    "label": "HbE disease / HbE-beta thal"
-   },
-   {
-    "value": "sickle",
-    "label": "Sickle cell disease / trait"
-   },
-   {
-    "value": "iron deficiency",
+    "value": "ida",
     "label": "Iron-deficiency anaemia"
    },
    {
-    "value": "other non-thal anaemia",
-    "label": "Other non-thalassaemia anaemia"
+    "value": "anaemia_other",
+    "label": "Other or unknown-cause anaemia"
    },
    {
-    "value": "unknown",
-    "label": "Unknown"
+    "value": "ckd",
+    "label": "Chronic kidney disease"
+   },
+   {
+    "value": "none",
+    "label": "None of these"
    }
   ],
-  "acute": [
+  "htn_meds": [
    {
     "value": "none",
     "label": "None"
    },
    {
+    "value": "one",
+    "label": "One medicine"
+   },
+   {
+    "value": "two",
+    "label": "Two medicines"
+   },
+   {
+    "value": "three_plus",
+    "label": "Three or more"
+   },
+   {
+    "value": "unsure",
+    "label": "Not sure"
+   }
+  ],
+  "af_pattern": [
+   {
+    "value": "paroxysmal",
+    "label": "Comes and goes (paroxysmal)"
+   },
+   {
+    "value": "persistent",
+    "label": "Persistent"
+   },
+   {
+    "value": "permanent",
+    "label": "Permanent"
+   },
+   {
+    "value": "unknown",
+    "label": "Don't know"
+   }
+  ],
+  "arrhythmia_type": [
+   {
+    "value": "flutter",
+    "label": "Atrial flutter"
+   },
+   {
+    "value": "ectopics",
+    "label": "Extra beats (ectopics)"
+   },
+   {
+    "value": "svt",
+    "label": "SVT"
+   },
+   {
+    "value": "other",
+    "label": "Other"
+   },
+   {
+    "value": "unknown",
+    "label": "Don't know"
+   }
+  ],
+  "dm_type": [
+   {
+    "value": "t1",
+    "label": "Type 1"
+   },
+   {
+    "value": "t2",
+    "label": "Type 2"
+   },
+   {
+    "value": "other",
+    "label": "Other"
+   },
+   {
+    "value": "unknown",
+    "label": "Don't know"
+   }
+  ],
+  "dm_treatment": [
+   {
+    "value": "diet",
+    "label": "Diet only"
+   },
+   {
+    "value": "tablets",
+    "label": "Tablets"
+   },
+   {
+    "value": "insulin",
+    "label": "Insulin"
+   },
+   {
+    "value": "tablets_insulin",
+    "label": "Tablets and insulin"
+   },
+   {
+    "value": "none_unknown",
+    "label": "None or don't know"
+   }
+  ],
+  "thal_type": [
+   {
+    "value": "beta_trait",
+    "label": "Beta-thal trait (carrier)"
+   },
+   {
+    "value": "beta_major_intermedia",
+    "label": "Beta-thal major or intermedia"
+   },
+   {
+    "value": "hbe_trait",
+    "label": "HbE trait (carrier)"
+   },
+   {
+    "value": "hbe_beta",
+    "label": "HbE beta-thalassaemia"
+   },
+   {
+    "value": "hbe_disease",
+    "label": "HbE disease (EE)"
+   },
+   {
+    "value": "other_unknown",
+    "label": "Other or don't know"
+   }
+  ],
+  "thal_transfusions": [
+   {
+    "value": "none",
+    "label": "Never or not now"
+   },
+   {
+    "value": "occasional",
+    "label": "Occasional"
+   },
+   {
+    "value": "regular",
+    "label": "Regular"
+   }
+  ],
+  "iron_therapy": [
+   {
+    "value": "none",
+    "label": "None"
+   },
+   {
+    "value": "oral",
+    "label": "Iron tablets or syrup"
+   },
+   {
+    "value": "iv_3m",
+    "label": "IV iron in the last 3 months"
+   },
+   {
+    "value": "unknown",
+    "label": "Don't know"
+   }
+  ],
+  "hplc_result": [
+   {
+    "value": "not_done",
+    "label": "Not done / not on record"
+   },
+   {
+    "value": "normal",
+    "label": "Normal"
+   },
+   {
+    "value": "beta_trait",
+    "label": "Beta-thal trait"
+   },
+   {
+    "value": "hbe_trait",
+    "label": "HbE trait"
+   },
+   {
+    "value": "hbe_beta",
+    "label": "HbE beta-thalassaemia"
+   },
+   {
+    "value": "beta_major_intermedia",
+    "label": "Beta-thal major or intermedia"
+   },
+   {
+    "value": "other",
+    "label": "Other variant"
+   }
+  ],
+  "acute": [
+   {
     "value": "caffeine",
-    "label": "Caffeine"
+    "label": "Tea, coffee or cola"
    },
    {
     "value": "tobacco",
-    "label": "Tobacco"
+    "label": "Smoked or chewed tobacco"
    },
    {
     "value": "exercise",
-    "label": "Exercise"
+    "label": "Hurried or climbed stairs"
    },
    {
     "value": "meal",
-    "label": "Meal"
+    "label": "Ate a meal"
+   },
+   {
+    "value": "none",
+    "label": "None of these"
    }
   ],
   "quality": [
@@ -463,123 +442,112 @@
     "value": "fail",
     "label": "Fail (re-shoot once)"
    }
+  ],
+  "kardia": [
+   {
+    "value": "nsr",
+    "label": "Normal sinus rhythm"
+   },
+   {
+    "value": "af",
+    "label": "Possible atrial fibrillation"
+   },
+   {
+    "value": "bradycardia",
+    "label": "Bradycardia (slow)"
+   },
+   {
+    "value": "tachycardia",
+    "label": "Tachycardia (fast)"
+   },
+   {
+    "value": "sinus_sve",
+    "label": "Sinus rhythm with SVE (extra beats from the top)"
+   },
+   {
+    "value": "sinus_pvc",
+    "label": "Sinus rhythm with PVCs (extra beats from the bottom)"
+   },
+   {
+    "value": "sinus_wide_qrs",
+    "label": "Sinus rhythm with wide QRS"
+   },
+   {
+    "value": "unclassified",
+    "label": "Unclassified"
+   },
+   {
+    "value": "unreadable",
+    "label": "Unreadable"
+   },
+   {
+    "value": "too_short",
+    "label": "Too short"
+   },
+   {
+    "value": "not_recorded",
+    "label": "Not recorded"
+   }
   ]
  },
  "screens": [
   {
-   "id": "enrolment",
-   "title": "Enrolment",
+   "id": "pid",
+   "title": "Participant ID",
    "questions": [
     {
      "id": "study_id",
      "type": "pid",
      "label": "Participant ID (PID)",
      "required": true,
-     "help": "Scan or type the label on the folder; the app can also take the next PID from this tablet's block."
-    },
+     "help": "Copy it from the paper consent form. Names stay on paper."
+    }
+   ]
+  },
+  {
+   "id": "e_consent",
+   "title": "Consent",
+   "questions": [
     {
      "id": "consent",
      "type": "single",
+     "label": "Signed consent form?",
      "choices": "yes_no",
-     "label": "Written informed consent obtained",
      "required": true,
      "export": false,
      "stop_if": {
       "q": "consent",
       "eq": "no"
      },
-     "stop_message": "No consent: do not enrol. Save as a screen failure."
+     "stop_message": "No consent: save as a screen failure."
     },
     {
      "id": "stream",
      "type": "single",
-     "choices": "stream",
      "label": "Study stream",
+     "choices": "stream",
      "required": true,
      "default": "$settings.stream"
     },
     {
      "id": "dept",
      "type": "single",
-     "choices": "dept",
      "label": "Department",
+     "choices": "dept",
      "required": true
-    },
-    {
-     "id": "cohort_tags",
-     "type": "multi",
-     "choices": "cohort",
-     "label": "Recruitment cohort(s)",
-     "required": true,
-     "default": [
-      "core"
-     ]
-    },
-    {
-     "id": "imaged_hand",
-     "type": "single",
-     "choices": "hand",
-     "label": "Hand imaged",
-     "required": true,
-     "default": "left"
     }
    ]
   },
   {
-   "id": "identity",
-   "title": "Identity (stored separately from study data)",
-   "questions": [
-    {
-     "id": "name",
-     "type": "text",
-     "label": "Full name",
-     "required": true,
-     "store": "identity"
-    },
-    {
-     "id": "hospital_reg_no",
-     "type": "text",
-     "label": "Hospital registration number",
-     "required": false,
-     "store": "identity"
-    },
-    {
-     "id": "phone",
-     "type": "text",
-     "label": "Phone (optional)",
-     "required": false,
-     "store": "identity",
-     "pattern": "^[0-9+ -]{6,16}$"
-    }
-   ]
-  },
-  {
-   "id": "bp1",
-   "title": "BP1 on seating",
-   "questions": [
-    {
-     "id": "bp1",
-     "type": "bp",
-     "label": "BP1 (first reading on seating)",
-     "required": true
-    },
-    {
-     "id": "rest_note",
-     "type": "info",
-     "label": "Start the seated rest now. History and the CRF are taken during the rest; BP2 opens after the configured rest."
-    }
-   ]
-  },
-  {
-   "id": "demographics",
-   "title": "Demographics",
+   "id": "e_basics",
+   "title": "Basics",
    "questions": [
     {
      "id": "age",
      "type": "integer",
      "label": "Age (years)",
      "required": true,
-     "min": 0,
+     "min": 18,
      "max": 110,
      "stop_if": {
       "q": "age",
@@ -590,17 +558,16 @@
     {
      "id": "sex",
      "type": "single",
-     "choices": "sex",
      "label": "Sex",
+     "choices": "sex",
      "required": true
     },
     {
      "id": "pregnant",
      "type": "single",
+     "label": "Pregnant now?",
      "choices": "yes_no_unknown",
-     "label": "Currently pregnant",
      "required": true,
-     "export_as": "bool_yes_no",
      "show_if": {
       "all": [
        {
@@ -615,6 +582,29 @@
         ]
        }
       ]
+     }
+    },
+    {
+     "id": "gestational_age_weeks",
+     "type": "decimal",
+     "label": "Weeks pregnant (from the antenatal card)",
+     "required": true,
+     "min": 4,
+     "max": 42,
+     "show_if": {
+      "q": "pregnant",
+      "eq": "yes"
+     }
+    },
+    {
+     "id": "trimester",
+     "type": "computed",
+     "label": "Trimester",
+     "compute": "trimester",
+     "export": true,
+     "show_if": {
+      "q": "pregnant",
+      "eq": "yes"
      }
     },
     {
@@ -637,22 +627,681 @@
      "id": "bmi",
      "type": "computed",
      "label": "BMI (kg/m2)",
-     "compute": "bmi"
+     "compute": "bmi",
+     "export": true
     },
     {
-     "id": "handedness",
+     "id": "mst_band",
+     "type": "mst",
+     "label": "Skin tone (Monk scale)",
+     "required": true,
+     "min": 1,
+     "max": 10,
+     "help": "The participant picks from the printed card held against the back of the hand. The screen colours are only a guide.",
+     "warn_if": {
+      "q": "mst_band",
+      "lt": 4
+     },
+     "warn_message": "Outside the target bands 4-10."
+    }
+   ]
+  },
+  {
+   "id": "e_conditions",
+   "title": "Known conditions",
+   "questions": [
+    {
+     "id": "conditions",
+     "type": "multi",
+     "label": "Known conditions (tick all that apply)",
+     "choices": "conditions",
+     "required": true,
+     "exclusive": [
+      "none"
+     ]
+    },
+    {
+     "id": "htn_meds",
      "type": "single",
-     "choices": "handedness",
-     "label": "Handedness",
+     "label": "How many blood pressure medicines?",
+     "choices": "htn_meds",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "htn"
+     }
+    },
+    {
+     "id": "htn_meds_today",
+     "type": "single",
+     "label": "Took them today?",
+     "choices": "yes_no",
+     "required": true,
+     "show_if": {
+      "q": "htn_meds",
+      "in": [
+       "one",
+       "two",
+       "three_plus"
+      ]
+     }
+    },
+    {
+     "id": "af_pattern",
+     "type": "single",
+     "label": "AF pattern",
+     "choices": "af_pattern",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "af"
+     }
+    },
+    {
+     "id": "anticoagulant",
+     "type": "single",
+     "label": "On a blood thinner?",
+     "choices": "yes_no_unknown",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "af"
+     }
+    },
+    {
+     "id": "arrhythmia_type",
+     "type": "single",
+     "label": "Which rhythm problem?",
+     "choices": "arrhythmia_type",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "arrhythmia_other"
+     }
+    },
+    {
+     "id": "cardiac_device",
+     "type": "single",
+     "label": "Pacemaker or ICD?",
+     "choices": "yes_no",
+     "required": true,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "af"
+       },
+       {
+        "q": "conditions",
+        "contains": "arrhythmia_other"
+       },
+       {
+        "q": "conditions",
+        "contains": "heart_other"
+       }
+      ]
+     }
+    },
+    {
+     "id": "dm_type",
+     "type": "single",
+     "label": "Diabetes type",
+     "choices": "dm_type",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "diabetes"
+     }
+    },
+    {
+     "id": "dm_years",
+     "type": "integer",
+     "label": "Years with diabetes",
+     "required": false,
+     "min": 0,
+     "max": 80,
+     "show_if": {
+      "q": "conditions",
+      "contains": "diabetes"
+     }
+    },
+    {
+     "id": "dm_treatment",
+     "type": "single",
+     "label": "Diabetes treatment",
+     "choices": "dm_treatment",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "diabetes"
+     }
+    },
+    {
+     "id": "thal_type",
+     "type": "single",
+     "label": "Thalassaemia or HbE type",
+     "choices": "thal_type",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "thal"
+     }
+    },
+    {
+     "id": "thal_transfusions",
+     "type": "single",
+     "label": "Blood transfusions for it",
+     "choices": "thal_transfusions",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "thal"
+     }
+    },
+    {
+     "id": "iron_therapy",
+     "type": "single",
+     "label": "Iron treatment",
+     "choices": "iron_therapy",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "ida"
+     }
+    },
+    {
+     "id": "on_dialysis",
+     "type": "single",
+     "label": "On dialysis?",
+     "choices": "yes_no",
+     "required": true,
+     "show_if": {
+      "q": "conditions",
+      "contains": "ckd"
+     }
+    },
+    {
+     "id": "transfusion_3m",
+     "type": "single",
+     "label": "Blood transfusion in the last 3 months?",
+     "choices": "yes_no_unknown",
      "required": true
+    },
+    {
+     "id": "last_transfusion_date",
+     "type": "date",
+     "label": "Date of the last transfusion",
+     "required": true,
+     "show_if": {
+      "q": "transfusion_3m",
+      "eq": "yes"
+     }
+    }
+   ]
+  },
+  {
+   "id": "e_labs",
+   "title": "Lab values on record",
+   "questions": [
+    {
+     "id": "labs_note",
+     "type": "info",
+     "label": "Copy from records only. Leave blank if not on record."
+    },
+    {
+     "id": "hb_gdl",
+     "type": "decimal",
+     "label": "Haemoglobin (g/dL)",
+     "required": false,
+     "min": 2,
+     "max": 25
+    },
+    {
+     "id": "hb_date",
+     "type": "date",
+     "label": "Haemoglobin date",
+     "required_if": {
+      "q": "hb_gdl",
+      "answered": true
+     }
+    },
+    {
+     "id": "rbc_mill",
+     "type": "decimal",
+     "label": "RBC count (million/uL)",
+     "required": false,
+     "min": 1,
+     "max": 9,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "mcv_fl",
+     "type": "decimal",
+     "label": "MCV (fL)",
+     "required": false,
+     "min": 40,
+     "max": 130,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "mch_pg",
+     "type": "decimal",
+     "label": "MCH (pg)",
+     "required": false,
+     "min": 10,
+     "max": 45,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "rdw_pct",
+     "type": "decimal",
+     "label": "RDW (%)",
+     "required": false,
+     "min": 8,
+     "max": 35,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "mentzer",
+     "type": "computed",
+     "label": "Mentzer index (MCV / RBC)",
+     "compute": "mentzer_index",
+     "export": true,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "hplc_reflex",
+     "type": "computed",
+     "label": "Small or pale red cells: HPLC worth checking",
+     "compute": "hplc_reflex",
+     "export": true,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "ferritin_ngml",
+     "type": "decimal",
+     "label": "Ferritin (ng/mL)",
+     "required": false,
+     "min": 1,
+     "max": 5000,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "ferritin_date",
+     "type": "date",
+     "label": "Ferritin date",
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "q": "conditions",
+        "contains": "ida"
+       },
+       {
+        "q": "conditions",
+        "contains": "anaemia_other"
+       },
+       {
+        "derived": "anaemic",
+        "eq": true
+       }
+      ]
+     },
+     "required_if": {
+      "q": "ferritin_ngml",
+      "answered": true
+     }
+    },
+    {
+     "id": "hplc_result",
+     "type": "single",
+     "label": "HPLC result",
+     "choices": "hplc_result",
+     "required": false,
+     "show_if": {
+      "any": [
+       {
+        "q": "conditions",
+        "contains": "thal"
+       },
+       {
+        "derived": "hplc_reflex",
+        "eq": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "hba2_pct",
+     "type": "decimal",
+     "label": "HbA2 (%)",
+     "required": false,
+     "min": 0,
+     "max": 20,
+     "show_if": {
+      "q": "hplc_result",
+      "in": [
+       "normal",
+       "beta_trait",
+       "hbe_trait",
+       "hbe_beta",
+       "beta_major_intermedia",
+       "other"
+      ]
+     }
+    },
+    {
+     "id": "hbf_pct",
+     "type": "decimal",
+     "label": "HbF (%)",
+     "required": false,
+     "min": 0,
+     "max": 100,
+     "show_if": {
+      "q": "hplc_result",
+      "in": [
+       "normal",
+       "beta_trait",
+       "hbe_trait",
+       "hbe_beta",
+       "beta_major_intermedia",
+       "other"
+      ]
+     }
+    },
+    {
+     "id": "hbe_pct",
+     "type": "decimal",
+     "label": "HbE (%)",
+     "required": false,
+     "min": 0,
+     "max": 100,
+     "show_if": {
+      "q": "hplc_result",
+      "in": [
+       "normal",
+       "beta_trait",
+       "hbe_trait",
+       "hbe_beta",
+       "beta_major_intermedia",
+       "other"
+      ]
+     }
+    },
+    {
+     "id": "hplc_date",
+     "type": "date",
+     "label": "HPLC date",
+     "show_if": {
+      "q": "hplc_result",
+      "in": [
+       "normal",
+       "beta_trait",
+       "hbe_trait",
+       "hbe_beta",
+       "beta_major_intermedia",
+       "other"
+      ]
+     },
+     "required_if": {
+      "q": "hplc_result",
+      "in": [
+       "normal",
+       "beta_trait",
+       "hbe_trait",
+       "hbe_beta",
+       "beta_major_intermedia",
+       "other"
+      ]
+     }
+    },
+    {
+     "id": "hba1c_pct",
+     "type": "decimal",
+     "label": "HbA1c (%)",
+     "required": false,
+     "min": 3,
+     "max": 20
+    },
+    {
+     "id": "hba1c_date",
+     "type": "date",
+     "label": "HbA1c date",
+     "required_if": {
+      "q": "hba1c_pct",
+      "answered": true
+     }
+    },
+    {
+     "id": "anaemia_grade",
+     "type": "computed",
+     "label": "Anaemia grade (WHO)",
+     "compute": "anaemia_grade",
+     "export": true
+    },
+    {
+     "id": "haem_cell",
+     "type": "computed",
+     "label": "Blood group for recruitment",
+     "compute": "haem_cell",
+     "export": true
+    },
+    {
+     "id": "dm_label",
+     "type": "computed",
+     "label": "Diabetes group for recruitment",
+     "compute": "dm_label",
+     "export": true
+    }
+   ]
+  },
+  {
+   "id": "e_today",
+   "title": "Today",
+   "questions": [
+    {
+     "id": "acute_30m",
+     "type": "multi",
+     "label": "In the last 30 minutes",
+     "choices": "acute",
+     "required": true,
+     "exclusive": [
+      "none"
+     ]
+    },
+    {
+     "id": "last_meal_h",
+     "type": "decimal",
+     "label": "Hours since the last meal",
+     "required": false,
+     "min": 0,
+     "max": 48
+    },
+    {
+     "id": "glucose_mgdl",
+     "type": "decimal",
+     "label": "Finger-prick glucose (mg/dL)",
+     "required": false,
+     "min": 20,
+     "max": 600,
+     "help": "Only for participants in the glucose sub-study (separate consent)."
+    }
+   ]
+  },
+  {
+   "id": "e_review",
+   "title": "Review and submit",
+   "questions": [
+    {
+     "id": "strata",
+     "type": "computed",
+     "label": "Recruitment groups",
+     "compute": "strata",
+     "export": true
+    },
+    {
+     "id": "enrol_notes",
+     "type": "text",
+     "label": "Notes (optional)",
+     "required": false
+    }
+   ]
+  },
+  {
+   "id": "s_setup",
+   "title": "Hand and cuff",
+   "questions": [
+    {
+     "id": "imaged_hand",
+     "type": "single",
+     "label": "Hand to image",
+     "choices": "hand",
+     "required": true,
+     "default": "$settings.imaged_hand"
     },
     {
      "id": "arm_circumference_cm",
      "type": "decimal",
-     "label": "Mid-upper-arm circumference (cm)",
-     "required": false,
+     "label": "Upper-arm circumference (cm)",
+     "required": true,
      "min": 15,
-     "max": 60
+     "max": 55
     },
     {
      "id": "cuff_suggestion",
@@ -663,361 +1312,26 @@
     {
      "id": "cuff_size",
      "type": "single",
-     "choices": "cuff_size",
      "label": "Cuff size used",
+     "choices": "cuff_size",
      "required": true
     }
    ]
   },
   {
-   "id": "pregnancy",
-   "title": "Antenatal details",
-   "show_if": {
-    "q": "pregnant",
-    "eq": "yes"
-   },
+   "id": "bp1",
+   "title": "BP1 on sitting down",
    "questions": [
     {
-     "id": "gestational_age_weeks",
-     "type": "decimal",
-     "label": "Gestational age (weeks, from records)",
-     "required": true,
-     "min": 4,
-     "max": 43
-    },
-    {
-     "id": "trimester",
-     "type": "computed",
-     "label": "Trimester",
-     "compute": "trimester",
-     "export": true
-    },
-    {
-     "id": "ga_source",
-     "type": "single",
-     "choices": "ga_source",
-     "label": "Gestational age source",
+     "id": "bp1",
+     "type": "bp",
+     "label": "BP1 (first reading after sitting down)",
      "required": true
     },
     {
-     "id": "gravida",
-     "type": "integer",
-     "label": "Gravida",
-     "required": true,
-     "min": 1,
-     "max": 20
-    },
-    {
-     "id": "parity",
-     "type": "integer",
-     "label": "Parity",
-     "required": true,
-     "min": 0,
-     "max": 20
-    },
-    {
-     "id": "hdp_status",
-     "type": "single",
-     "choices": "hdp_status",
-     "label": "Hypertensive disorder of pregnancy (as classified in the antenatal notes)",
-     "required": true
-    },
-    {
-     "id": "urine_protein",
-     "type": "single",
-     "choices": "urine_protein",
-     "label": "Urine protein dipstick (routine, latest)",
-     "required": true
-    },
-    {
-     "id": "anc_hb_gdl",
-     "type": "decimal",
-     "label": "Antenatal Hb (g/dL, routine, latest)",
-     "required": false,
-     "min": 3,
-     "max": 20
-    },
-    {
-     "id": "anc_hb_date",
-     "type": "date",
-     "label": "Antenatal Hb date",
-     "required_if": {
-      "q": "anc_hb_gdl",
-      "answered": true
-     }
-    },
-    {
-     "id": "anc_clinic_sbp",
-     "type": "integer",
-     "label": "Clinic SBP in records (mmHg, optional)",
-     "required": false,
-     "min": 60,
-     "max": 260
-    },
-    {
-     "id": "anc_clinic_dbp",
-     "type": "integer",
-     "label": "Clinic DBP in records (mmHg, optional)",
-     "required": false,
-     "min": 30,
-     "max": 160
-    }
-   ]
-  },
-  {
-   "id": "skin",
-   "title": "Skin tone",
-   "questions": [
-    {
-     "id": "mst_band",
-     "type": "mst",
-     "label": "Monk Skin Tone band (participant chooses from the physical swatch card held against the back of the hand, in room light)",
-     "required": true,
-     "min": 1,
-     "max": 10,
-     "help": "The colours on this screen are only a guide; the band comes from the printed card.",
-     "warn_if": {
-      "q": "mst_band",
-      "lt": 4
-     },
-     "warn_message": "MST 1-3 is allowed but outside the equity analysis scope."
-    },
-    {
-     "id": "ita_deg",
-     "type": "decimal",
-     "label": "ITA from colorimeter (degrees, optional)",
-     "required": false,
-     "min": -90,
-     "max": 90
-    }
-   ]
-  },
-  {
-   "id": "history",
-   "title": "Medical history",
-   "questions": [
-    {
-     "id": "flags",
-     "type": "multi",
-     "choices": "flags",
-     "exclusive": [
-      "none"
-     ],
-     "label": "Known conditions",
-     "required": true
-    },
-    {
-     "id": "antihtn_today",
-     "type": "single",
-     "choices": "antihtn_today",
-     "label": "Antihypertensive taken today",
-     "required": true,
-     "show_if": {
-      "q": "flags",
-      "contains": "hypertension"
-     }
-    },
-    {
-     "id": "n_antihtn_drugs",
-     "type": "integer",
-     "label": "Number of antihypertensive drugs",
-     "required": false,
-     "min": 0,
-     "max": 8,
-     "show_if": {
-      "q": "flags",
-      "contains": "hypertension"
-     }
-    },
-    {
-     "id": "dm_type",
-     "type": "single",
-     "choices": "dm_type",
-     "label": "Diabetes type",
-     "required": true,
-     "show_if": {
-      "q": "flags",
-      "contains": "diabetes"
-     }
-    },
-    {
-     "id": "on_insulin",
-     "type": "single",
-     "choices": "yes_no",
-     "label": "On insulin",
-     "required": true,
-     "export_as": "bool_yes_no",
-     "show_if": {
-      "q": "flags",
-      "contains": "diabetes"
-     }
-    },
-    {
-     "id": "on_dialysis",
-     "type": "single",
-     "choices": "yes_no",
-     "label": "On dialysis",
-     "required": true,
-     "export_as": "bool_yes_no",
-     "show_if": {
-      "q": "flags",
-      "contains": "chronic kidney disease"
-     }
-    },
-    {
-     "id": "egfr",
-     "type": "decimal",
-     "label": "Latest eGFR (mL/min/1.73m2, optional)",
-     "required": false,
-     "min": 1,
-     "max": 200,
-     "show_if": {
-      "q": "flags",
-      "contains": "chronic kidney disease"
-     }
-    },
-    {
-     "id": "arr_type",
-     "type": "single",
-     "choices": "arr_type",
-     "label": "Arrhythmia type",
-     "required": true,
-     "show_if": {
-      "q": "flags",
-      "contains": "arrhythmia"
-     }
-    },
-    {
-     "id": "arr_status",
-     "type": "single",
-     "choices": "arr_status",
-     "label": "Arrhythmia status",
-     "required": true,
-     "show_if": {
-      "q": "flags",
-      "contains": "arrhythmia"
-     }
-    },
-    {
-     "id": "haem_type",
-     "type": "single",
-     "choices": "haem_type",
-     "label": "Anaemia / haemoglobinopathy type",
-     "required": true,
-     "show_if": {
-      "q": "flags",
-      "contains": "anaemia/thalassaemia"
-     }
-    },
-    {
-     "id": "transfusion_30d",
-     "type": "single",
-     "choices": "yes_no",
-     "label": "Blood transfusion in the last 30 days",
-     "required": true,
-     "export_as": "bool_yes_no",
-     "show_if": {
-      "q": "flags",
-      "contains": "anaemia/thalassaemia"
-     }
-    },
-    {
-     "id": "days_since_transfusion",
-     "type": "integer",
-     "label": "Days since last transfusion",
-     "required": true,
-     "min": 0,
-     "max": 30,
-     "show_if": {
-      "q": "transfusion_30d",
-      "eq": "yes"
-     }
-    }
-   ]
-  },
-  {
-   "id": "chart_values",
-   "title": "Chart values (existing results only, no new tests)",
-   "questions": [
-    {
-     "id": "hb_gdl",
-     "type": "decimal",
-     "label": "Hb (g/dL)",
-     "min": 2,
-     "max": 22,
-     "required_if": {
-      "q": "flags",
-      "contains": "anaemia/thalassaemia"
-     }
-    },
-    {
-     "id": "hb_date",
-     "type": "date",
-     "label": "Hb date",
-     "required_if": {
-      "q": "hb_gdl",
-      "answered": true
-     }
-    },
-    {
-     "id": "hba1c",
-     "type": "decimal",
-     "label": "HbA1c (%)",
-     "min": 3,
-     "max": 20,
-     "required_if": {
-      "q": "flags",
-      "contains": "diabetes"
-     }
-    },
-    {
-     "id": "hba1c_date",
-     "type": "date",
-     "label": "HbA1c date",
-     "required_if": {
-      "q": "hba1c",
-      "answered": true
-     }
-    }
-   ]
-  },
-  {
-   "id": "acute",
-   "title": "Last 30 minutes and optional measures",
-   "questions": [
-    {
-     "id": "acute_30m",
-     "type": "multi",
-     "choices": "acute",
-     "exclusive": [
-      "none"
-     ],
-     "label": "In the last 30 minutes",
-     "required": true
-    },
-    {
-     "id": "last_meal_h",
-     "type": "decimal",
-     "label": "Hours since last meal",
-     "required": true,
-     "min": 0,
-     "max": 48
-    },
-    {
-     "id": "glucose_mgdl",
-     "type": "decimal",
-     "label": "Capillary glucose (mg/dL, optional finger-prick)",
-     "required": false,
-     "min": 20,
-     "max": 600
-    },
-    {
-     "id": "spo2",
-     "type": "integer",
-     "label": "SpO2 spot (%, optional)",
-     "required": false,
-     "min": 50,
-     "max": 100
+     "id": "rest_note",
+     "type": "info",
+     "label": "Rest starts now. Enrolment and history happen during the rest."
     }
    ]
   },
@@ -1040,13 +1354,13 @@
       "derived": "bp1_outlier",
       "eq": true
      },
-     "warn_message": "BP1 differs from BP2 by more than the outlier limit; it will be dropped from the reference mean."
+     "warn_message": "BP1 differs from BP2 by more than the outlier limit; it will be left out of the reference mean."
     },
     {
      "id": "irregular_pulse",
      "type": "single",
+     "label": "Cuff showed an irregular-heartbeat sign on any reading?",
      "choices": "yes_no",
-     "label": "Cuff showed an irregular-heartbeat indicator on any reading",
      "required": true,
      "export_as": "bool_yes_no"
     }
@@ -1059,7 +1373,7 @@
     {
      "id": "clip1",
      "type": "clip",
-     "label": "Clip 1 (Kardia card between both thumbs, left palm over the aperture)",
+     "label": "Clip 1 (Kardia between both thumbs, palm over the window)",
      "required": true
     }
    ]
@@ -1123,38 +1437,45 @@
       "derived": "bracket_flag",
       "eq": true
      },
-     "warn_message": "Readings differ by more than the bracket limit; the visit is flagged (bracket_flag)."
+     "warn_message": "Readings differ by more than the bracket limit; the visit is flagged."
     },
     {
      "id": "adverse_event",
      "type": "text",
-     "label": "Adverse event during the visit (leave blank if none)",
+     "label": "Anything go wrong for the participant? (leave blank if not)",
      "required": false
     }
    ]
   },
   {
-   "id": "review",
+   "id": "s_review",
    "title": "Review and submit",
    "questions": [
     {
      "id": "recovery",
      "type": "computed",
-     "label": "Rest gate",
+     "label": "Rest before the clip",
      "compute": "recovery",
      "export": true
     },
     {
      "id": "bracket_flag",
      "type": "computed",
-     "label": "Bracket flag",
+     "label": "Readings too far apart",
      "compute": "bracket_flag",
      "export": true
     },
     {
-     "id": "operator_notes",
+     "id": "scan_strata",
+     "type": "computed",
+     "label": "Recruitment groups (scan)",
+     "compute": "scan_strata",
+     "export": true
+    },
+    {
+     "id": "scan_notes",
      "type": "text",
-     "label": "Operator notes (optional)",
+     "label": "Notes (optional)",
      "required": false
     }
    ]

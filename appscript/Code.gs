@@ -1,5 +1,6 @@
 /**
- * SamaHealth SWHT-PP-003: pull the CRF export from Supabase into this Google Sheet, and save CSV snapshots to Drive.
+ * SamaHealth SWHT-PP-003: pull the participant export from Supabase into this Google Sheet (one row per PID, the enrol
+ * and scan parts side by side), show recruitment-target fill on a Targets tab, and save CSV snapshots to Drive.
  *
  * Setup (once): Extensions > Apps Script, paste this file, then Project Settings > Script properties:
  *   SUPABASE_URL        https://<project>.supabase.co
@@ -10,14 +11,16 @@
  * Then reload the sheet and use the SamaHealth menu: "Install hourly refresh" once.
  *
  * The hourly refresh also keeps the free Supabase project active (free projects pause after 7 idle days), and the
- * weekly CSV snapshot is the off-site backup the free plan does not provide. Names never come here: the export view
- * has no identity columns and the exporter account cannot read the identity table.
+ * weekly CSV snapshot is the off-site backup the free plan does not provide. Names never come here: names stay on
+ * paper, the export view has no identity columns and the exporter account cannot read the identity table.
  */
 
 var PAGE_SIZE = 1000;
 var SHEET_DATA = 'CRF';
 var SHEET_LOG = 'Sync log';
-var VIEW = 'crf_export';
+var SHEET_TARGETS = 'Targets';
+var VIEW = 'participant_export';
+var TARGETS_HEADER = ['key', 'group', 'label', 'n', 'target', 'fill %'];
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('SamaHealth')
@@ -70,6 +73,57 @@ function fetchAll_(cfg, token) {
   return rows;
 }
 
+function postJson_(cfg, token, path, body) {
+  var r = UrlFetchApp.fetch(cfg.url + path, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { apikey: cfg.key, Authorization: 'Bearer ' + token },
+    payload: JSON.stringify(body || {})
+  });
+  if (r.getResponseCode() !== 200) throw new Error(path + ' failed: ' + r.getResponseCode() + ' ' + r.getContentText());
+  return JSON.parse(r.getContentText());
+}
+
+function getJson_(cfg, token, path) {
+  var r = UrlFetchApp.fetch(cfg.url + path, {
+    method: 'get', muteHttpExceptions: true, headers: { apikey: cfg.key, Authorization: 'Bearer ' + token }
+  });
+  if (r.getResponseCode() !== 200) throw new Error(path + ' failed: ' + r.getResponseCode() + ' ' + r.getContentText());
+  return JSON.parse(r.getContentText());
+}
+
+/**
+ * Targets tab: active recruitment_targets rows (in file order) with the server-wide counts from strata_counts()
+ * (distinct PIDs over submitted records, all streams). fill % = min(100, 100 n / target), one decimal.
+ */
+function targetsTable_(targets, counts) {
+  var n = {};
+  counts.forEach(function (c) { n[c.key] = Number(c.n); });
+  var body = targets.filter(function (t) { return t.active !== false; }).map(function (t) {
+    var k = n[t.key] || 0;
+    return [t.key, t.group_label || t.group_id, t.label, k, t.target, Math.round(Math.min(1, k / t.target) * 1000) / 10];
+  });
+  return { header: TARGETS_HEADER.slice(), body: body };
+}
+
+function fetchTargets_(cfg, token) {
+  var targets = getJson_(cfg, token, '/rest/v1/recruitment_targets?select=*&order=sort_order.asc,key.asc');
+  var counts = postJson_(cfg, token, '/rest/v1/rpc/strata_counts', {});
+  return targetsTable_(targets, counts);
+}
+
+function writeTable_(name, t) {
+  var s = sheet_(name);
+  s.clearContents();
+  var values = [t.header].concat(t.body);
+  if (t.header.length) {
+    for (var i = 0; i < values.length; i += 500) {               // chunked writes stay inside Sheets' payload limits
+      var chunk = values.slice(i, i + 500);
+      s.getRange(i + 1, 1, chunk.length, t.header.length).setValues(chunk);
+    }
+    s.setFrozenRows(1);
+  }
+}
+
 /** Header = keys in first-seen order across all records; values flattened for a cell. */
 function buildTable_(records) {
   var header = [], seen = {};
@@ -111,27 +165,20 @@ function log_(status, n, ms, note) {
   s.appendRow([new Date(), status, n, Math.round(ms / 100) / 10, note || '']);
 }
 
-function pull_() {
+function pull_(withTargets) {
   var cfg = config_();
   var token = signIn_(cfg);
-  return { cfg: cfg, table: buildTable_(fetchAll_(cfg, token)) };
+  return { cfg: cfg, table: buildTable_(fetchAll_(cfg, token)), targets: withTargets ? fetchTargets_(cfg, token) : null };
 }
 
 function refreshNow() {
   var t0 = Date.now();
   try {
-    var t = pull_().table;
-    var s = sheet_(SHEET_DATA);
-    s.clearContents();
-    var values = [t.header].concat(t.body);
-    if (t.header.length) {
-      for (var i = 0; i < values.length; i += 500) {             // chunked writes stay inside Sheets' payload limits
-        var chunk = values.slice(i, i + 500);
-        s.getRange(i + 1, 1, chunk.length, t.header.length).setValues(chunk);
-      }
-      s.setFrozenRows(1);
-    }
-    log_('ok', t.body.length, Date.now() - t0, '');
+    var p = pull_(true);
+    var t = p.table;
+    writeTable_(SHEET_DATA, t);
+    writeTable_(SHEET_TARGETS, p.targets);
+    log_('ok', t.body.length, Date.now() - t0, p.targets.body.length + ' target cells');
     return t.body.length;
   } catch (e) {
     log_('error', 0, Date.now() - t0, String(e && e.message || e));
@@ -140,8 +187,8 @@ function refreshNow() {
 }
 
 function writeCsv_(interactive) {
-  var p = pull_();
-  var name = 'crf_export_' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd_HHmm') + '.csv';
+  var p = pull_(false);
+  var name = 'participant_export_' + Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd_HHmm') + '.csv';
   var blob = Utilities.newBlob(toCsv_(p.table), 'text/csv', name);
   var file = p.cfg.folder ? DriveApp.getFolderById(p.cfg.folder).createFile(blob) : DriveApp.createFile(blob);
   log_('csv', p.table.body.length, 0, name);

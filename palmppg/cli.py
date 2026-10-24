@@ -10,6 +10,7 @@
     palmppg gonogo [--interim]
     palmppg reports build
     palmppg crf pull --study-root <dir>
+    palmppg ecg founder --weights <pth> (--atc FILE | --participants DIR) [--unfiltered]
     palmppg lint
 """
 from __future__ import annotations
@@ -90,6 +91,17 @@ def build_parser() -> argparse.ArgumentParser:
     cs = c.add_subparsers(dest="sub", required=True)
     cp = cs.add_parser("pull", help="write participants/<PID>/crf.json from Supabase (credentials from SUPABASE_* env vars)")
     cp.add_argument("--study-root", required=True)
+
+    ec = sub.add_parser("ecg", help="ECG research model (offline, for clinician review)")
+    ecs = ec.add_subparsers(dest="sub", required=True)
+    ef = ecs.add_parser("founder", help="ECGFounder lead-I rhythm probabilities -> <clip>_ecg_founder.json")
+    ef.add_argument("--weights", required=True, help="1_lead_ECGFounder.pth (see docs/ecg_model.md)")
+    efs = ef.add_mutually_exclusive_group(required=True)
+    efs.add_argument("--atc", help="one ATC file (or a BLE <clip>_ecg_samples.csv)")
+    efs.add_argument("--participants", help="folder of participant folders (or a study root)")
+    ef.add_argument("--unfiltered", action="store_true", help="z-score only (ptbxl_eval.py), no band-pass")
+    ef.add_argument("--out", default=None, help="output folder (default: next to each input)")
+    ef.add_argument("--trust-pickle", action="store_true", help="full unpickle of the checkpoint")
 
     sub.add_parser("lint", help="banned vocabulary scan")
     return ap
