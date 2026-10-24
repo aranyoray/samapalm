@@ -29,6 +29,13 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    // ONNX Runtime ships a 20 MB native library per ABI. The study phones are all arm64, so only that one is
+    // packaged: it keeps the APK near 30 MB without the model and avoids shipping three unused copies.
+    // Add x86_64 here if you need to run the app on an emulator.
+    defaultConfig {
+        ndk { abiFilters += listOf("arm64-v8a") }
+    }
+
     // The survey schema is the repository's configs/crf_schema.json, copied into the APK assets at build time.
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/crfAssets"))
 }
@@ -43,6 +50,8 @@ tasks.named("preBuild") { dependsOn(copyCrfSchema) }
 dependencies {
     implementation(project(":crf-core"))
     implementation(project(":quality-core"))
+    implementation(project(":ecg-model"))
+    implementation(libs.onnxruntime.android)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

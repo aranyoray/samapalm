@@ -42,6 +42,7 @@ import org.samahealth.crf.str
 import org.samahealth.quality.Grade
 import org.samahealth.onboarding.container
 import org.samahealth.onboarding.data.VisitEntity
+import org.samahealth.onboarding.ecg.FounderOnnx
 import org.samahealth.onboarding.quality.QualityRunner
 import java.io.File
 
@@ -198,8 +199,17 @@ fun QualityScreen(onOpenVisit: (String) -> Unit) {
     detail?.let { row ->
         ClipDetailDialog(
             row = row,
+            modelAvailable = FounderOnnx.isAvailable(ctx),
             onDismiss = { detail = null },
             onOpenVisit = { detail = null; onOpenVisit(row.visitUuid) },
+            onPreRead = {
+                scope.launch {
+                    busy = "Running the research model…"
+                    detail = null
+                    adhoc = preRead(ctx, row)
+                    busy = null
+                }
+            },
             onReanalyse = {
                 scope.launch {
                     busy = "Re-analysing ${row.clipId}…"
@@ -220,8 +230,50 @@ fun QualityScreen(onOpenVisit: (String) -> Unit) {
     }
 }
 
+/**
+ * The research model's reading of the clip's ECG. It is shown to the study team only, never to a participant,
+ * and never without the line saying what it is (design section 9).
+ */
+private suspend fun preRead(ctx: android.content.Context, row: ClipRow): String {
+    val path = str(row.record["ecg_file"]) ?: return "This clip has no ECG file to run the model on."
+    val file = File(path)
+    if (!file.isFile) return "The ECG file for this clip is missing: $path"
+    val trace = withContext(Dispatchers.IO) { runCatching { readTrace(file) }.getOrNull() }
+        ?: return "The ECG file could not be read."
+    val r = FounderOnnx.run(ctx, trace.first, trace.second)
+        ?: return "The research model is not installed on this phone."
+    if (r.nWindows == 0) return "The strip is shorter than 10 seconds, so the model has nothing to read."
+    return buildString {
+        appendLine("Research pre-read for the study clinician. Not a result for the participant, and not a")
+        appendLine("reading of this recording on its own: a clinician reads every strip.")
+        appendLine()
+        appendLine("${r.nWindows} window(s)${if (r.polarityFlipped) ", strip was inverted and flipped" else ""}")
+        appendLine()
+        for (l in r.labels.take(6)) {
+            appendLine("${"%.2f".format(l.prob)}  ${l.name.lowercase()}  (${l.rule} over windows)")
+        }
+    }
+}
+
+/** (samples in mV, sample rate) from whichever ECG file the clip record points at. */
+private fun readTrace(file: File): Pair<DoubleArray, Double> {
+    val name = file.name.lowercase()
+    return when {
+        name.endsWith(".pdf") -> org.samahealth.quality.KardiaPdf.extract(file.readBytes()).let { it.mv to it.fs }
+        name.endsWith(".atc") -> org.samahealth.quality.AtcReader.read(file.readBytes()).let { it.mv to it.fs }
+        else -> org.samahealth.quality.EcgCsv.parseLead1Mv(file.readText())
+    }
+}
+
 @Composable
-private fun ClipDetailDialog(row: ClipRow, onDismiss: () -> Unit, onOpenVisit: () -> Unit, onReanalyse: () -> Unit) {
+private fun ClipDetailDialog(
+    row: ClipRow,
+    modelAvailable: Boolean,
+    onDismiss: () -> Unit,
+    onOpenVisit: () -> Unit,
+    onPreRead: () -> Unit,
+    onReanalyse: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("${row.pid} · ${row.clipId}") },
@@ -234,6 +286,9 @@ private fun ClipDetailDialog(row: ClipRow, onDismiss: () -> Unit, onOpenVisit: (
                 str(row.record["ecg_source"])?.let { Text("ECG from: $it", style = MaterialTheme.typography.bodySmall) }
                 if (row.interrupted) Text("The recording stopped before the full clip length.",
                     style = MaterialTheme.typography.bodySmall)
+                if (modelAvailable && row.ecgGrade != null) {
+                    TextButton(onClick = onPreRead) { Text("Research pre-read (study clinician)") }
+                }
             }
         },
         confirmButton = { TextButton(onClick = onReanalyse) { Text("Re-analyse") } },

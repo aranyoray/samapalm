@@ -8,8 +8,14 @@ on:
             "palmppg/core/crf*.py", "palmppg/core/strata.py", "palmppg/quality/**", "palmppg/capture/crf_pull.py",
             "tests/test_core_crf*.py", "tests/test_core_strata.py", "tests/test_supabase_schema.py",
             "tests/test_capture_crf_pull.py", "tests/test_appscript_exporter.py", "tests/test_quality_onsite.py",
+            "palmppg/ecg/founder_prep.py", "configs/founder_fixtures/**", "tests/test_founder_prep.py",
             ".github/workflows/onboarding.yml"]
   workflow_dispatch:
+    inputs:
+      build_model:
+        description: "Also download the ECGFounder weights, export ONNX and build an APK with the model in it"
+        type: boolean
+        default: false
 
 jobs:
   android:
@@ -28,6 +34,8 @@ jobs:
         run: ./gradlew :crf-core:test --console=plain
       - name: Quality tests (grades and the Kardia PDF reader against the shared fixtures)
         run: ./gradlew :quality-core:test --console=plain
+      - name: ECGFounder preprocessing (the Kotlin port against the Python golden fixtures)
+        run: ./gradlew :ecg-model:test --console=plain
       - name: App JVM tests (recorder controls, YUV maths, participant page, Room migration)
         run: ./gradlew :app:testDebugUnitTest --console=plain
       - name: Build debug APK
@@ -36,6 +44,46 @@ jobs:
         with:
           name: samahealth-onboarding-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  # The research model is optional: it is built on demand because the weights are 370 MB and the exported graph
+  # is ~123 MB, which would make every APK that size. The APK it produces is a separate artifact.
+  model:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_model
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install the model tools
+        run: pip install numpy scipy torch --index-url https://download.pytorch.org/whl/cpu && pip install onnx onnxruntime
+      - name: Download the 1-lead weights
+        env:
+          HF_URL: https://huggingface.co/PKUDigitalHealth/ECGFounder/resolve/main/1_lead_ECGFounder.pth
+        run: |
+          mkdir -p work/ecgfounder
+          curl -sSL --retry 3 -o work/ecgfounder/1_lead_ECGFounder.pth "$HF_URL"
+          echo "f863a38897fb49a27fec7e44008ea3c7bdbd29c77fa4a02ecbb8c56df4f37603  work/ecgfounder/1_lead_ECGFounder.pth" | sha256sum -c -
+      - name: Export to ONNX and check ONNX Runtime against torch
+        run: python tools/export_ecgfounder_onnx.py --weights work/ecgfounder/1_lead_ECGFounder.pth
+      - name: Bundle the model into the APK assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp work/ecgfounder/ecgfounder_1lead_fp32.onnx android/app/src/main/assets/
+      - name: Build the debug APK with the model
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --console=plain
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samahealth-onboarding-debug-apk-with-model
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            work/ecgfounder/ecgfounder_1lead_fp32.report.json
 
   contracts:
     runs-on: ubuntu-latest
@@ -53,4 +101,4 @@ jobs:
         run: >
           python -m pytest -q tests/test_core_crf.py tests/test_core_crf_schema.py tests/test_core_strata.py
           tests/test_supabase_schema.py tests/test_capture_crf_pull.py tests/test_appscript_exporter.py
-          tests/test_quality_onsite.py tests/test_core_lint.py
+          tests/test_quality_onsite.py tests/test_founder_prep.py tests/test_core_lint.py

@@ -1,5 +1,7 @@
 // SamaHealth onboarding app (SWHT-PP-003). Two modules:
-//   :crf-core  pure Kotlin/JVM: survey engine, PID allocation, Supabase REST client (unit-tested on any JVM)
+//   :crf-core   pure Kotlin/JVM: survey engine, PID allocation, Supabase REST client (unit-tested on any JVM)
+//   :quality-core  pure Kotlin/JVM: clip and ECG quality grades, Kardia file readers
+//   :ecg-model  pure Kotlin/JVM: the ECGFounder preprocessing chain (the model itself runs in ONNX Runtime)
 //   :app       Android UI, Room outbox, WorkManager sync, phone recorder (needs the Android SDK)
 // :app is included only when an Android SDK is configured (local.properties sdk.dir or ANDROID_HOME), so the
 // JVM tests of :crf-core run on machines and CI images without the SDK.
@@ -20,6 +22,7 @@ dependencyResolutionManagement {
 rootProject.name = "samahealth-onboarding"
 include(":crf-core")
 include(":quality-core")
+include(":ecg-model")
 
 val localProps = java.util.Properties().apply {
     val f = file("local.properties")

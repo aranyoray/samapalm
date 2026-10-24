@@ -109,8 +109,12 @@ python tools/export_ecgfounder_onnx.py --random-weights --out /tmp/rand.onnx   #
 
 The tool exports fp32, opset 17, and runs ONNX Runtime against torch on random z-scored windows and on synthetic
 ECG windows (sinus, AF-like, ectopy, inverted; filtered and unfiltered). Pass: max |delta p| < 1e-4 on all 150
-outputs. The JSON report lists versions, operators, sizes, both sha256 values and the parity numbers. With random
-weights the parity was 1e-7 (max |delta p|) and the file 123 MB.
+outputs. The JSON report lists versions, operators, sizes, both sha256 values and the parity numbers.
+
+Checked with the real weights (2026-10-24, torch 2.14.1 / onnx 1.23.2 / onnxruntime 1.31.0): the export passes
+with max |delta p| 2.1e-6 on random windows and 6.9e-7 on synthetic ECG, and max |delta logit| 1.8e-5. The file
+is 123.3 MB. Weights sha256 `f863a38897fb49a27fec7e44008ea3c7bdbd29c77fa4a02ecbb8c56df4f37603`
+(`1_lead_ECGFounder.pth`, 369,807,481 bytes); the CI model job checks that sum before exporting.
 
 Pad fix: upstream zero-pads before each max-pool. After constant folding, ONNX Runtime fuses that Pad into
 MaxPool's own padding, which pads with -inf instead of 0; with the trained weights this gave logit errors up to
@@ -118,7 +122,30 @@ MaxPool's own padding, which pads with -inf instead of 0; with the trained weigh
 (`founder.onnx_export_mode`), which cannot be fused; the maths is unchanged and the test suite checks
 torch == ONNX Runtime within 1e-4.
 
-## 4. Notes for on-phone inference (for the Android lead)
+## 4. On the phone
+
+Built, as of 2026-10-24.
+
+* Preprocessing: `android/ecg-model` (`org.samahealth.ecgmodel.FounderPrep`) is a port of
+  `palmppg/ecg/founder_prep.py`, which was split out of `founder.py` so the chain can be imported, tested and
+  used to generate fixtures without torch. `tools/make_founder_fixtures.py` writes
+  `configs/founder_fixtures/preprocess.json` (synthetic strips, every intermediate stage, the filter
+  coefficients and the combination rule) and both `tests/test_founder_prep.py` and
+  `android/ecg-model/src/test/.../FounderPrepTest.kt` check against it. The Kotlin resampling matches scipy to
+  2e-6, the filtered windows to 5e-6 and the model input to 1e-4, all in float32, which is the precision the
+  model is fed in.
+* Inference: `org.samahealth.onboarding.ecg.FounderOnnx` in the app. The model file is optional: it is looked
+  for in the APK assets and then in `<externalFilesDir>/model/ecgfounder_1lead_fp32.onnx`, so a phone can be
+  given the file without a new build, and the app simply offers no pre-read when it is absent.
+* Where it shows: the Quality tab's clip detail, behind "Research pre-read (study clinician)", with a line
+  saying what it is. It is never on the participant summary.
+* APK size: ONNX Runtime's native library is 17.5 MB for arm64 and 20 MB for each other ABI, so
+  `android/app/build.gradle.kts` packages arm64-v8a only (add x86_64 there to run on an emulator). That makes
+  the APK about 47 MB without the model. The 123 MB model is not bundled by default: the `model` job in
+  `.github/workflows/onboarding.yml`, run by hand with `build_model: true`, downloads the weights, exports,
+  checks torch against ONNX Runtime and uploads a separate APK with the model inside.
+
+### Notes from the export (for reference)
 
 * Model I/O: input `ecg`, float32 `[batch, 1, 5000]` (batch dynamic, length fixed); outputs `logits` and `probs`,
   float32 `[batch, 150]`; label i is line i + 1 of `configs/ecgfounder_tasks.txt`. Run all windows of a strip as
