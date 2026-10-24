@@ -62,6 +62,12 @@ import org.samahealth.crf.bool
 import org.samahealth.crf.num
 import org.samahealth.crf.str
 import org.samahealth.crf.valueEquals
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AssistChip
+import kotlinx.serialization.json.jsonObject
+import org.samahealth.crf.CrfJson
+import org.samahealth.crf.Priority
+import org.samahealth.crf.Strata
 import org.samahealth.onboarding.container
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -118,7 +124,7 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit) {
             for (q in s.questions) {
                 QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid)
             }
-            if (s.screenId == "review") ReviewSummary(s, vm)
+            if (s.screenId.endsWith("review")) ReviewSummary(s, vm)
         }
         HorizontalDivider()
         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -140,8 +146,68 @@ private fun Banner(text: String, colour: Color) {
     }
 }
 
+/** Where this participant counts towards recruitment, shown on the enrol review before submitting. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PriorityBadge(strata: List<String>) {
+    val c = LocalContext.current.container
+    var priority by remember(strata) { mutableStateOf<Priority?>(null) }
+    LaunchedEffect(strata) {
+        if (strata.isEmpty()) return@LaunchedEffect
+        priority = withContext(Dispatchers.IO) {
+            runCatching {
+                val targets = Strata.parseTargets(c.targetsText)
+                val counts = HashMap<String, Int>()
+                val client = c.client()
+                val session = c.prefs.session
+                if (client != null && session != null) {
+                    runCatching { client.strataCounts(session.accessToken, c.prefs.defaultStream) }
+                        .getOrNull()?.let { counts.putAll(it) }
+                }
+                for (v in c.repo.unsyncedEnrolments()) {
+                    val crf = v.crfJson ?: continue
+                    val keys = runCatching {
+                        (CrfJson.parseToJsonElement(crf).jsonObject["strata"] as? JsonArray)?.mapNotNull { str(it) }
+                    }.getOrNull() ?: continue
+                    for (k in keys) counts[k] = (counts[k] ?: 0) + 1
+                }
+                Strata.priority(strata, counts, targets)
+            }.getOrNull()
+        }
+    }
+    Text("Recruitment", style = MaterialTheme.typography.titleMedium)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (k in strata) {
+            AssistChip(onClick = {}, label = { Text(k, style = MaterialTheme.typography.bodySmall) })
+        }
+    }
+    val p = priority
+    if (p == null) {
+        Text("Working out where this participant counts…", style = MaterialTheme.typography.bodySmall)
+    } else {
+        val words = when (p.level) {
+            "high" -> "High priority"
+            "medium" -> "Medium priority"
+            "low" -> "Low priority"
+            "met" -> "These cells are already full"
+            else -> "No recruitment cell matches"
+        }
+        val colour = when (p.level) {
+            "high" -> MaterialTheme.colorScheme.primary
+            "medium" -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+        Text(words, color = colour, style = MaterialTheme.typography.titleMedium)
+        for (r in p.reasons) Text("· ${r.label}: ${r.n} of ${r.target}", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
 @Composable
 private fun ReviewSummary(s: SurveyUi, vm: SurveyViewModel) {
+    if (s.part == "enrol") {
+        val strata = s.questions.firstOrNull { it.id == "strata" }?.derived as? JsonArray
+        PriorityBadge(strata?.mapNotNull { str(it) } ?: emptyList())
+    }
     Text("Screens", style = MaterialTheme.typography.titleMedium)
     for ((id, title) in s.screenTitles) {
         val n = s.errorCountByScreen[id] ?: 0
