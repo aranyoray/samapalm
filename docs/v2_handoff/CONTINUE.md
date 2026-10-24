@@ -42,6 +42,9 @@ Branch `wip/onboarding-v2`, merged to `master` once CI is green. Read `docs/onbo
    `test_capture_pi.py` and `test_capture_sync_marker.py` need Linux's `time.CLOCK_BOOTTIME`;
    `test_capture_offload.py` needs GNU rsync (`--info=progress2`); `test_pulse_run.py` recovers 85.6 bpm
    instead of 72 on arm64. They pass, or are expected to pass, on the Linux CI image.
+7. **Do not install torch into the main virtual environment on macOS.** It deadlocks lightgbm inside
+   `LGBM_DatasetCreateFromMat` (duelling OpenMP runtimes), which hangs `pytest tests/` part way through. Use a
+   separate environment for the ECGFounder work; `palmppg/ecg/founder_prep.py` and the fixtures need no torch.
 
 ## Tooling
 * `python tools/make_quality_fixtures.py` and `python tools/make_founder_fixtures.py` regenerate the shared

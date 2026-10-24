@@ -42,7 +42,17 @@ If the repository asks you to accept terms or to log in, do that (`huggingface-c
 accepted. Record the sha256 in DECISIONS.md the first time; every output JSON carries `weights_sha256`, so a
 result can always be tied to the exact file.
 
+The sha256 of the file downloaded on 2026-10-24 was
+`f863a38897fb49a27fec7e44008ea3c7bdbd29c77fa4a02ecbb8c56df4f37603` (369,807,481 bytes).
+
 Install the extra: `pip install -e ".[ecgmodel]"` (torch, onnx, onnxruntime).
+
+**Keep torch in its own environment on macOS.** With torch installed alongside lightgbm and scikit-learn in
+the same arm64 virtual environment, `pytest tests/` deadlocks inside `LGBM_DatasetCreateFromMat`: both link
+their own OpenMP runtime and the two fight over it, and `OMP_NUM_THREADS=1` does not help. torch is an
+optional extra for exactly this sort of reason. Use a second virtual environment for the model work, or
+uninstall torch before running the whole suite. The export tool and the preprocessing tests do not need the
+rest of the pipeline, and `palmppg/ecg/founder_prep.py` imports without torch at all.
 
 ## 2. Run it
 
