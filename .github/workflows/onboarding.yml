@@ -96,7 +96,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install test dependencies
-        run: pip install pytest numpy pandas pyyaml
+        run: pip install pytest numpy pandas pyyaml scipy
       - name: Contract tests
         run: >
           python -m pytest -q tests/test_core_crf.py tests/test_core_crf_schema.py tests/test_core_strata.py
