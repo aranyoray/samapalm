@@ -2,8 +2,6 @@ package org.samahealth.ecgmodel
 
 import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -279,9 +277,4 @@ object Dsp {
         }
         return peaks.indices.filter { keep[it] }.map { peaks[it] }.toIntArray()
     }
-
-    fun ceilInt(x: Double): Int = ceil(x).toInt()
-
-    @Suppress("unused")
-    private fun unusedCos() = cos(0.0)
 }

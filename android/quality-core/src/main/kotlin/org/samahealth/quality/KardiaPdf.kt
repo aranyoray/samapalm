@@ -377,8 +377,6 @@ private fun lum(vals: List<Double>): Boolean? = when (vals.size) {
     else -> null
 }
 
-private operator fun <T> List<T>.component4(): T = this[3]
-
 private val ID_RE = Regex("""\sID[\s]""")
 private val EI_RE = Regex("""\sEI(?=[\s/<\[]|$)""")
 

@@ -3,6 +3,7 @@ package org.samahealth.onboarding.quality
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import org.samahealth.onboarding.recorder.PalmRecorderActivity
 import org.samahealth.quality.RoiSeries
 import java.io.File
 import java.nio.ByteBuffer
@@ -66,7 +67,8 @@ class FrameStats {
  * presentation time as its timestamp.
  */
 object Mp4Roi {
-    private const val ROI_FRACTION = 0.40f
+    /** The recorder's own window, so a clip taken elsewhere is measured over the same part of the frame. */
+    private val ROI_FRACTION = PalmRecorderActivity.ROI_FRACTION
     private const val STEP = 4
     private const val TIMEOUT_US = 10_000L
 
@@ -199,6 +201,4 @@ object Mp4Roi {
         }
         return st
     }
-
-    private operator fun <T> List<T>.component4(): T = this[3]
 }
