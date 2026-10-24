@@ -161,6 +161,24 @@ class FounderPrepTest {
         }
     }
 
+    /**
+     * Writes the tensor this port produces to `-Dfounder.dump=<dir>`, so the real exported model can be run on
+     * it and the probabilities compared with the Python runner's. Does nothing when the property is unset.
+     */
+    @Test
+    fun dumpTheModelInputWhenAsked() {
+        val dir = System.getProperty("founder.dump") ?: return
+        File(dir).mkdirs()
+        for (c in cases) {
+            val name = str(c, "name")
+            val w = FounderPrep.preprocess(f32(str(c, "strip_f32_b64")), c["fs_in"]!!.jsonPrimitive.content.toDouble())
+            val f = w.toFloatArray()
+            val bb = ByteBuffer.allocate(f.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+            for (v in f) bb.putFloat(v)
+            File(dir, "$name.f32").writeBytes(bb.array())
+        }
+    }
+
     @Test
     fun aStripShorterThanTenSecondsGivesNoWindow() {
         val c = cases.first { str(it, "name") == "short_8s" }

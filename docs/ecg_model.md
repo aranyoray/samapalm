@@ -134,6 +134,11 @@ Built, as of 2026-10-24.
   `android/ecg-model/src/test/.../FounderPrepTest.kt` check against it. The Kotlin resampling matches scipy to
   2e-6, the filtered windows to 5e-6 and the model input to 1e-4, all in float32, which is the precision the
   model is fed in.
+* Checked end to end on 2026-10-24: the tensors the Kotlin port produces were run through the real exported
+  graph with ONNX Runtime and compared with the Python runner's, giving max |delta p| 4.8e-6 per window and
+  1.0e-6 after combining, with the same top labels (a synthetic 72 bpm sinus strip reads "sinus rhythm" 0.99).
+  Reproduce it with `./gradlew :ecg-model:test -PfounderDump=<dir>`, which writes the tensors, then run the
+  graph on those files and on `model_input_f32_b64` from the fixture.
 * Inference: `org.samahealth.onboarding.ecg.FounderOnnx` in the app. The model file is optional: it is looked
   for in the APK assets and then in `<externalFilesDir>/model/ecgfounder_1lead_fp32.onnx`, so a phone can be
   given the file without a new build, and the app simply offers no pre-read when it is absent.
