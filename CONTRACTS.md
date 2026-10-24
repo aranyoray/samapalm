@@ -252,3 +252,20 @@ described as product results in reports.
   for legacy rows only. Schema: `supabase/migrations/0001_init.sql`, `0002_two_parts.sql`.
 * `palmppg crf pull --study-root <dir>` writes the merged `participants/<PID>/crf.json` (section 3.7) for submitted
   parts and `onboarding/{screen_failures.csv, crf_export_<UTC>.csv, pull_log.jsonl}`.
+* Quality grades (design section 4): `palmppg/quality/onsite.py` and the Kotlin module `android/quality-core`
+  (`org.samahealth.quality`) implement the same rules and are pinned by `configs/quality_fixtures/*.json`, which
+  `tools/make_quality_fixtures.py` writes. `Grade(level, reasons, metrics)` with level `good | borderline | retake`.
+  Readers: `RoiCsv` and `FramesCsv` over the recorder's `<clip>_roi.csv` and `<clip>_frames.csv`, `EcgCsv` over
+  `<clip>_ecg_samples.csv`, `AtcReader` over ATC, and `KardiaPdf`, which reads the vector trace out of a Kardia PDF
+  export (300 Hz, calibration pulse for the mV scale, strips ordered top to bottom) rather than rasterising it.
+  `EcgSummary.summarise` gives the participant-facing wording and never names a rhythm. The app writes the grades
+  into the clip record as `video_grade`/`video_reasons`/`video_metrics` and `ecg_grade`/`ecg_reasons`/`ecg_metrics`,
+  with `ecg_file` and `ecg_source` (`ble | kardia_pdf | kardia_atc`).
+* ECGFounder preprocessing (design section 9): `palmppg/ecg/founder_prep.py` is the chain (resample to 500 Hz,
+  polarity check, 10 s windows, 50 Hz notch and Butterworth 0.67-40 Hz forward and backward, minus a 0.4 s running
+  median, z-score) and is importable without torch; `palmppg/ecg/founder.py` re-exports it and adds the vendored
+  network. `android/ecg-model` (`org.samahealth.ecgmodel.FounderPrep`) is the Kotlin port, pinned by
+  `configs/founder_fixtures/preprocess.json` from `tools/make_founder_fixtures.py`. The exported graph takes
+  `ecg` float32 `[batch, 1, 5000]` and returns `logits` and `probs` `[batch, 150]`; window probabilities combine as
+  max for the ectopy and pause labels and mean for the rest. Model output is a research pre-read for the study
+  clinician only, never a participant result.

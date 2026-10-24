@@ -1,47 +1,51 @@
-# Onboarding v2: where the work stopped (2026-10-24)
+# Onboarding v2: where the work stands (2026-10-24)
 
-Branch `wip/onboarding-v2`. `master` holds only the finished, CI-green part (design doc + recorder fix 8dee245).
+Branch `wip/onboarding-v2`, merged to `master` once CI is green. Read `docs/onboarding_v2_design.md` first.
 
-## Done on this branch
-* Design contract: `docs/onboarding_v2_design.md` (read first).
-* Schema v2 + both CRF engines (two parts enrol/scan, no names, condition modules, WHO 2024 anaemia grade,
-  Mentzer, HPLC reflex, haem cell, diabetes label, strata keys) + golden fixtures. Recruitment targets and priority
-  (`configs/recruitment_targets.json`, `palmppg/core/strata.py`, `crf-core/Strata.kt`, shared fixtures).
-  Targets are DEFAULTS: the PI must confirm the numbers.
-* Supabase `0002_two_parts.sql` (parts, unique (pid, part), recruitment_targets, strata_counts, scan_queue,
-  participant_export), tests on local Postgres; Apps Script reads participant_export + Targets sheet; `crf pull`
-  merges parts; `SupabaseClient` new calls (strataCounts, scanQueue, targets, AuthFailedException).
-* ECGFounder single-lead runner `palmppg/ecg/founder.py`, CLI `palmppg ecg founder`, ONNX export
-  `tools/export_ecgfounder_onnx.py` (Concat pad fix), `docs/ecg_model.md`, tests on random weights.
-* Tests at pause: crf-core and quality-core Gradle tests pass; schema, strata, supabase, crf pull, lint, founder
-  pytest files pass. Full pytest not re-run at the pause (2 known failures in tests/test_capture_pi.py come from
-  master's 50 Hz exposure change d881359: expectation 8000 vs 10000 us).
+## Done
+* **Schema v2 and both CRF engines**: two parts (enrol/scan), no names, condition modules, WHO 2024 anaemia
+  grade, Mentzer, HPLC reflex, haem cell, diabetes label, strata keys, golden fixtures.
+* **Recruitment targets and priority**: `configs/recruitment_targets.json` (DEFAULTS: the PI must still confirm
+  the numbers), `palmppg/core/strata.py`, `crf-core/Strata.kt`, shared fixtures.
+* **Supabase `0002_two_parts.sql`**: parts, unique (pid, part), recruitment_targets, strata_counts, scan_queue,
+  participant_export; Apps Script reads participant_export and the Targets sheet; `crf pull` merges parts, and
+  a test checks the merged record validates and derives.
+* **quality-core**: the grades and readers, plus `KardiaPdf`, a pure-Kotlin reader of the vector trace in a
+  Kardia PDF export. Python and Kotlin agree to 1e-9 relative on the shared fixtures, and the PDF to 1e-12.
+  46 Python tests, 29 Kotlin.
+* **Android app v2**: Enrol | Scan | Quality | Targets tabs; two parts per PID with the scan started from an
+  enrolled PID; Room 1 -> 2 migration (v1 rows survive as the legacy part "full", read-only but still
+  uploadable; the identity table and its names are dropped); one serial writer for every visit write;
+  conditional autosave; sync fixes (KEEP policy, process-wide mutex, rejected rows leave the automatic queue,
+  "Sign in again" banner); clip grades after each clip with Kardia import and the share-sheet inbox; the
+  participant ECG summary PDF; the enrol priority badge. 33 JVM tests.
+* **ECGFounder on the phone**: `palmppg/ecg/founder_prep.py` (the chain, torch-free), `android/ecg-model` (the
+  Kotlin port, checked against golden fixtures), `FounderOnnx` (ONNX Runtime Android, model file optional),
+  shown only as a research pre-read in the Quality tab. The ONNX export was checked against the **real**
+  weights: ONNX Runtime matches torch to 2.1e-6.
+* **CI**: `:quality-core:test`, `:ecg-model:test` and the app JVM tests run on every push, plus the Python
+  quality, strata and lint tests. A `model` job (manual, `build_model: true`) downloads the weights, exports
+  and builds an APK with the model in it.
 
-## Not finished
-1. quality-core (agent stopped mid-way): `android/quality-core/src/main/.../{Dsp,EcgQuality,Readers,Types,
-   VideoQuality}.kt` and `palmppg/quality/onsite.py` exist but are unreviewed; missing: Kotlin tests, Python
-   tests (`tests/test_quality_onsite.py`), fixtures (`tools/make_quality_fixtures.py`,
-   `configs/quality_fixtures/`), `KardiaPdf` vector reader. Brief: `quality.md` here.
-2. `palmppg/core/crf.py` v2 covariates: check against the engine brief (`engine.md`) and that `crf pull`'s
-   merged v2 records validate (operator/unit_id now under `parts.<part>`).
-3. Android app (not started): `app_media.md` and `app_data_ui.md` briefs. Two call sites break against the new
-   SupabaseClient: `app/.../sync/SyncWorker.kt` (VisitPayload.part) and `app/.../ui/SurveyViewModel.kt`
-   (pidTakenElsewhere now takes part). Apply the review findings listed in the design doc section 6.
-4. ECGFounder on the phone (requested): ONNX Runtime Android (`com.microsoft.onnxruntime:onnxruntime-android`,
-   Maven Central) rather than TFLite. A GitHub Actions job downloads `1_lead_ECGFounder.pth` from HuggingFace
-   (blocked in the cloud sandbox), runs the export tool, checks torch vs ORT, and packages the ~123 MB ONNX into
-   the APK assets. Port the preprocessing (300->500 Hz resample_poly(5,3), 50 Hz notch Q30, Butterworth 0.67-40 Hz
-   filtfilt, 0.4 s median subtraction, per-window z-score, polarity) to Kotlin with Python golden fixtures
-   (strip in -> model input and probabilities out); three 10 s windows, mean for rhythms, max for ectopy. Show it
-   as a research pre-read for the study clinician only; the graph contains Einsum (keep it in any reduced ORT build).
-5. CI: add `:quality-core:test` and the ECGFounder job to `.github/workflows/onboarding.yml`; build until green.
-6. Docs: README/DECISIONS/CONTRACTS entries for v2, staff field guide (two-station workflow, priority badge,
-   quality tab, ECG summary).
+## Still open
+1. **The PI must confirm the recruitment target numbers** in `configs/recruitment_targets.json`. They are
+   defaults taken from the concept note, and the Targets tab presents them as if they were agreed.
+2. **The quality thresholds are PROVISIONAL** (`VideoQualityConfig`, `EcgQualityConfig`), to be calibrated on
+   pilot clips as DECISIONS D-008 says. They have only been exercised on synthetic signals.
+3. **Not yet run on a participant**: the app installs and runs on the OnePlus 12, but the camera, the Kardia
+   and the full two-station flow have not been exercised hands-on. That is the next thing to do.
+4. **The scan station's "Do enrolment for this PID now"** shortcut from the BP1 screen (design section 6) is
+   not built; a single operator can still run both parts by switching tabs.
+5. **The Kardia PDF reader has only been checked against a synthetic export.** Point it at a real Kardia PDF
+   before relying on it; it reports what it assumed in `warnings`.
+6. **Known test failures on macOS only** (all of them fail on `master` too, and all are environment, not code):
+   `test_capture_pi.py` and `test_capture_sync_marker.py` need Linux's `time.CLOCK_BOOTTIME`;
+   `test_capture_offload.py` needs GNU rsync (`--info=progress2`); `test_pulse_run.py` recovers 85.6 bpm
+   instead of 72 on arm64. They pass, or are expected to pass, on the Linux CI image.
 
 ## Tooling
-* `compile_app.sh` + `README.txt` + `stubs/`: local compile check for the app without the Android SDK, using
-  Robolectric's `org.robolectric:android-all:15-robolectric-13954326` jar from Maven Central as the framework
-  classpath plus AndroidX stubs and Compose desktop 1.7.1 jars. Paths inside point at the old sandbox; edit
-  `S=` to your copy. On a machine with the Android SDK, just run `./gradlew :app:assembleDebug`.
-* Briefs (`common.md`, `engine.md`, `strata.md`, `quality.md`, `backend.md`, `ecgmodel.md`, `app_media.md`,
-  `app_data_ui.md`) refer to `/tmp/.../scratchpad/prompts/`; read them from this folder instead.
+* `python tools/make_quality_fixtures.py` and `python tools/make_founder_fixtures.py` regenerate the shared
+  fixtures; both test suites then check against them.
+* `cd android && ./gradlew :app:assembleDebug` on a machine with the Android SDK. `compile_app.sh` here is the
+  older SDK-free compile check and is no longer needed when the SDK is present.
+* The ECGFounder weights are 370 MB and the exported graph 123 MB: neither is in the repository.

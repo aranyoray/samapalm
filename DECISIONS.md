@@ -220,3 +220,31 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   capture README. `--dry-run` prints every nmcli call and the unit file, so the script is exercisable off the Pi
   per the repo rule that every capture script runs without hardware. **Not yet verified on hardware:** no Pi has
   been reachable this session, so the nmcli profiles and the systemd unit are tested only through `--dry-run`.
+
+- **D-037 (2026-10-24) The quality grades are rule-based with published thresholds, and PROVISIONAL.** The
+  Quality tab, and the pass/fail the clip widget pre-fills, come from signal-quality rules, not a trained model:
+  POS pulse and the de Haan and Jeanne (2013) SNR for the video, and a Pan-Tompkins style detector with the
+  Orphanidou (2015) template correlation, Clifford (2012) kSQI and the Dash (2009) irregularity triple for the
+  ECG. The thresholds in `VideoQualityConfig` and `EcgQualityConfig` are first guesses: they have been exercised
+  on synthetic signals with a known heart rate and beat count, never on a pilot clip, and D-008 requires them to
+  be calibrated once clips exist. The operator always decides; a grade only pre-selects. The irregularity flag
+  never lowers a grade and never names a rhythm: it is a reason for a clinician to look, which is why the
+  participant summary says "the time between beats varied" and nothing more.
+
+- **D-038 (2026-10-24) Names leave the app entirely; the PID on the paper form is the only link.** v1 kept names
+  in a separate table that could be purged after upload. v2 has no identity screen, no identity table and no
+  upload of one: the Room 1 -> 2 migration drops the table and the names in it. A phone that still holds
+  un-uploaded v1 visits keeps them as the legacy part "full": they can still be uploaded but not re-opened,
+  because the v2 schema has no flow for them, and showing a half-migrated survey would risk the operator
+  "correcting" a record into a shape neither schema describes. This is what makes the app's backup rules able to
+  exclude everything: there is nothing on the phone that identifies a person without the paper form.
+
+- **D-039 (2026-10-24) The research model is a pre-read for the study clinician, and is never bundled by
+  default.** ECGFounder runs on the phone through ONNX Runtime when the exported graph is present, and its
+  output appears only in the Quality tab behind a line saying what it is. It is not on the participant summary,
+  which carries the Kardia device's own result instead, because no Indian or South Asian evaluation of this
+  model exists and returning its output to a participant needs ethics approval and a clinician over-read
+  (design section 9). The 123 MB graph is not in the ordinary APK: a manual CI job builds an APK with it, and a
+  phone can also be handed the file directly. The export is checked against torch on the real weights, not just
+  random ones (max |delta p| 2.1e-6), because the pad-fusion bug it works around only shows up with trained
+  weights.

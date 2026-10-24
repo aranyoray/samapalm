@@ -73,7 +73,8 @@ palmppg/
   core/      config, reference-clock timeline, CRF derivations, track registry, study layout, vocabulary lint
   capture/   capture_pi.py, sync_marker.py, clock_sync.sh, offload.sh, phone_settings.md, android/
   ingest/    Bayer unpack, unit calibration, timestamps, phone decode, Pi proxy chain, QC, LED/audio/ECG sync, bench
-  ecg/       ATC parser, PDF digitiser, cleaning, R-peaks, rhythm features, artefact onset
+  ecg/       ATC parser, PDF digitiser, cleaning, R-peaks, rhythm features, artefact onset, ECGFounder runner
+  quality/   on-site clip and ECG grades (the Python twin of android/quality-core)
   spatial/   hand landmarks, palm ROIs, patch grid and STMaps, static colour
   pulse/     preprocessing, classical rPPG methods, SQI, fusion, learned and self-supervised models, denoising
   beats/     beat segmentation, morphology, APG, HRV, perfusion, respiratory proxy, PAT (requires ECG)
@@ -85,7 +86,10 @@ palmppg/
   experiments/  E0 to E17 runners
   reports/   STARD flow, TRIPOD+AI checklist, strata tables, model cards, data dictionary, bench report
   pipeline/  per-participant runner
-configs/     pipeline.yaml, unit_config.yaml, frozen_config.yaml (signed), experiments/
+configs/     pipeline.yaml, unit_config.yaml, frozen_config.yaml (signed), experiments/, crf_schema.json,
+             recruitment_targets.json, crf_fixtures/, quality_fixtures/, founder_fixtures/
+android/     the onboarding app: :app (UI, Room outbox, recorder), :crf-core (survey engine, Supabase client),
+             :quality-core (clip and ECG grades), :ecg-model (ECGFounder preprocessing)
 data/        manifests, splits, hashes (the study data itself is mounted, never committed)
 tests/       unit and pipeline tests on synthetic data
 ```
