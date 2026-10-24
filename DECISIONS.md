@@ -175,3 +175,48 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   onboarding recorder: the three-surface session at 1080p, the torch staying lit under `AE_MODE_OFF`, and the HAL
   honouring tonemap/shading/`AWB_MODE_OFF` — the phone was on its lockscreen, which backgrounds the app and closes the
   camera. `palmppg/capture/android/dry_run.sh` performs and prints exactly that read-back.
+- **D-034 (2026-10-24) Pi exposure 8000 -> 10000 us: one 50 Hz half-cycle.** `unit_01` benches at 350 lux with
+  the OnePlus 12 mount and two box LEDs at 20 mA, against `illumination.lux_nominal: 400`. Lux is not a gate
+  anywhere in the pipeline: it is a stratum (`features.lux_band_edges: [200, 400]`) and an E2 covariate, so 350
+  fails nothing. It does cost signal, and the previous 8 ms exposure was also 0.8 of a 50 Hz mains half-cycle, so
+  any room light leaking past the aperture aliased instead of integrating out (`qc.flicker_hz` already watches
+  50/100/10 Hz at `flicker_snr_db_min: 6.0`). Moving to 10 ms fixes both: it is exactly one half-cycle, and the
+  25 % more light covers the 350 -> 400 shortfall (350 x 1.25 = 437 lux-equivalent) without touching the optics.
+  `frame_duration_us` is 33333, so 10 ms fits with wide margin, and the extra 2 ms of blur is immaterial for a
+  resting palm under `landmark_jitter_px_max: 3.0`. `exposure_us` is not in `frozen_config.yaml`, which is
+  untouched. The measured value is recorded as `illumination.lux_measured` beside the design target rather than
+  overwriting it. `palmppg/synth/bayer_video.py` deliberately keeps `exposure_us: 8000` as its default so the
+  committed synthetic run and its reports stay reproducible; the rig and the simulator are separate operating
+  points. **Not yet verified on hardware:** the positive control and the D-025 SQI null calibration must be re-run
+  at the new operating point before the bench acceptance in run-order step 2, and `lux_measured` re-read at 10 ms.
+- **D-035 (2026-10-24) A phone torch is never a supplementary illuminant.** Raised when the 350 lux reading
+  prompted adding the hotspot handset's flash to the box. Rejected on three grounds, any one of which is
+  disqualifying. (1) Thermal rolloff: phone torches dim measurably as they heat, and `qc.lighting_drift_pct_max`
+  is 2 % over a 60 s clip, so this trades a soft lux shortfall that gates nothing for a hard QC failure on every
+  clip. (2) PWM: phone torches are PWM-dimmed below full output and can ripple at full, injecting an undocumented
+  periodic component into the illuminant while the target signal is a ~1 % pulsatile modulation. (3) Spectrum: the
+  torch phosphor and CCT differ from the box LEDs, and with `awb_gains` fixed at [1.6, 1.4] on raw Bayer that
+  reweights the channels, which confounds exactly the MST-band and ITA stratification H2 and H2b rest on.
+  Secondary: `box_led_current_ma: 20` is a reproducible documented quantity whereas torch output varies with iOS
+  version, battery level and thermal state across 500 participants, and the hotspot handset is already carrying
+  AP and cellular load that compounds (1). Q14.5 (torch off, box light only, simultaneous mode) stands unchanged.
+  The remedy is D-034, then moving the LEDs closer (inverse-square: 400/350 needs distance x 0.935, e.g. 20 cm ->
+  18.7 cm), which requires re-shooting the white-card `luxmap.json` against `vignetting_residual_pct_max: 3.0`.
+  Recorded in `palmppg/capture/phone_settings.md` so it reaches the operator, not just the log.
+- **D-036 (2026-10-24) The hotspot is the route to the NTP pool, not a time source; provisioning is scripted.**
+  `clock_sync.sh` documented "the OnePlus 12 hotspot up and the Pi joined to it; chronyd uses it as NTP source"
+  and names its column `offset_ms_vs_phone`. No phone runs an NTP server, so the reference has always been the
+  internet NTP pool reached *through* the hotspot; the phone's own clock was never involved. This was harmless
+  while the hotspot and the study camera were one handset, but the site now shares from a separate iPhone, and
+  the old wording reads as though the time reference moved with it. It did not. The documentation is corrected and
+  the column name kept so existing `clock_sync_log.csv` files stay readable. Two consequences are now scripted in
+  `palmppg/capture/pi_provision.sh`: the subnet is platform-dependent (iOS Personal Hotspot is 172.20.10.0/28,
+  gateway .1, clients .2-.14 and so 14 maximum; Android is 192.168.43.0/24), and the Pi has no RTC, so a weak
+  signal at shift start blocks capture outright because `capture_pi.py` exits 2 without a makestep row dated
+  today. The script writes NetworkManager profiles with `autoconnect-priority` and a validated static address per
+  SSID, and installs `palmppg-clock-step.service`, a oneshot after `network-online.target` that runs
+  `clock_sync.sh` at boot so the row exists before the first participant. iOS Personal Hotspot also switches
+  itself off with no client attached, so a device must hold it up while the Pi first boots; this is in the
+  capture README. `--dry-run` prints every nmcli call and the unit file, so the script is exercisable off the Pi
+  per the repo rule that every capture script runs without hardware. **Not yet verified on hardware:** no Pi has
+  been reachable this session, so the nmcli profiles and the systemd unit are tested only through `--dry-run`.

@@ -7,7 +7,10 @@
 #   clock_sync.sh --simulate <operator> [unit_id] [log_path] same as the first form without chronyc (bench/test)
 #
 # What the first form does, in order:
-#   1. The operator has the OnePlus 12 hotspot up (60 s) and the Pi joined to it; chronyd uses it as NTP source.
+#   1. The operator has a phone hotspot up and the Pi joined to it. The hotspot is the ROUTE to the internet
+#      NTP pool, not itself a time source: no phone runs an NTP server, so which handset provides the hotspot
+#      does not change the reference (D-036). Any hotspot works; note the subnet differs by platform, iOS
+#      Personal Hotspot is 172.20.10.0/28 and Android is 192.168.43.0/24 (see pi_provision.sh).
 #   2. `chronyc makestep`      forces the step instead of slewing (sub-second corrections take minutes otherwise).
 #   3. `chronyc tracking`      reports the residual: "System time : 0.000123456 seconds fast of NTP time".
 #   4. One row is appended to clock_sync_log.csv (CONTRACTS section 3.8):
@@ -18,8 +21,10 @@
 #   5. If the log already has a row for this device today, the drift since that row is printed, scaled to
 #      8 hours, and flagged when it exceeds clock.drift_flag_s_per_8h from configs/pipeline.yaml.
 #
-# Sign convention: offset_ms_vs_phone = device clock minus phone (NTP) time, in milliseconds.
+# Sign convention: offset_ms_vs_phone = device clock minus NTP time, in milliseconds.
 #   "fast of NTP time" -> positive; "slow of NTP time" -> negative.
+# The column name is historical: the reference has always been the internet NTP pool reached THROUGH the
+# hotspot, never the phone's own clock. Kept as-is so existing clock_sync_log.csv files stay readable (D-036).
 #
 # Manual Kardia tablet row (the tablet runs no chrony). Open a network-time app on the tablet (one that
 # shows "device clock offset" against NTP), read the offset in milliseconds with the same sign convention
@@ -40,7 +45,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_DEFAULT="${CLOCK_SYNC_LOG:-/data/study/clock_sync_log.csv}"
 
 usage() {
-  sed -n '2,37p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,39p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 1
 }
 

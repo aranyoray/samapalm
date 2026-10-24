@@ -3,7 +3,7 @@ unit_id: unit_01
 camera:
   sensor_mode: {size: [1536, 864], format: SRGGB10_CSI2P, fps: 30}
   roi_crop: null                  # or {x: 256, y: 144, w: 1024, h: 576}; Q14.4
-  exposure_us: 8000
+  exposure_us: 10000              # 10 ms = one 50 Hz half-cycle, so mains flicker integrates out (D-034)
   analogue_gain: 2.0
   awb_gains: [1.6, 1.4]
   lens_position: 2.5              # dioptres, locked
@@ -25,7 +25,10 @@ capture:
   study_root: /data/study
   box_led_current_ma: 20
 illumination:
-  lux_nominal: 400
+  lux_nominal: 400                # design target
+  lux_measured: 350               # unit_01 bench: OnePlus 12 mount + 2 box LEDs at 20 mA (D-034)
+  # Not a gate. lux is a stratum and an E2 covariate only (pipeline.yaml lux_band_edges). The 350 -> 400
+  # shortfall is covered by the exposure change above, not by adding a phone torch (D-035).
 phone:
   model: OnePlus 12
   app: OpenCamera

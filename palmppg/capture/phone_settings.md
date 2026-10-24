@@ -46,6 +46,14 @@ Alternative: the custom recorder in `android/` (logs per-frame `SENSOR_TIMESTAMP
     `sequential`: on the desk stand for a separate palm-over-camera scan after the box clip, torch **ON**.
     `[screenshot placeholder: phone in the mount, LED visible at the aperture rim]`
 
+    **No phone torch is ever an illuminant.** If the box reads under `illumination.lux_nominal`, raise
+    `camera.exposure_us` or move the box LEDs closer; never add a second handset's flash to make up the
+    shortfall. A phone torch dims as it heats (the 60 s clip would breach `qc.lighting_drift_pct_max`
+    of 2 %), it is PWM-dimmed at an undocumented rate against a ~1 % pulsatile signal, and its phosphor
+    differs from the box LEDs, which reweights the Bayer channels and confounds the MST/ITA melanin
+    stratification behind H2. Lux is a stratum and an E2 covariate, never a pass/fail gate, so a reading
+    under target degrades nothing on its own (D-035).
+
 ## C. Weekly, per unit (section 5, phone flat field)
 
 11. Record one 10 s clip of the white card under the box light with the same locked settings as a participant

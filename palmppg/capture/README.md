@@ -5,21 +5,30 @@
 | `capture_pi.py` | picamera2 raw capture with preflight gates, locked camera, packed raw frames, per-frame `SensorTimestamp`, clip meta; starts the marker | 4.6 |
 | `sync_marker.py` | LED + buzzer patterns P1/P2 on GPIO, logged as edges on `CLOCK_BOOTTIME` with a GPIO self-check | 4.2 |
 | `clock_sync.sh` | `chronyc makestep` at shift start/end and the `clock_sync_log.csv` row; manual Kardia tablet row | 4.1 |
+| `pi_provision.sh` | NetworkManager hotspot autojoin at a fixed address, and the boot-time clock-step unit | 4.1 |
 | `offload.sh` | rsync to the SSD/laptop, SHA-256 manifest from the source verified on the copy, completeness check and `COMPLETE.flag` | 4.6 |
 | `phone_settings.md` | OnePlus 12 operator checklist | 5 |
 | `android/` | Open Camera route and its limitation; the onboarding app recorder (clip + ECG on one clock) | 5, 4.6 |
 
 Every script runs without hardware: `--simulate` on the Python scripts (MockPin objects, a software frame
 source at 384x216 with the LED block painted from the marker's own pin state), `--simulate` on
-`clock_sync.sh`, and `offload.sh` on any directory tree. picamera2 and gpiozero are imported lazily.
+`clock_sync.sh`, `--dry-run` on `pi_provision.sh` (prints every nmcli call and the unit file without
+needing NetworkManager), and `offload.sh` on any directory tree. picamera2 and gpiozero are imported lazily.
 
 ```
 python -m palmppg.capture.sync_marker --simulate --seconds 8 --out /tmp/sync_events.csv
 python -m palmppg.capture.capture_pi --simulate --study-id SWHT-PP-003-0001 --out-dir /tmp/p1/pi \
        --video-seconds 8 --clock-log /tmp/clock_sync_log.csv
 palmppg/capture/clock_sync.sh --simulate RB unit_01 /tmp/clock_sync_log.csv
+palmppg/capture/pi_provision.sh --dry-run --hotspot "<ssid>" --psk "<pass>" --kind ios
 palmppg/capture/offload.sh --check /tmp/study ; palmppg/capture/offload.sh /tmp/study /mnt/ssd
 ```
+
+Once per Pi, as root: `pi_provision.sh --hotspot "<ssid>" --psk "<pass>" --kind ios|android` for each
+hotspot the unit should join (repeat per SSID; higher `--priority` wins), then `pi_provision.sh --clock-unit`
+so the makestep row exists before the first participant. `pi_provision.sh --status` shows what is saved.
+The hotspot is only the route to the NTP pool, never a time source (D-036); an iOS hotspot is a /28 and
+switches itself off with no client attached, so keep a device on it while the Pi first boots.
 
 On the Pi (real run), in this order: `clock_sync.sh <operator>` at shift start, then per participant
 `python -m palmppg.capture.capture_pi --study-id <id> --out-dir <study_root>/participants/<id>/pi --operator <op> --dept <dept>`.
