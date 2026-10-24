@@ -315,6 +315,14 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
             if (samples > 0) {
                 next = next + ("kardia_on" to JsonPrimitive(true)) + ("ecg_seconds" to JsonPrimitive(seconds))
             }
+            // the recorder now reports when the clip rolled and stopped, and whether it stopped early
+            r.data?.getStringExtra(PalmRecorderActivity.EXTRA_STARTED_AT)?.let { next = next + ("started_at" to JsonPrimitive(it)) }
+            r.data?.getStringExtra(PalmRecorderActivity.EXTRA_ENDED_AT)?.let { next = next + ("ended_at" to JsonPrimitive(it)) }
+            val dur = r.data?.getDoubleExtra(PalmRecorderActivity.EXTRA_DURATION_S, -1.0) ?: -1.0
+            if (dur >= 0) next = next + ("phone_duration_s" to JsonPrimitive(dur))
+            val interrupted = r.data?.getBooleanExtra(PalmRecorderActivity.EXTRA_INTERRUPTED, false) ?: false
+            next = next + ("phone_interrupted" to JsonPrimitive(interrupted))
+            if (interrupted) next = next + ("quality" to JsonPrimitive("fail"))
             set(JsonObject(next))
         }
     }
@@ -354,10 +362,15 @@ private fun ClipInput(q: QuestionUi, readOnly: Boolean, pid: String?, set: (Json
                 recorder.launch(Intent(ctx, PalmRecorderActivity::class.java)
                     .putExtra(PalmRecorderActivity.EXTRA_STUDY_ID, pid)
                     .putExtra(PalmRecorderActivity.EXTRA_CLIP_ID, q.id)
-                    .putExtra(PalmRecorderActivity.EXTRA_CAPTURE_MODE, ctx.container.prefs.captureMode))
+                    .putExtra(PalmRecorderActivity.EXTRA_CAPTURE_MODE, ctx.container.prefs.captureMode)
+                    .putExtra(PalmRecorderActivity.EXTRA_SECONDS, if (ctx.container.prefs.clipPlan == "2x30") 30 else 60))
             }) { Text("Record phone clip on this device (optional)") }
         }
         str(o["phone_file"])?.let { Text("Phone clip: $it", style = MaterialTheme.typography.bodySmall) }
+        if (bool(o["phone_interrupted"]) == true) {
+            Text("Recording stopped early (${num(o["phone_duration_s"])?.let { "%.0f s".format(it) } ?: "?"}): re-shoot this clip.",
+                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
         Spacer(Modifier.height(4.dp))
     }
 }

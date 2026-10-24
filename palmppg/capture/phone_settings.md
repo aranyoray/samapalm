@@ -33,6 +33,13 @@ Alternative: the custom recorder in `android/` (logs per-frame `SENSOR_TIMESTAMP
 8. Settings -> *On-screen GUI*: enable the *video timer*; disable *shutter sound*; disable *auto-rotate*.
    `[screenshot placeholder: GUI options]`
 
+9a. **Stop the phone locking mid-clip.** The lock screen closes the camera and cuts the clip short (a 15 s screen
+    timeout gave the ~13 s clips seen on 24 Oct). The onboarding app's recorder now keeps the screen on by itself;
+    for Open Camera set Settings -> *More camera controls* / *On-screen GUI* -> **Keep display on: ON**, and in
+    Android Settings -> Display set **Screen timeout to 10 minutes** on the scan phone. Also check Open Camera's
+    *Video settings* -> *Maximum duration of video* = none and *Maximum file size* = none, and turn battery
+    optimisation off for the recording app (Settings -> Apps -> Battery -> Unrestricted).
+
 ## B. Daily, at shift start and shift end (section 4.1)
 
 9. Turn on the phone hotspot for 60 s, join the Pi, run `palmppg/capture/clock_sync.sh <operator>` on the Pi

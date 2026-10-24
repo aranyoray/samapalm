@@ -213,7 +213,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   `palmppg/capture/pi_provision.sh`: the subnet is platform-dependent (iOS Personal Hotspot is 172.20.10.0/28,
   gateway .1, clients .2-.14 and so 14 maximum; Android is 192.168.43.0/24), and the Pi has no RTC, so a weak
   signal at shift start blocks capture outright because `capture_pi.py` exits 2 without a makestep row dated
-  today. The script writes NetworkManager profiles with `autoconnect-priority` and a validated static address per
+  today. The script writes NetworkManager profiles with `autoconnect-priority` and a checked static address per
   SSID, and installs `palmppg-clock-step.service`, a oneshot after `network-online.target` that runs
   `clock_sync.sh` at boot so the row exists before the first participant. iOS Personal Hotspot also switches
   itself off with no client attached, so a device must hold it up while the Pi first boots; this is in the

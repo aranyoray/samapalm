@@ -3,7 +3,8 @@
  * screen of the onboarding survey.
  *
  * Records a 60 s 1920x1080 / 30 fps / H.264 clip with AAC audio (the rig buzzer is the sync marker) and, at the same
- * time, the KardiaMobile 6L/Card ECG over BLE.
+ * time, the KardiaMobile 6L/Card ECG over BLE. It must pass the bench acceptance (protocol 4.5) before it is used
+ * for study clips.
  *
  * Camera controls (D-033): the main sensor is opened by id so the logical camera cannot hand off to the ultrawide at
  * palm distance; focus is a fixed plane at the rig distance from the first frame (no autofocus to catch mid-hunt);
@@ -19,8 +20,6 @@
  *   <clip>.mp4, <clip>_frames.csv (frame_idx, sensor_ts_ns on the reference clock, wall_ns, iso, exposure_ns),
  *   <clip>_controls.csv, <clip>_roi.csv, <clip>_meta.json, and when a Kardia was streaming: <clip>_ecg.atc (CONTRACTS 3.6), <clip>_ecg_samples.csv,
  *   <clip>_ecg_packets.csv, <clip>_ecg_meta.json, <clip>_sync.json.
- *
- * It must pass the bench acceptance (protocol 4.5) before it is used for study clips.
  */
 package org.samahealth.onboarding.recorder
 
@@ -81,12 +80,19 @@ class PalmRecorderActivity : Activity() {
 
         /** Lens-to-palm distance in cm; sets the fixed focus plane. Defaults to [PalmControls.DEFAULT_DISTANCE_CM]. */
         const val EXTRA_DISTANCE_CM = "distance_cm"
+        /** Clip length in seconds (60 for the 1x60 plan, 30 for 2x30); the clip stops itself at this length. */
+        const val EXTRA_SECONDS = "seconds"
+        /** Result: ISO 8601 times the clip started rolling and stopped, its length, and whether it stopped early. */
+        const val EXTRA_STARTED_AT = "started_at"
+        const val EXTRA_ENDED_AT = "ended_at"
+        const val EXTRA_DURATION_S = "duration_s"
+        const val EXTRA_INTERRUPTED = "interrupted"
         /** OnePlus 12 main sensor (6.06 mm f/1.6, closest focus 13 cm). Logical camera 0 fuses it with the ultrawide. */
         const val PREFERRED_PHYSICAL_ID = "2"
 
         const val ROI_FRACTION = 0.40f
         private const val TAG = "PalmRecorder"
-        private const val RECORD_SECONDS = 60
+        private const val DEFAULT_RECORD_SECONDS = 60
         private const val SETTLE_MS = 2_000L
         /** After the lock request is sent, before the clip rolls: lets the HAL report what it did. */
         private const val LOCK_SETTLE_MS = 400L
@@ -103,6 +109,7 @@ class PalmRecorderActivity : Activity() {
     private val captureMode: String get() = intent.getStringExtra(EXTRA_CAPTURE_MODE) ?: "simultaneous"
     private val torchOn: Boolean get() = captureMode == "sequential"
     private val distanceCm: Float get() = intent.getFloatExtra(EXTRA_DISTANCE_CM, PalmControls.DEFAULT_DISTANCE_CM)
+    private val RECORD_SECONDS: Int get() = intent.getIntExtra(EXTRA_SECONDS, DEFAULT_RECORD_SECONDS).coerceIn(5, 300)
 
     private lateinit var preview: SurfaceView
     private lateinit var overlay: RecorderOverlay
@@ -194,6 +201,9 @@ class PalmRecorderActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The lock screen backgrounds the activity and closes the camera, which cut clips short at the screen
+        // timeout (a 15 s timeout minus the 2.4 s settle is the ~13 s cut-off seen in the field).
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         preview = SurfaceView(this)
         overlay = RecorderOverlay(this).apply {
@@ -795,24 +805,42 @@ class PalmRecorderActivity : Activity() {
         session?.close(); session = null
         camera?.close(); camera = null
 
-        if (cancelled) {
-            ui.post { finish() }
-            return
-        }
+        val endWallMs = System.currentTimeMillis()
+        val elapsedS = (SystemClock.elapsedRealtime() - recordStartElapsedMs) / 1000.0
+        val durationS = fileDurationS() ?: elapsedS
         val samples = capture?.lead1?.size ?: 0
         val seconds = if (capture != null && capture.measuredFsHz > 0)
             capture.lead1.size / capture.measuredFsHz else 0.0
+        // An interrupted clip (lock screen, back, user stop, error) is still reported, with its real length, so
+        // the survey and the quality check can flag it instead of the file sitting there unexplained.
         setResult(
             RESULT_OK,
             Intent()
                 .putExtra(EXTRA_MP4, File(outDir, "$clipId.mp4").absolutePath)
                 .putExtra(EXTRA_ECG_SAMPLES, samples)
                 .putExtra(EXTRA_ECG_SECONDS, seconds)
+                .putExtra(EXTRA_STARTED_AT, isoTime(startWallNs / 1_000_000L))
+                .putExtra(EXTRA_ENDED_AT, isoTime(endWallMs))
+                .putExtra(EXTRA_DURATION_S, durationS)
+                .putExtra(EXTRA_INTERRUPTED, cancelled || durationS < RECORD_SECONDS - 1.0)
         )
         ui.post { finish() }
     }
 
     // ---- outputs ----
+
+    private fun isoTime(ms: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US).format(Date(ms))
+
+    /** Length of the written clip from its container, or null when it cannot be read (e.g. not finalised). */
+    private fun fileDurationS(): Double? {
+        val f = File(outDir, "$clipId.mp4")
+        if (!f.exists() || f.length() == 0L) return null
+        val r = MediaMetadataRetriever()
+        return try {
+            r.setDataSource(f.absolutePath)
+            r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.let { it / 1000.0 }
+        } catch (e: Exception) { null } finally { try { r.release() } catch (_: Exception) {} }
+    }
 
     private fun writeEcgFiles(cap: BleKardia.Capture) {
         FileWriter(File(outDir, "${clipId}_ecg_samples.csv")).buffered().use { w ->
