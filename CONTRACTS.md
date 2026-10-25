@@ -123,6 +123,16 @@ Columns: `event_id, kind, pattern, mono_ns, wall_ns, gpio_ok`. `kind` in {`start
   awb_mode_reported, gains_rggb, transform_row_major}, tonemap_mode_requested, tonemap_mode_reported,
   shading_mode_reported, aberration_mode_reported, zoom_ratio_reported, flash_state_reported, result_fps,
   analysis_resolution, preflight {ok, warnings, exposure_correction_factor}}`.
+* `clip1_meta.json` additional keys (onboarding app recorder, D-040): `requested_ecg_lead_in_s,
+  requested_ecg_lead_out_s` — the ECG runs before and after the clip, so the clip is a window inside a longer
+  ECG record. The lead-out is `0.0` when the clip was interrupted.
+* `clip1_sync.json` additional key (onboarding app recorder, D-040): `clip_window {clip_start_ref_ns,
+  clip_stop_ref_ns, requested_lead_in_s, requested_lead_out_s, interrupted, measured_lead_in_s,
+  measured_lead_out_s, clip_start_sample_idx, clip_stop_sample_idx, note}` — where the clip sits inside the ECG
+  record, on the reference clock and as sample indices into `clip1_ecg_samples.csv`. The measured lead is what
+  was captured, which is shorter than requested when the stream started late or stalled; the sample indices can
+  fall outside the record for the same reason and must be clamped by the reader.
+* `clip1_ecg_meta.json` additional keys (onboarding app recorder, D-040): `lead_in_s, lead_out_s, window_note`.
 
 ### 3.6 ECG
 * `ecg/kardia_####.atc`: AliveCor ATC v1 chunk file. Header: `b"ALIVE"` + 3 version bytes (8 bytes). Then
@@ -258,7 +268,10 @@ described as product results in reports.
   Readers: `RoiCsv` and `FramesCsv` over the recorder's `<clip>_roi.csv` and `<clip>_frames.csv`, `EcgCsv` over
   `<clip>_ecg_samples.csv`, `AtcReader` over ATC, and `KardiaPdf`, which reads the vector trace out of a Kardia PDF
   export (300 Hz, calibration pulse for the mV scale, strips ordered top to bottom) rather than rasterising it.
-  `EcgSummary.summarise` gives the participant-facing wording and never names a rhythm. The app writes the grades
+  `EcgSummary.summarise` gives the participant-facing wording and never names a rhythm. The BLE ECG is graded
+  over the clip window from `clip1_sync.json`, not over the whole record (D-040): the lead is kept in the file
+  for analysis but is not part of the clip, and the participant's fingers may not be on the electrodes during
+  it. An imported Kardia file has no window and is graded whole, as before. The app writes the grades
   into the clip record as `video_grade`/`video_reasons`/`video_metrics` and `ecg_grade`/`ecg_reasons`/`ecg_metrics`,
   with `ecg_file` and `ecg_source` (`ble | kardia_pdf | kardia_atc`).
 * ECGFounder preprocessing (design section 9): `palmppg/ecg/founder_prep.py` is the chain (resample to 500 Hz,

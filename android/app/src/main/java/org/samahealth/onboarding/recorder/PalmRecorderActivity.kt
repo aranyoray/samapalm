@@ -6,6 +6,15 @@
  * time, the KardiaMobile 6L/Card ECG over BLE. It must pass the bench acceptance (protocol 4.5) before it is used
  * for study clips.
  *
+ * The ECG is deliberately longer than the clip: it opens [ECG_LEAD_IN_MS] before the encoder and closes
+ * [ECG_LEAD_OUT_MS] after it, so the clip is a window inside a continuous ECG record and the beats straddling
+ * either boundary are whole rather than truncated. Where the clip sits inside that record is written out as
+ * sample indices in `<clip>_sync.json`, so nothing downstream has to re-derive it.
+ *
+ * Two short tones mark the clip for an operator who is holding the rig rather than watching the screen: one
+ * before the encoder opens, one after it closes. Both fall outside the recorded audio on purpose, so neither
+ * can be mistaken for the rig buzzer when the track is read for the sync marker.
+ *
  * Camera controls (D-033): the main sensor is opened by id so the logical camera cannot hand off to the ultrawide at
  * palm distance; focus is a fixed plane at the rig distance from the first frame (no autofocus to catch mid-hunt);
  * zoom pinned at 1.0; an explicit sRGB tone curve with lens shading and aberration correction off; AE metered on the
@@ -40,9 +49,11 @@ import android.hardware.camera2.params.ColorSpaceTransform
 import android.hardware.camera2.params.MeteringRectangle
 import android.hardware.camera2.params.RggbChannelVector
 import android.hardware.camera2.params.TonemapCurve
+import android.media.AudioManager
 import android.media.ImageReader
 import android.media.MediaMetadataRetriever
 import android.media.MediaRecorder
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -58,6 +69,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.TextView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -96,6 +108,12 @@ class PalmRecorderActivity : Activity() {
         private const val SETTLE_MS = 2_000L
         /** After the lock request is sent, before the clip rolls: lets the HAL report what it did. */
         private const val LOCK_SETTLE_MS = 400L
+        /** ECG runs this long before the encoder opens. Served inside the AE settle, which only helps it. */
+        private const val ECG_LEAD_IN_MS = 10_000L
+        /** ECG keeps running this long after the encoder closes. Skipped when the clip was interrupted. */
+        private const val ECG_LEAD_OUT_MS = 10_000L
+        private const val START_TONE_MS = 150
+        private const val DONE_TONE_MS = 400
         private const val VIDEO_W = 1920
         private const val VIDEO_H = 1080
         private const val FPS = 30
@@ -115,6 +133,7 @@ class PalmRecorderActivity : Activity() {
     private lateinit var overlay: RecorderOverlay
     private lateinit var statusView: TextView
     private lateinit var recordButton: Button
+    private lateinit var nudgeButton: Button
     private lateinit var outDir: File
 
     private var camera: CameraDevice? = null
@@ -175,6 +194,19 @@ class PalmRecorderActivity : Activity() {
     private var surfaceReady = false
     private var startWallNs = 0L
     private var recordStartElapsedMs = 0L
+    /** Reference-clock bounds of the clip itself, to locate it inside the longer ECG record. */
+    private var recordStartRefNs = 0L
+    private var recordStopRefNs = 0L
+    /** Reference-clock time ECG buffering opened, i.e. the start of the lead-in. */
+    private var ecgStartRefNs = 0L
+    @Volatile private var ecgCapturing = false
+    @Volatile private var leadOutPending = false
+    private var leadOutEndsAtMs = 0L
+    private var stopWasCancelled = false
+    private var stopCompleted = false
+    private var clipEndWallMs = 0L
+    private var clipElapsedS = 0.0
+    private var tones: ToneGenerator? = null
 
     private var clock: ClockBridge? = null
     private val ble by lazy { BleKardia(this) }
@@ -220,6 +252,20 @@ class PalmRecorderActivity : Activity() {
             setPadding(16, 12, 16, 12)
         }
         recordButton = Button(this).apply { text = "● REC ${RECORD_SECONDS}s" }
+        // The Card is the part most likely to misbehave in the field, and the watchdog only acts after
+        // three seconds of silence. This fires the same recovery ladder immediately.
+        nudgeButton = Button(this).apply {
+            text = "Nudge Kardia"
+            setOnClickListener {
+                Log.i(TAG, "operator nudge -> " + ble.nudge())
+                updateStatus()
+            }
+        }
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(recordButton)
+            addView(nudgeButton)
+        }
 
         // The camera frame is 16:9. A MATCH_PARENT SurfaceView would stretch it to whatever shape
         // the screen is, which both looks wrong and makes the ROI box point somewhere other than
@@ -235,7 +281,7 @@ class PalmRecorderActivity : Activity() {
             FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP)
         )
         root.addView(
-            recordButton,
+            buttons,
             FrameLayout.LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)
         )
         setContentView(root)
@@ -250,6 +296,7 @@ class PalmRecorderActivity : Activity() {
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 surfaceReady = false
                 if (recording) stopRecording(cancelled = true)
+                else abortPendingStart("preview surface went away")
             }
         })
 
@@ -285,10 +332,60 @@ class PalmRecorderActivity : Activity() {
     override fun onDestroy() {
         ui.removeCallbacksAndMessages(null)
         handler.removeCallbacksAndMessages(null)
-        if (recording) stopRecording(cancelled = true)
+        if (recording) {
+            stopRecording(cancelled = true)
+        } else if (leadOutPending) {
+            // the camera thread is about to be quit, so the deferred close has to happen here or the
+            // whole ECG record is lost along with the clip that was already on disk
+            Log.w(TAG, "destroyed during the ECG lead-out; closing it now")
+            completeStop()
+        } else {
+            abortPendingStart("activity destroyed")
+        }
         ble.stop()
+        // let a tone that is still sounding finish; the generator outlives the activity by a moment
+        val t = tones
+        tones = null
+        if (t != null) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                try { t.release() } catch (_: RuntimeException) {}
+            }, DONE_TONE_MS + 200L)
+        }
         thread.quitSafely()
         super.onDestroy()
+    }
+
+    /**
+     * Drops a start that was still in its lead-in. The clip has not rolled, so there is nothing to save,
+     * but the ECG buffer and its packet log are open and would otherwise be left dangling: [BleKardia.finalise]
+     * closes the writer, and its return value is discarded on purpose.
+     */
+    private fun abortPendingStart(reason: String) {
+        if (!ecgCapturing || recording || finishing) return
+        Log.w(TAG, "lead-in abandoned: $reason")
+        ecgCapturing = false
+        handler.removeCallbacksAndMessages(null)
+        ble.finalise()
+        ui.post {
+            recordButton.isEnabled = true
+            recordButton.text = "● REC ${RECORD_SECONDS}s"
+        }
+    }
+
+    // ---- operator tones ----
+
+    /**
+     * STREAM_MUSIC rather than the notification stream: ringer-silent mutes notifications, and the whole
+     * point is that an operator holding the rig hears the clip finish without looking at the phone. A
+     * device that will not give us a tone generator is logged and ignored; it must not fail a clip.
+     */
+    private fun beep(tone: Int, ms: Int) {
+        try {
+            if (tones == null) tones = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
+            tones?.startTone(tone, ms)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "tone unavailable", e)
+        }
     }
 
     // ---- camera ----
@@ -696,14 +793,25 @@ class PalmRecorderActivity : Activity() {
 
     // ---- recording ----
 
+    /**
+     * Phase 1: open the ECG, then let AE meter the palm while the lead-in is served.
+     *
+     * The lead-in is spent in the settle rather than after the lock, because during the settle AE is still
+     * metering the ROI: the extra seconds make the exposure decision better instead of leaving a locked
+     * camera staring at the palm with the torch on.
+     */
     private fun startRecording() {
         val dev = camera ?: return
         val s = session ?: return
         if (recording || finishing) return
         recordButton.isEnabled = false
         recordButton.text = "settling…"
+        ble.startCapture(File(outDir, "${clipId}_ecg_packets.csv"))
+        ecgStartRefNs = SystemClock.elapsedRealtimeNanos()
+        ecgCapturing = true
+        val settleMs = maxOf(SETTLE_MS, ECG_LEAD_IN_MS - LOCK_SETTLE_MS - START_TONE_MS - 100L)
         // Phase 2: pin everything at the settled values, then roll.
-        handler.postDelayed({ lockAndRecord(dev, s) }, SETTLE_MS)
+        handler.postDelayed({ lockAndRecord(dev, s) }, settleMs)
     }
 
     /**
@@ -749,8 +857,24 @@ class PalmRecorderActivity : Activity() {
         }
     }
 
-    /** Phase 2b: open the logs and start the clip under the locked request already running. */
+    /**
+     * Phase 2b: hold until the ECG lead-in has actually been served (the torch fallback can add a second
+     * lock settle, so the wait is measured, not assumed), sound the start tone, and let the tone finish
+     * before the encoder opens so it stays off the recorded audio track.
+     */
     private fun roll() {
+        if (finishing) return
+        val remainingMs = ECG_LEAD_IN_MS - (SystemClock.elapsedRealtimeNanos() - ecgStartRefNs) / 1_000_000L
+        if (remainingMs > 0) {
+            handler.postDelayed({ roll() }, remainingMs)
+            return
+        }
+        beep(ToneGenerator.TONE_PROP_BEEP, START_TONE_MS)
+        handler.postDelayed({ if (!finishing) rollNow() }, START_TONE_MS + 100L)
+    }
+
+    /** Phase 2c: open the logs and start the clip under the locked request already running. */
+    private fun rollNow() {
         if (finishing) return
         framesCsv = FileWriter(File(outDir, "${clipId}_frames.csv")).apply {
             write("frame_idx,sensor_ts_ns,wall_ns,iso,exposure_ns\n")
@@ -767,9 +891,9 @@ class PalmRecorderActivity : Activity() {
         frameIdx = 0
         droppedFrames = 0
         clock?.measure()
-        ble.startCapture(File(outDir, "${clipId}_ecg_packets.csv"))
         startWallNs = System.currentTimeMillis() * 1_000_000L
         recordStartElapsedMs = SystemClock.elapsedRealtime()
+        recordStartRefNs = SystemClock.elapsedRealtimeNanos()
         recorder?.start()
         recording = true
 
@@ -781,20 +905,59 @@ class PalmRecorderActivity : Activity() {
             RECORD_SECONDS * 1000L)
     }
 
+    /**
+     * Closes the clip, then keeps the ECG running for the lead-out before anything is written.
+     *
+     * The tone is sounded after [MediaRecorder.stop], so it is not in the encoded audio and cannot be read
+     * later as the rig buzzer. A cancelled clip (lock screen, surface gone, back, error) gets no lead-out:
+     * the activity is on its way out and an ECG tail nobody will wait for is worth less than finishing
+     * cleanly with what was captured.
+     */
     private fun stopRecording(cancelled: Boolean) {
         if (!recording || finishing) return
         finishing = true
         recording = false
+        stopWasCancelled = cancelled
         handler.removeCallbacksAndMessages(null)
         try { session?.stopRepeating() } catch (_: Exception) {}
         try { recorder?.stop() } catch (e: Exception) { Log.e(TAG, "recorder stop", e) }
         recorder?.release(); recorder = null
+        recordStopRefNs = SystemClock.elapsedRealtimeNanos()
+        clipEndWallMs = System.currentTimeMillis()
+        clipElapsedS = (SystemClock.elapsedRealtime() - recordStartElapsedMs) / 1000.0
         try { framesCsv?.flush(); framesCsv?.close() } catch (_: Exception) {}
         framesCsv = null
         try { controlsCsv?.flush(); controlsCsv?.close() } catch (_: Exception) {}
         controlsCsv = null
         try { roiCsv?.flush(); roiCsv?.close() } catch (_: Exception) {}
         roiCsv = null
+
+        // double beep for a clip that ran its length, the three-tone nack for one that did not
+        beep(
+            if (cancelled) ToneGenerator.TONE_PROP_NACK else ToneGenerator.TONE_PROP_BEEP2,
+            DONE_TONE_MS
+        )
+
+        ui.post {
+            recordButton.isEnabled = false
+            recordButton.text = if (cancelled) "saving…" else "ECG lead-out…"
+        }
+
+        if (cancelled) {
+            completeStop()
+        } else {
+            leadOutPending = true
+            leadOutEndsAtMs = SystemClock.elapsedRealtime() + ECG_LEAD_OUT_MS
+            handler.postDelayed({ completeStop() }, ECG_LEAD_OUT_MS)
+        }
+    }
+
+    /** Closes the ECG record at the end of the lead-out, writes everything, and hands the result back. */
+    private fun completeStop() {
+        if (stopCompleted) return
+        stopCompleted = true
+        leadOutPending = false
+        ecgCapturing = false
 
         val capture = ble.finalise()
         if (capture != null && capture.lead1.isNotEmpty()) writeEcgFiles(capture)
@@ -805,14 +968,13 @@ class PalmRecorderActivity : Activity() {
         session?.close(); session = null
         camera?.close(); camera = null
 
-        val endWallMs = System.currentTimeMillis()
-        val elapsedS = (SystemClock.elapsedRealtime() - recordStartElapsedMs) / 1000.0
-        val durationS = fileDurationS() ?: elapsedS
+        val durationS = fileDurationS() ?: clipElapsedS
         val samples = capture?.lead1?.size ?: 0
         val seconds = if (capture != null && capture.measuredFsHz > 0)
             capture.lead1.size / capture.measuredFsHz else 0.0
         // An interrupted clip (lock screen, back, user stop, error) is still reported, with its real length, so
         // the survey and the quality check can flag it instead of the file sitting there unexplained.
+        // The times reported are the clip's, not the ECG record's, which is longer at both ends by design.
         setResult(
             RESULT_OK,
             Intent()
@@ -820,9 +982,9 @@ class PalmRecorderActivity : Activity() {
                 .putExtra(EXTRA_ECG_SAMPLES, samples)
                 .putExtra(EXTRA_ECG_SECONDS, seconds)
                 .putExtra(EXTRA_STARTED_AT, isoTime(startWallNs / 1_000_000L))
-                .putExtra(EXTRA_ENDED_AT, isoTime(endWallMs))
+                .putExtra(EXTRA_ENDED_AT, isoTime(clipEndWallMs))
                 .putExtra(EXTRA_DURATION_S, durationS)
-                .putExtra(EXTRA_INTERRUPTED, cancelled || durationS < RECORD_SECONDS - 1.0)
+                .putExtra(EXTRA_INTERRUPTED, stopWasCancelled || durationS < RECORD_SECONDS - 1.0)
         )
         ui.post { finish() }
     }
@@ -900,7 +1062,28 @@ class PalmRecorderActivity : Activity() {
             .put("n_samples", cap.lead1.size)
             .put("gap_count", cap.gapCount)
             .put("missing_samples_zero_filled", cap.missingSamples)
+            .put("lead_in_s", leadInS(cap))
+            .put("lead_out_s", leadOutS(cap))
+            .put(
+                "window_note",
+                "this record is longer than the clip at both ends on purpose; " +
+                    "${clipId}_sync.json gives the sample indices the clip spans"
+            )
         File(outDir, "${clipId}_ecg_meta.json").writeText(meta.toString(2))
+    }
+
+    /** Sample index of a reference-clock instant in the ECG record; may fall outside it if the stream dropped. */
+    private fun sampleIndexAt(cap: BleKardia.Capture, refNs: Long): Long =
+        Math.round((refNs - cap.t0RefNs) / cap.samplePeriodNs)
+
+    /** ECG actually captured before the encoder opened, in seconds. */
+    private fun leadInS(cap: BleKardia.Capture): Double =
+        if (recordStartRefNs == 0L) 0.0 else (recordStartRefNs - cap.t0RefNs) / 1e9
+
+    /** ECG actually captured after the encoder closed, in seconds. */
+    private fun leadOutS(cap: BleKardia.Capture): Double {
+        if (recordStopRefNs == 0L || cap.lead1.isEmpty()) return 0.0
+        return (cap.tRefNs(cap.lead1.size - 1) - recordStopRefNs) / 1e9
     }
 
     private fun writeMeta() {
@@ -953,6 +1136,8 @@ class PalmRecorderActivity : Activity() {
             .put("n_frames_in_container", frameCount)
             .put("container_duration_ms", durationMs)
             .put("requested_duration_s", RECORD_SECONDS)
+            .put("requested_ecg_lead_in_s", ECG_LEAD_IN_MS / 1000.0)
+            .put("requested_ecg_lead_out_s", if (stopWasCancelled) 0.0 else ECG_LEAD_OUT_MS / 1000.0)
             .put("roi_fraction", ROI_FRACTION)
             .put("pulse_readout_bound", analysisBound)
             // --- D-033: what was asked of the camera and what it reported (CONTRACTS 3.5) ---
@@ -998,10 +1183,29 @@ class PalmRecorderActivity : Activity() {
             .put("arrival_delay_p95_ns", cap.arrivalJitterP95Ns)
             .put("gap_count", cap.gapCount)
             .put("missing_samples_zero_filled", cap.missingSamples)
+        // The clip is a window inside a longer ECG record. Give the window in both clock and sample terms
+        // so nothing downstream has to re-derive it from the lead-in constant, which may change.
+        val clipWindow = JSONObject()
+            .put("clip_start_ref_ns", recordStartRefNs)
+            .put("clip_stop_ref_ns", recordStopRefNs)
+            .put("requested_lead_in_s", ECG_LEAD_IN_MS / 1000.0)
+            .put("requested_lead_out_s", if (stopWasCancelled) 0.0 else ECG_LEAD_OUT_MS / 1000.0)
+            .put("interrupted", stopWasCancelled)
+            .put("measured_lead_in_s", if (cap == null) JSONObject.NULL else leadInS(cap))
+            .put("measured_lead_out_s", if (cap == null) JSONObject.NULL else leadOutS(cap))
+            .put("clip_start_sample_idx", if (cap == null) JSONObject.NULL else sampleIndexAt(cap, recordStartRefNs))
+            .put("clip_stop_sample_idx", if (cap == null) JSONObject.NULL else sampleIndexAt(cap, recordStopRefNs))
+            .put(
+                "note",
+                "ECG opens before the encoder and closes after it so the beats either side of the clip " +
+                    "boundary are whole. The measured lead is what was captured, which is shorter than " +
+                    "requested if the stream started late or stalled."
+            )
         val sync = JSONObject()
             .put("reference_clock", "CLOCK_BOOTTIME via SystemClock.elapsedRealtimeNanos")
             .put("camera", camera)
             .put("ecg", ecg)
+            .put("clip_window", clipWindow)
             .put(
                 "alignment",
                 "${clipId}_frames.csv sensor_ts_ns and ${clipId}_ecg_samples.csv t_ref_ns are both " +
@@ -1088,13 +1292,20 @@ class PalmRecorderActivity : Activity() {
         if (recording) {
             val left = RECORD_SECONDS - (SystemClock.elapsedRealtime() - recordStartElapsedMs) / 1000
             sb.append("● REC  ${left.coerceAtLeast(0)}s left   frames $frameIdx\n")
+        } else if (leadOutPending) {
+            val left = (leadOutEndsAtMs - SystemClock.elapsedRealtime()) / 1000
+            sb.append("clip done · ECG lead-out ${left.coerceAtLeast(0)}s\n")
         } else if (finishing) {
             sb.append("saving…\n")
+        } else if (ecgCapturing) {
+            val left = (ECG_LEAD_IN_MS - (SystemClock.elapsedRealtimeNanos() - ecgStartRefNs) / 1_000_000L) / 1000
+            sb.append("ECG lead-in ${left.coerceAtLeast(0)}s · settling\n")
         } else {
             sb.append("$studyId · $clipId · $captureMode · torch ${if (torchOn) "on" else "off"}\n")
         }
         sb.append(ble.statusLine)
         if (ble.streaming) sb.append("  pkts ${ble.packetCount}  samples ${ble.loggedSamples}")
+        if (ble.nudgeCount > 0) sb.append("  nudged ${ble.nudgeCount}x (${ble.lastNudge})")
         sb.append('\n')
         val hr = ble.heartRateBpm
         sb.append(if (hr > 0) "ECG HR ~%.0f bpm   ".format(hr) else "ECG HR --   ")

@@ -248,3 +248,35 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   phone can also be handed the file directly. The export is checked against torch on the real weights, not just
   random ones (max |delta p| 2.1e-6), because the pad-fusion bug it works around only shows up with trained
   weights.
+
+- **D-040 (2026-10-25) The phone ECG is longer than the clip, and the clip is graded over its own window.**
+  The recorder used to open the Kardia capture and the encoder together and close them together, so every beat
+  at either boundary was truncated and the first PAT of a clip was computed off half a complex. The ECG now
+  opens 10 s before the encoder and closes 10 s after it. The lead-in is spent inside the AE settle rather than
+  after the lock, so the extra seconds improve the exposure decision instead of leaving a locked camera and a
+  lit torch pointed at a palm. The clip's bounds are written to `<clip>_sync.json` as `clip_window`, on the
+  reference clock and as sample indices, so nothing downstream re-derives them from the constant. The quality
+  grade is taken over that window: the participant's fingers may not be on the electrodes during the lead, and
+  grading the whole record would have counted the lead as flat line and marked good clips borderline at the
+  0.1 `borderlineFlatFrac` threshold. An interrupted clip gets no lead-out, because the activity is on its way
+  out and an ECG tail nobody waits for is worth less than closing the files cleanly.
+  **Not yet verified on hardware:** no phone or Kardia has been available this session; the change compiles and
+  the window arithmetic is unit-tested, but the lead has not been seen on a real recording.
+
+- **D-041 (2026-10-25) Kardia recovery is a ladder the operator can also pull, and there is no wake-up opcode.**
+  A stalled stream used to get one re-sent unlock at 3 s and a full tear-down at 8 s. It is now one rung per 3 s
+  of silence, reset by the next packet: re-send the mode in use, try the other mode, rebuild the GATT
+  subscription and re-ask for the fast connection interval, then disconnect and rescan. Only the first two are
+  things the device is known to listen to; the published protocol (D-007, kardia-rs interop notes) has no "wake
+  up" command and none is invented here, so the later rungs act on our own side of the link. A `Nudge Kardia`
+  button on the recorder fires the next rung immediately rather than waiting out the silence, and with no usable
+  link it restarts the scan; it is the same code path as the watchdog so the two cannot drift apart. The rung
+  taken is shown on the recorder's status line and logged.
+
+- **D-042 (2026-10-25) The recorder sounds the clip, outside the clip's own audio.** A single beep before the
+  encoder opens and a double beep after it closes, so an operator holding the rig knows where the clip is
+  without watching the screen; an interrupted clip gets the three-tone nack instead. Both tones fall outside the
+  recorded audio on purpose: the clip's AAC track exists to carry the rig buzzer as the sync marker, and a
+  phone-generated tone inside it could be read as the buzzer. They go to `STREAM_MUSIC`, not the notification
+  stream, because ringer-silent mutes notifications and the whole point is to be heard. A device that will not
+  give us a tone generator is logged and ignored: it must never fail a clip.

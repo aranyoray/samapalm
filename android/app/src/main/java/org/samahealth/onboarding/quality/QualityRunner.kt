@@ -4,10 +4,14 @@ import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.samahealth.quality.AtcReader
 import org.samahealth.quality.EcgCsv
 import org.samahealth.quality.EcgQuality
@@ -123,6 +127,31 @@ object QualityRunner {
     }
 
     /**
+     * The clip's own stretch of the BLE ECG record, as sample indices, from `<clip>_sync.json`.
+     *
+     * The recorder keeps the ECG running before and after the clip so the beats either side of the boundary
+     * are whole, but the participant's fingers may not be on the electrodes during that lead. Grading the
+     * whole record would therefore count the lead as flat line and mark good clips borderline, so the grade
+     * is taken over the clip window and the lead is left for analysis. Returns null when there is no window
+     * to apply: an imported Kardia file, a recording from before the lead existed, or a file that will not
+     * parse. Nothing here throws; an unreadable sync file just means the whole trace is graded, as before.
+     */
+    internal fun clipWindow(syncJson: String?, nSamples: Int): IntRange? {
+        if (syncJson.isNullOrBlank()) return null
+        val w = runCatching {
+            Json.parseToJsonElement(syncJson).jsonObject["clip_window"]?.jsonObject
+        }.getOrNull() ?: return null
+        fun idx(k: String) = runCatching { w[k]?.jsonPrimitive?.doubleOrNull }.getOrNull()
+        val from = idx("clip_start_sample_idx")?.toInt() ?: return null
+        val to = idx("clip_stop_sample_idx")?.toInt() ?: return null
+        val lo = from.coerceIn(0, nSamples)
+        val hi = to.coerceIn(lo, nSamples)
+        // a window that is empty, or that covers the record anyway, is not worth applying
+        if (hi - lo < 1 || (lo == 0 && hi == nSamples)) return null
+        return lo until hi
+    }
+
+    /**
      * Both grades for one clip of a visit: the palm video from the ROI log, and the ECG from the BLE capture or,
      * when there is none, from a Kardia file imported for this clip. The ECG heart rate becomes the reference
      * rate for the video SNR, so the two signals are checked against each other.
@@ -154,8 +183,20 @@ object QualityRunner {
             if (err != null || trace == null) {
                 notes.add("The ECG file could not be read: ${err ?: "no samples"}")
             } else {
-                ecgGrade = EcgQuality.score(trace.mv, trace.fs)
-                rhythm = EcgSummary.summarise(trace.mv, trace.fs)
+                // only the in-app BLE capture has a lead to trim; an imported file is whatever Kardia recorded
+                val window = if (ecgFile == ble) {
+                    clipWindow(readOrNull(File(dir, "${clipId}_sync.json")), trace.mv.size)
+                } else null
+                val mv = if (window == null) trace.mv else trace.mv.sliceArray(window)
+                if (window != null) {
+                    notes.add(
+                        "ECG graded over the clip window (%.0f s of a %.0f s recording); the lead before and "
+                            .format(mv.size / trace.fs, trace.mv.size / trace.fs) +
+                            "after the clip is kept in the file but not graded."
+                    )
+                }
+                ecgGrade = EcgQuality.score(mv, trace.fs)
+                rhythm = EcgSummary.summarise(mv, trace.fs)
                 refHr = ecgGrade.metrics["hr_bpm"]
                 trace.warnings.forEach { notes.add("ECG file: $it") }
             }

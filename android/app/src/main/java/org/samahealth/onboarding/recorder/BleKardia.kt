@@ -63,6 +63,13 @@ class BleKardia(private val context: Context) {
         const val SAMPLE_NS = 1_000_000_000L / ECG_FS
         /** Arrival later than the running minimum by more than this means samples were dropped. */
         private const val GAP_NS = 100_000_000L
+        /** One rung of the recovery ladder per this much continuous silence. */
+        const val RUNG_MS = 3_000L
+        /** Rung the ladder should have reached after this much continuous silence. */
+        fun rungForSilence(quietMs: Long): Int = (quietMs / RUNG_MS).toInt()
+        /** The mode to try when the one in use has stopped producing packets. */
+        fun otherMode(current: String?): String = if (current == "M2") "M1" else "M2"
+
         /** Below this, neighbouring values are one waveform rather than two interleaved leads. */
         private const val SINGLE_LEAD_RATIO = 0.9
 
@@ -99,12 +106,19 @@ class BleKardia(private val context: Context) {
     /** Arrival time of the last ECG notification, for the stall watchdog. */
     @Volatile private var lastPacketNs = 0L
     @Volatile var stallRestarts = 0; private set
-    private var gotPacketSinceConnect = false
+    /** What the last recovery rung actually did, for the recorder's status line. */
+    @Volatile var lastNudge: String? = null; private set
+    @Volatile var nudgeCount = 0; private set
+    @Volatile private var recoveryRung = 0
+    @Volatile private var gotPacketSinceConnect = false
 
     /**
      * The Card can stop notifying while the link stays up (it sleeps when the electrodes lose contact, and a
-     * phone doze can starve the connection). A silent stream used to leave the clip with a flat ECG. Every
-     * second: >3 s of silence re-sends the unlock command, >8 s tears the link down and rescans.
+     * phone doze can starve the connection). A silent stream used to leave the clip with a flat ECG.
+     *
+     * Recovery is a ladder, one rung per [RUNG_MS] of continuous silence, reset by the next packet, so a
+     * device that only needs a poke is not torn down and re-bonded for it. [nudge] fires the next rung on
+     * demand, which is the same code path: the operator's button and the watchdog cannot drift apart.
      */
     private val watchdog = object : Runnable {
         override fun run() {
@@ -112,22 +126,79 @@ class BleKardia(private val context: Context) {
             val g = gatt
             if (g != null && servicesDiscovered && gotPacketSinceConnect) {
                 val quietMs = (SystemClock.elapsedRealtimeNanos() - lastPacketNs) / 1_000_000L
-                if (quietMs > 8_000) {
-                    Log.w(TAG, "ECG silent ${quietMs} ms, reconnecting")
-                    stallRestarts++
-                    streaming = false
-                    statusLine = "BLE: stream stalled, reconnecting"
-                    gotPacketSinceConnect = false
-                    g.disconnect()
-                } else if (quietMs > 3_000 && streaming) {
-                    Log.w(TAG, "ECG silent ${quietMs} ms, re-sending unlock")
-                    streaming = false
-                    statusLine = "BLE: stream stalled, restarting"
-                    writeModeCommand(g, modeUsed ?: "M2")
+                val wanted = rungForSilence(quietMs)
+                if (wanted > recoveryRung) {
+                    recoveryRung = wanted
+                    escalate(g, recoveryRung, "silent $quietMs ms")
                 }
             }
             handler.postDelayed(this, 1000)
         }
+    }
+
+    /**
+     * One rung of the recovery ladder.
+     *
+     * Rungs 1 and 2 are the only things the device is actually known to listen to: the mode write, then the
+     * other mode (a Card answers M1 where a 6L answers M2, and a device that has gone to sleep mid-session
+     * sometimes takes the opposite one). Rung 3 rebuilds the GATT subscription in case the CCCD was lost
+     * without the link dropping, and re-asks for the fast connection interval. Rung 4 gives up on the link
+     * and rescans. There is no magic "wake up" opcode in the published protocol, and none is invented here.
+     */
+    private fun escalate(g: BluetoothGatt, rung: Int, why: String) {
+        nudgeCount++
+        streaming = false
+        when (rung) {
+            1 -> {
+                val mode = modeUsed ?: "M2"
+                lastNudge = "re-sent $mode"
+                statusLine = "BLE: $why — re-sending $mode"
+                writeModeCommand(g, mode)
+            }
+            2 -> {
+                val other = otherMode(modeUsed)
+                lastNudge = "switched to $other"
+                statusLine = "BLE: $why — trying $other"
+                writeModeCommand(g, other)
+            }
+            3 -> {
+                lastNudge = "re-subscribed"
+                statusLine = "BLE: $why — re-subscribing"
+                g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                // the command CCCD write completing re-sends the mode, which re-arms the ECG CCCD
+                cmdChar?.let { enableCccd(g, it, indicate = true) }
+            }
+            else -> {
+                lastNudge = "reconnected"
+                stallRestarts++
+                statusLine = "BLE: $why — reconnecting"
+                gotPacketSinceConnect = false
+                recoveryRung = 0
+                g.disconnect()
+            }
+        }
+        Log.w(TAG, "kardia nudge rung $rung ($why): $lastNudge")
+    }
+
+    /**
+     * Operator-triggered recovery: fire the next rung now rather than waiting out the silence. With no
+     * usable link it restarts the scan instead, which is the only useful thing to do at that point.
+     * Returns what it did, for the caller to show.
+     */
+    fun nudge(): String {
+        val g = gatt
+        if (g == null || !servicesDiscovered) {
+            nudgeCount++
+            lastNudge = "rescan"
+            statusLine = "BLE: operator nudge — rescanning"
+            connecting = false
+            try { adapter?.bluetoothLeScanner?.stopScan(scanCb) } catch (_: Exception) {}
+            if (started) startScan()
+            return "rescan"
+        }
+        recoveryRung += 1
+        escalate(g, recoveryRung, "operator nudge")
+        return lastNudge ?: "nudged"
     }
 
     // ---- session capture state (guarded by logLock; BLE callbacks arrive on binder threads) ----
@@ -440,6 +511,7 @@ class BleKardia(private val context: Context) {
                 statusLine = "BLE: discovering…"
                 servicesDiscovered = false
                 gotPacketSinceConnect = false
+                recoveryRung = 0
                 g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
                 g.requestMtu(64)
                 handler.postDelayed({ if (!servicesDiscovered) g.discoverServices() }, 3000)
@@ -491,7 +563,8 @@ class BleKardia(private val context: Context) {
                 return
             }
             when (d.characteristic) {
-                cmdChar -> writeModeCommand(g, "M2")
+                // modeUsed, not a hard "M2": a rung-3 re-subscribe must not undo the M1 fallback
+                cmdChar -> writeModeCommand(g, modeUsed ?: "M2")
                 ecgChar -> {
                     statusLine = "BLE: waiting for stream…"
                     val before = packetCount
@@ -570,6 +643,7 @@ class BleKardia(private val context: Context) {
         packetCount += 1
         lastPacketNs = recvNs
         gotPacketSinceConnect = true
+        recoveryRung = 0
         streaming = true
         statusLine = "BLE: streaming ${deviceName ?: ""} ($modeUsed)"
 

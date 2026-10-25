@@ -61,10 +61,17 @@ Then sign in with the operator's account.
 
 ## Phone clip
 
-Each clip screen can launch the built-in Camera2 recorder (1080p30, H.264, audio on, AE/AWB/AF locked after a 2 s
+Each clip screen can launch the built-in Camera2 recorder (1080p30, H.264, audio on, AE/AWB/AF locked after the
 settle, stabilisation off, per-frame SENSOR_TIMESTAMP log). Files go to
 `Android/data/org.samahealth.onboarding/files/<PID>/`. The recorder must pass the bench acceptance (protocol 4.5)
 before study use; Open Camera remains the fallback (`palmppg/capture/phone_settings.md`).
+
+Pressing REC starts the Kardia capture first and holds for a 10 s lead-in, spent metering the palm, before the
+encoder opens; the ECG keeps running for 10 s after the clip ends. The clip is therefore a window inside a longer
+ECG record, and `<clip>_sync.json` says where (D-040). One beep marks the clip starting and a double beep marks it
+finishing, both outside the recorded audio so neither is mistaken for the rig buzzer (D-042). `Nudge Kardia` pokes
+a device that has gone quiet without waiting for the watchdog, escalating a rung each press: re-send the mode, try
+the other mode, re-subscribe, reconnect (D-041).
 
 ## Layout
 
