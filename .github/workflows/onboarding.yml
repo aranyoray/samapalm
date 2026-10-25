@@ -64,7 +64,7 @@ jobs:
         # --index-url replaces PyPI rather than adding to it, so scipy was being looked for on the torch
         # index and not found. Only torch comes from there.
         run: |
-          pip install numpy scipy onnx onnxruntime
+          pip install numpy scipy pyyaml onnx onnxruntime
           pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: Download the 1-lead weights
         env:
