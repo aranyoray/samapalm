@@ -131,6 +131,16 @@ internal object Dsp {
         return doubleArrayOf(b0 / a0, b1 / a0, b0 / a0, (-2.0 * c) / a0, (1.0 - alpha) / a0)
     }
 
+    /** Second-order notch (RBJ cookbook), a0 = 1. Narrow at q = 30: 50 Hz goes, 40 Hz and the QRS stay. */
+    fun notchCoeffs(f0: Double, q: Double, fs: Double): DoubleArray {
+        val w0 = 2.0 * PI * f0 / fs
+        val c = cos(w0)
+        val s = sin(w0)
+        val alpha = s / (2.0 * q)
+        val a0 = 1.0 + alpha
+        return doubleArrayOf(1.0 / a0, (-2.0 * c) / a0, 1.0 / a0, (-2.0 * c) / a0, (1.0 - alpha) / a0)
+    }
+
     fun biquad(x: DoubleArray, co: DoubleArray): DoubleArray {
         val b0 = co[0]; val b1 = co[1]; val b2 = co[2]; val a1 = co[3]; val a2 = co[4]
         var z1 = 0.0
@@ -146,13 +156,26 @@ internal object Dsp {
         return out
     }
 
-    /** Zero-phase band-pass: median removed, odd extension of 2 s, HP then LP biquad, forward then backward. */
-    fun ecgBandpass(mv: DoubleArray, fs: Double, lo: Double = 0.5, hi: Double = 40.0): DoubleArray {
+    /**
+     * Zero-phase mains notch then band-pass: median removed, odd extension of 2 s, notch then HP then LP
+     * biquad, forward then backward.
+     *
+     * The 40 Hz low-pass alone leaves mains pickup about 11 dB down, which is still enough to bother the beat
+     * detector in a room lit by tubes; the notch takes it out without touching the QRS. Skipped when the
+     * sample rate cannot carry it.
+     */
+    fun ecgBandpass(
+        mv: DoubleArray, fs: Double, lo: Double = 0.5, hi: Double = 40.0,
+        mainsHz: Double = 50.0, mainsQ: Double = 30.0,
+    ): DoubleArray {
         val n = mv.size
         if (n == 0) return DoubleArray(0)
         val med = median(mv)
         val x = DoubleArray(n) { mv[it] - med }
-        val sections = listOf(biquadCoeffs(false, lo, fs), biquadCoeffs(true, min(hi, 0.45 * fs), fs))
+        val sections = ArrayList<DoubleArray>(3)
+        if (mainsHz > 0.0 && mainsHz < 0.45 * fs) sections.add(notchCoeffs(mainsHz, mainsQ, fs))
+        sections.add(biquadCoeffs(false, lo, fs))
+        sections.add(biquadCoeffs(true, min(hi, 0.45 * fs), fs))
         val pad = min(n - 1, rhu(2.0 * fs))
         var y = DoubleArray(n + 2 * pad)
         for (i in 0 until pad) y[i] = 2.0 * x[0] - x[pad - i]

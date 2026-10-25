@@ -34,6 +34,16 @@ object PalmControls {
      */
     const val MAX_EXPOSURE_NS = 12_000_000L
 
+    /**
+     * Mains frequency at the study site. Fluorescent tubes and most LED drivers ripple at twice this, so a
+     * shutter that lasts a whole number of half-cycles collects the same light every frame and the flicker
+     * cancels. India is 50 Hz; a 60 Hz site changes this one line.
+     */
+    const val MAINS_HZ = 50.0
+
+    /** One mains half-cycle: the shortest flicker-free shutter, 10 ms at 50 Hz. */
+    val FLICKER_STEP_NS: Long = Math.round(1e9 / (2.0 * MAINS_HZ))
+
     /** Target ROI luma after the settle, in 8-bit sRGB code values. Mid-grey with headroom. */
     const val TARGET_ROI_LUMA = 140f
     const val MIN_ROI_LUMA = 40f
@@ -76,21 +86,48 @@ object PalmControls {
     data class Exposure(val exposureNs: Long, val iso: Int, val capped: Boolean, val isoSaturated: Boolean)
 
     /**
-     * Pins the exposure the AE settled on, but never longer than [MAX_EXPOSURE_NS]. Light given
-     * up by shortening the shutter is restored by raising sensitivity in the same ratio, so the
-     * scene brightness is unchanged; if the sensor cannot go high enough the result is flagged
-     * and the clip will be darker than the settle, which the pre-flight then reports.
+     * The nearest whole number of mains half-cycles to [wantedNs], or [wantedNs] when none fits the range.
+     *
+     * Under manual exposure Camera2's antibanding control does nothing at all, so this is the only thing
+     * standing between a tube-lit room and a 100 Hz ripple running through the ROI trace. Whether to take it
+     * is the caller's decision, because snapping changes how much light the shutter lets in.
+     */
+    fun flickerFreeExposure(wantedNs: Long, minNs: Long, maxNs: Long): Long {
+        if (FLICKER_STEP_NS < minNs || FLICKER_STEP_NS > maxNs) return wantedNs
+        val k = maxOf(1L, Math.round(wantedNs.toDouble() / FLICKER_STEP_NS))
+        val snapped = minOf(k * FLICKER_STEP_NS, (maxNs / FLICKER_STEP_NS) * FLICKER_STEP_NS)
+        return if (snapped in minNs..maxNs) snapped else wantedNs
+    }
+
+    /**
+     * [flickerFreeExposure], taken only when the sensitivity left can absorb the change. A flicker-free
+     * shutter is worth a gain change; it is not worth a blown-out ROI, which is what forcing 10 ms on a
+     * scene that wants 2 ms would give once ISO hits its floor.
+     */
+    private fun snapIfAffordable(
+        wantedNs: Long, light: Double, minNs: Long, maxNs: Long, isoRange: IntRange,
+    ): Long {
+        val snapped = flickerFreeExposure(wantedNs, minNs, maxNs)
+        if (snapped == wantedNs) return wantedNs
+        return if ((light / snapped).roundToInt() >= isoRange.first) snapped else wantedNs
+    }
+
+    /**
+     * Pins the exposure the AE settled on, never longer than [MAX_EXPOSURE_NS] and, where the gain can pay
+     * for it, a whole number of mains half-cycles so tube lighting does not beat against the frame rate.
+     * Light given up by shortening the shutter is restored by raising sensitivity in the same ratio, so the
+     * scene brightness is unchanged; if the sensor cannot go high enough the result is flagged and the clip
+     * will be darker than the settle, which the pre-flight then reports.
      */
     fun capExposure(settledExposureNs: Long, settledIso: Int, isoRange: IntRange, exposureRange: LongRange,
                     maxExposureNs: Long = MAX_EXPOSURE_NS): Exposure {
         val exp = settledExposureNs.coerceIn(exposureRange.first, exposureRange.last)
-        if (exp <= maxExposureNs) {
-            return Exposure(exp, settledIso.coerceIn(isoRange.first, isoRange.last), capped = false, isoSaturated = false)
-        }
-        val ratio = exp.toDouble() / maxExposureNs
-        val wantedIso = (settledIso * ratio).roundToInt()
+        val ceiling = minOf(maxExposureNs, exposureRange.last)
+        val light = exp.toDouble() * settledIso
+        val use = snapIfAffordable(minOf(exp, ceiling), light, exposureRange.first, ceiling, isoRange)
+        val wantedIso = (light / use).roundToInt()
         val iso = wantedIso.coerceIn(isoRange.first, isoRange.last)
-        return Exposure(maxExposureNs, iso, capped = true, isoSaturated = iso < wantedIso)
+        return Exposure(use, iso, capped = exp > ceiling, isoSaturated = iso < wantedIso)
     }
 
     /**
@@ -113,12 +150,15 @@ object PalmControls {
     private fun scale(current: Exposure, factor: Double, isoRange: IntRange, exposureRange: LongRange, maxExposureNs: Long): Exposure {
         val f = factor.coerceIn(0.05, 20.0)
         val expCeiling = minOf(maxExposureNs, exposureRange.last)
-        var exp = (current.exposureNs * f).roundToLong().coerceIn(exposureRange.first, expCeiling)
+        val wantedNs = current.exposureNs * f
+        val light = wantedNs * current.iso
+        val rounded = wantedNs.roundToLong().coerceIn(exposureRange.first, expCeiling)
+        val exp = snapIfAffordable(rounded, light, exposureRange.first, expCeiling, isoRange)
         // Whatever the shutter could not absorb goes to gain.
-        val remaining = (current.exposureNs * f) / exp
+        val remaining = wantedNs / exp
         val wantedIso = (current.iso * remaining).roundToInt()
         val iso = wantedIso.coerceIn(isoRange.first, isoRange.last)
-        return Exposure(exp, iso, capped = exp == expCeiling && remaining > 1.0, isoSaturated = iso < wantedIso)
+        return Exposure(exp, iso, capped = wantedNs > expCeiling, isoSaturated = iso < wantedIso)
     }
 
     // ---- tone curve ------------------------------------------------------------------------

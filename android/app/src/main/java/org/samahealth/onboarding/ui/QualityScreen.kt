@@ -44,6 +44,7 @@ import org.samahealth.onboarding.container
 import org.samahealth.onboarding.data.VisitEntity
 import org.samahealth.onboarding.ecg.FounderOnnx
 import org.samahealth.onboarding.quality.QualityRunner
+import org.samahealth.onboarding.quality.toJson
 import java.io.File
 
 /** One clip of one visit, as the Quality tab lists it. */
@@ -221,6 +222,12 @@ fun QualityScreen(onOpenVisit: (String) -> Unit) {
                         g.video?.reasons?.forEach { appendLine("  $it") }
                         appendLine("ECG: ${gradeWords(g.ecg?.level)}")
                         g.ecg?.reasons?.forEach { appendLine("  $it") }
+                        EcgReadout.lines(
+                            metrics = g.ecg?.toJson()?.get("metrics") as? JsonObject,
+                            level = g.ecg?.level,
+                            deviceDetermination = g.deviceDetermination,
+                            deviceHrBpm = g.deviceHrBpm,
+                        ).forEach { appendLine("  $it") }
                         g.notes.forEach { appendLine(it) }
                     }
                     detail = null
@@ -300,6 +307,13 @@ private fun ClipDetailDialog(
                 for (r in reasonsOf(row.record, "video_reasons")) Text("· $r", style = MaterialTheme.typography.bodySmall)
                 Text("ECG: ${gradeWords(row.ecgGrade)}", style = MaterialTheme.typography.titleSmall)
                 for (r in reasonsOf(row.record, "ecg_reasons")) Text("· $r", style = MaterialTheme.typography.bodySmall)
+                for (line in EcgReadout.lines(
+                    metrics = row.record["ecg_metrics"] as? JsonObject,
+                    level = row.ecgGrade,
+                    rhythmSentences = row.record["rhythm_sentences"],
+                    deviceDetermination = str(row.record["ecg_device_determination"]),
+                    deviceHrBpm = num(row.record["ecg_device_hr"])?.toInt(),
+                )) Text(line, style = MaterialTheme.typography.bodySmall)
                 str(row.record["ecg_source"])?.let { Text("ECG from: $it", style = MaterialTheme.typography.bodySmall) }
                 if (row.interrupted) Text("The recording stopped before the full clip length.",
                     style = MaterialTheme.typography.bodySmall)

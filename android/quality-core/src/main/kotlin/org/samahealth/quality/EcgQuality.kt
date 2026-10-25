@@ -44,7 +44,7 @@ object EcgQuality {
             m["flat_frac"] = 1.0
             return Analysis(m, false, null)
         }
-        val y = Dsp.ecgBandpass(x, fs, cfg.bandLoHz, cfg.bandHiHz)
+        val y = Dsp.ecgBandpass(x, fs, cfg.bandLoHz, cfg.bandHiHz, cfg.mainsHz, cfg.mainsQ)
         val (r, inverted) = detect(y, fs)
         m["n_beats"] = r.size.toDouble()
         m["inverted"] = if (inverted) 1.0 else 0.0

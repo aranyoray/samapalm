@@ -35,6 +35,11 @@ data class ClipGrades(
     val source: String?,
     val ecgFile: String?,
     val notes: List<String>,
+    /** What the Kardia device itself printed on the strip, when the ECG came from a Kardia export. */
+    val deviceDetermination: String? = null,
+    val deviceHrBpm: Int? = null,
+    val deviceMainsHz: Int? = null,
+    val deviceEnhancedFilter: Boolean? = null,
 )
 
 /** {"grade", "reasons", "metrics"} as the clip record stores it. */
@@ -170,6 +175,10 @@ object QualityRunner {
         var source: String? = null
         var ecgRel: String? = null
         var refHr: Double? = null
+        var devDet: String? = null
+        var devHr: Int? = null
+        var devMains: Int? = null
+        var devFilter: Boolean? = null
 
         val ble = File(dir, "${clipId}_ecg_samples.csv")
         val imported = listOf("pdf", "atc").map { File(dir, "${clipId}_kardia.$it") }.firstOrNull { it.isFile }
@@ -198,6 +207,12 @@ object QualityRunner {
                 ecgGrade = EcgQuality.score(mv, trace.fs)
                 rhythm = EcgSummary.summarise(mv, trace.fs)
                 refHr = ecgGrade.metrics["hr_bpm"]
+                // A Kardia export carries the device's own reading on the page. It is the regulated
+                // device's word, not ours, so it is carried through rather than recomputed or dropped.
+                devDet = trace.determination
+                devHr = trace.hrBpm
+                devMains = trace.mainsHz
+                devFilter = trace.enhancedFilter
                 trace.warnings.forEach { notes.add("ECG file: $it") }
             }
         }
@@ -216,6 +231,6 @@ object QualityRunner {
                 null
             }
         }
-        ClipGrades(videoGrade, ecgGrade, rhythm, source, ecgRel, notes)
+        ClipGrades(videoGrade, ecgGrade, rhythm, source, ecgRel, notes, devDet, devHr, devMains, devFilter)
     }
 }

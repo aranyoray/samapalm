@@ -1264,7 +1264,13 @@ class PalmRecorderActivity : Activity() {
                 .put("reported_ns", lockedExposureNs)
                 .put("reported_iso", lockedIso)
                 .put("ae_mode_reported", lastAeMode)
-                .put("metered_on_roi", activeArray != null))
+                .put("metered_on_roi", activeArray != null)
+                .put("mains_hz", PalmControls.MAINS_HZ)
+                .put("mains_half_cycle_ns", PalmControls.FLICKER_STEP_NS)
+                // whether the shutter the camera actually reported is a whole number of half-cycles, which
+                // is what decides if tube lighting rides on the ROI trace
+                .put("flicker_free", lockedExposureNs > 0 && lockedExposureNs % PalmControls.FLICKER_STEP_NS == 0L)
+                .put("flicker_free_requested", (req?.exposureNs ?: 0L) % PalmControls.FLICKER_STEP_NS == 0L))
             .put("white_balance", JSONObject()
                 .put("applied", awbApplied)
                 .put("awb_mode_reported", lastAwbMode)

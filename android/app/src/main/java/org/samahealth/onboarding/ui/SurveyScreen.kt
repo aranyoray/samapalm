@@ -431,6 +431,12 @@ private fun ClipInput(
             g.rhythm?.let { r ->
                 next = next + ("rhythm_sentences" to JsonArray(r.sentences.map { sline -> JsonPrimitive(sline) }))
             }
+            // Kept apart from the operator's own kardia_determination answer: this is what the export said,
+            // read off the page, and it must not quietly fill in a CRF question the operator has to answer.
+            g.deviceDetermination?.let { next = next + ("ecg_device_determination" to JsonPrimitive(it)) }
+            g.deviceHrBpm?.let { next = next + ("ecg_device_hr" to JsonPrimitive(it)) }
+            g.deviceMainsHz?.let { next = next + ("ecg_device_mains_hz" to JsonPrimitive(it)) }
+            g.deviceEnhancedFilter?.let { next = next + ("ecg_device_enhanced_filter" to JsonPrimitive(it)) }
             // the grades pre-fill the operator's decision; the operator can still change it
             val bad = g.video?.level == "retake" || g.ecg?.level == "retake" ||
                 bool(latest.value["phone_interrupted"]) == true
@@ -533,6 +539,13 @@ private fun ClipInput(
         if (grading) Text("Checking the recording…", style = MaterialTheme.typography.bodySmall)
         GradeLine("Palm video", str(o["video_grade"]), o["video_reasons"])
         GradeLine("ECG", str(o["ecg_grade"]), o["ecg_reasons"])
+        for (line in EcgReadout.lines(
+            metrics = o["ecg_metrics"] as? JsonObject,
+            level = str(o["ecg_grade"]),
+            rhythmSentences = o["rhythm_sentences"],
+            deviceDetermination = str(o["ecg_device_determination"]),
+            deviceHrBpm = num(o["ecg_device_hr"])?.toInt(),
+        )) Text(line, style = MaterialTheme.typography.bodySmall)
         for (n in notes) Text(n, style = MaterialTheme.typography.bodySmall)
 
         Text("What the Kardia app showed")

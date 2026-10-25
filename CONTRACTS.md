@@ -123,6 +123,9 @@ Columns: `event_id, kind, pattern, mono_ns, wall_ns, gpio_ok`. `kind` in {`start
   awb_mode_reported, gains_rggb, transform_row_major}, tonemap_mode_requested, tonemap_mode_reported,
   shading_mode_reported, aberration_mode_reported, zoom_ratio_reported, flash_state_reported, result_fps,
   analysis_resolution, preflight {ok, warnings, exposure_correction_factor}}`.
+* `clip1_meta.json` `controls.exposure` additional keys (onboarding app recorder, D-044): `mains_hz,
+  mains_half_cycle_ns, flicker_free, flicker_free_requested`. `flicker_free` is read off the shutter the
+  camera reported, not the one requested, so it says whether the clip actually is flicker-free.
 * `clip1_meta.json` additional keys (onboarding app recorder, D-040): `requested_ecg_lead_in_s,
   requested_ecg_lead_out_s` — the ECG runs before and after the clip, so the clip is a window inside a longer
   ECG record. The lead-out is `0.0` when the clip was interrupted.
@@ -268,12 +271,17 @@ described as product results in reports.
   Readers: `RoiCsv` and `FramesCsv` over the recorder's `<clip>_roi.csv` and `<clip>_frames.csv`, `EcgCsv` over
   `<clip>_ecg_samples.csv`, `AtcReader` over ATC, and `KardiaPdf`, which reads the vector trace out of a Kardia PDF
   export (300 Hz, calibration pulse for the mV scale, strips ordered top to bottom) rather than rasterising it.
-  `EcgSummary.summarise` gives the participant-facing wording and never names a rhythm. The BLE ECG is graded
+  Before scoring, the ECG goes through a 50 Hz mains notch (RBJ, Q 30) and then the 0.5-40 Hz band-pass
+  (D-043); `mains_hz`/`mains_q` in the config turn it off or move it to a 60 Hz site. `EcgSummary.summarise`
+  gives the participant-facing wording and never names a rhythm. The BLE ECG is graded
   over the clip window from `clip1_sync.json`, not over the whole record (D-040): the lead is kept in the file
   for analysis but is not part of the clip, and the participant's fingers may not be on the electrodes during
   it. An imported Kardia file has no window and is graded whole, as before. The app writes the grades
   into the clip record as `video_grade`/`video_reasons`/`video_metrics` and `ecg_grade`/`ecg_reasons`/`ecg_metrics`,
-  with `ecg_file` and `ecg_source` (`ble | kardia_pdf | kardia_atc`).
+  with `ecg_file` and `ecg_source` (`ble | kardia_pdf | kardia_atc`). A Kardia export also carries the
+  device's own printed reading, which is kept as `ecg_device_determination`, `ecg_device_hr`,
+  `ecg_device_mains_hz` and `ecg_device_enhanced_filter` (D-045). These are the device's word, shown as such;
+  they never fill in the operator's own `kardia_determination` and `kardia_hr` answers.
 * ECGFounder preprocessing (design section 9): `palmppg/ecg/founder_prep.py` is the chain (resample to 500 Hz,
   polarity check, 10 s windows, 50 Hz notch and Butterworth 0.67-40 Hz forward and backward, minus a 0.4 s running
   median, z-score) and is importable without torch; `palmppg/ecg/founder.py` re-exports it and adds the vendored

@@ -280,3 +280,34 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   phone-generated tone inside it could be read as the buzzer. They go to `STREAM_MUSIC`, not the notification
   stream, because ringer-silent mutes notifications and the whole point is to be heard. A device that will not
   give us a tone generator is logged and ignored: it must never fail a clip.
+
+- **D-043 (2026-10-25) The ECG is notched at 50 Hz before it is graded, not only before the model.** The
+  grader ran a 0.5-40 Hz band-pass and nothing else, which leaves mains pickup only about 11 dB down: roll-off,
+  not rejection. In a room lit by tubes that was enough to cost the beat detector, and the loss showed up as a
+  low template match rather than as the mains artefact it was. A 50 Hz RBJ notch at Q 30 now runs ahead of the
+  band-pass in both `palmppg/quality/onsite.py` and the Kotlin port, in the same order, so the two still agree
+  to 1e-9 on every fixture. On the synthetic cases the clean strip barely moves (template match 0.9972 to
+  0.9973) and the noisy one improves (0.386 to 0.395, and three mains-driven false beats disappear). The
+  frequency is config, not a constant, because a 60 Hz site needs the other value; the existing 50 Hz notch in
+  `FounderPrep` is inherited verbatim from upstream ECGFounder and is left alone. Raw files stay unfiltered:
+  filtering before writing would be unrecoverable.
+
+- **D-044 (2026-10-25) The shutter is a whole number of mains half-cycles, when the gain can pay for it.**
+  Under manual exposure Camera2's antibanding control does nothing, and nothing else in the recorder addressed
+  mains flicker: the shutter was whatever the AE settled on, capped at 12 ms. At 30 fps a 50 Hz room beats at
+  about 10 Hz, above the 0.7-4 Hz pulse band, so the palm trace was probably never corrupted - but that is
+  arithmetic luck, not design, and it would walk into the band if the frame rate ever moved toward 33 fps. The
+  exposure now snaps to a multiple of 10 ms. It snaps only when the sensitivity left can absorb the change:
+  forcing 10 ms on a scene that wants 2 ms is five times the light, and at the ISO 100 floor that is a blown
+  ROI, which is worse than flicker. `clip_meta.json` records whether the shutter the camera actually reported
+  came out flicker-free, so the answer is in the data rather than inferred from the constant.
+  **Not yet verified on hardware:** the arithmetic is unit-tested, but no clip has been shot under tubes.
+
+- **D-045 (2026-10-25) The ECG readout shows the numbers and says how far to trust them.** The app showed a
+  grade word and nothing else: no rate, no beat count, and - worse - `KardiaPdf` was already reading the
+  device's own determination, heart rate, mains frequency and filter setting off the strip and `QualityRunner`
+  was dropping all four. The regulated device's own label was being parsed and discarded. It is now carried
+  through and shown as the device's word, kept apart from the operator's `kardia_determination` answer so it
+  cannot quietly fill in a CRF question. Beside it the app shows what it measured itself and a confidence,
+  which is the signal-quality grade restated: it is confidence in the number, never in a diagnosis, and a test
+  asserts the readout never emits a rhythm name of its own (D-037 keeps that for the clinician).

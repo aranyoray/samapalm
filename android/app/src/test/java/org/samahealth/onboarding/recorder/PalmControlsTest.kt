@@ -50,28 +50,56 @@ class PalmControlsTest {
     }
 
     @Test
-    fun `an exposure inside the cap is kept exactly`() {
+    fun `an exposure inside the cap is snapped to whole mains half-cycles`() {
+        // 10.0 ms, not the 9.998 ms the AE happened to land on: under 50 Hz tubes a shutter that is not a
+        // whole number of half-cycles collects a different amount of light every frame.
         val e = PalmControls.capExposure(9_998_229L, 130, isoRange, exposureRange)
-        assertEquals(9_998_229L, e.exposureNs)
-        assertEquals(130, e.iso)
+        assertEquals(PalmControls.FLICKER_STEP_NS, e.exposureNs)
+        assertEquals(10_000_000L, e.exposureNs)
+        assertEquals(130, e.iso)   // 0.02 % more light; the rounded gain is unchanged
         assertFalse(e.capped)
     }
 
     @Test
     fun `a long exposure is capped and the lost light moved into sensitivity`() {
         // The 18 Oct dry run: 29.99 ms at ISO 6400 - already at max gain, so the cap must be
-        // honest about the brightness it cannot restore.
+        // honest about the brightness it cannot restore. 12 ms then snaps down to one half-cycle.
         val e = PalmControls.capExposure(29_994_687L, 6400, isoRange, exposureRange)
-        assertEquals(PalmControls.MAX_EXPOSURE_NS, e.exposureNs)
+        assertEquals(10_000_000L, e.exposureNs)
         assertTrue(e.capped)
         assertTrue(e.isoSaturated)
         assertEquals(6400, e.iso)
 
         // Same shutter at ISO 400: gain has room, so brightness is preserved exactly.
         val f = PalmControls.capExposure(24_000_000L, 400, isoRange, exposureRange)
-        assertEquals(PalmControls.MAX_EXPOSURE_NS, f.exposureNs)
-        assertEquals(800, f.iso)
+        assertEquals(10_000_000L, f.exposureNs)
+        assertEquals(960, f.iso)   // 24 ms x 400 of light into a 10 ms shutter
         assertFalse(f.isoSaturated)
+        assertEquals(24_000_000L * 400, f.exposureNs * f.iso.toLong())
+    }
+
+    @Test
+    fun `the shutter is left alone when gain cannot pay for a flicker-free one`() {
+        // A bright scene wanting 2 ms: forcing 10 ms is 5x the light, and ISO 100 is the floor, so the
+        // ROI would blow out. Flicker is the lesser problem and the shutter stays where it is.
+        val bright = PalmControls.capExposure(2_000_000L, 100, isoRange, exposureRange)
+        assertEquals(2_000_000L, bright.exposureNs)
+        assertEquals(100, bright.iso)
+
+        // The same 2 ms at ISO 800 has room to come down, so it snaps and the light is preserved.
+        val dim = PalmControls.capExposure(2_000_000L, 800, isoRange, exposureRange)
+        assertEquals(10_000_000L, dim.exposureNs)
+        assertEquals(160, dim.iso)
+        assertEquals(2_000_000L * 800, dim.exposureNs * dim.iso.toLong())
+    }
+
+    @Test
+    fun `flicker-free snapping needs a half-cycle to fit between the sensor limits`() {
+        // A sensor that cannot reach 10 ms at all gets the value it asked for, not a clamp.
+        assertEquals(4_000_000L, PalmControls.flickerFreeExposure(4_000_000L, 100_000L, 5_000_000L))
+        // Never below the floor, never above the ceiling.
+        assertEquals(10_000_000L, PalmControls.flickerFreeExposure(11_000_000L, 105_042L, 12_000_000L))
+        assertEquals(20_000_000L, PalmControls.flickerFreeExposure(21_000_000L, 105_042L, 54_204_790_072L))
     }
 
     @Test

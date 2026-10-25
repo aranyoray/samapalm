@@ -95,6 +95,8 @@ data class EcgQualityConfig(
     val flatPtpMv: Double = 0.05,
     val bandLoHz: Double = 0.5,
     val bandHiHz: Double = 40.0,
+    val mainsHz: Double = 50.0,                 // tube and LED lighting ripples at 2x this; 0 disables the notch
+    val mainsQ: Double = 30.0,
     val irregularRmssdRatio: Double = 0.1,      // Dash et al. 2009
     val irregularShannon: Double = 0.7,
     val minRrForRhythm: Int = 8,

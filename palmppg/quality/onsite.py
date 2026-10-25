@@ -135,6 +135,8 @@ class EcgQualityConfig:
     flat_ptp_mv: float = 0.05               # 1 s window with a smaller peak-to-peak counts as flat
     band_lo_hz: float = 0.5
     band_hi_hz: float = 40.0
+    mains_hz: float = 50.0                  # tube and LED lighting ripples at 2x this; 0 disables the notch
+    mains_q: float = 30.0
     irregular_rmssd_ratio: float = 0.1      # Dash et al. 2009
     irregular_shannon: float = 0.7
     min_rr_for_rhythm: int = 8
@@ -218,6 +220,15 @@ def _biquad_coeffs(kind: str, f0: float, fs: float) -> tuple[float, float, float
     return b0 / a0, b1 / a0, b0 / a0, (-2.0 * c) / a0, (1.0 - alpha) / a0
 
 
+def _notch_coeffs(f0: float, q: float, fs: float) -> tuple[float, float, float, float, float]:
+    """Second-order notch (RBJ cookbook), a0 = 1. Narrow at q = 30: 50 Hz goes, 40 Hz and the QRS stay."""
+    w0 = 2.0 * math.pi * f0 / fs
+    c, s = math.cos(w0), math.sin(w0)
+    alpha = s / (2.0 * q)
+    a0 = 1.0 + alpha
+    return 1.0 / a0, (-2.0 * c) / a0, 1.0 / a0, (-2.0 * c) / a0, (1.0 - alpha) / a0
+
+
 def _biquad(x: list[float], co) -> list[float]:
     b0, b1, b2, a1, a2 = co
     z1 = z2 = 0.0
@@ -230,14 +241,23 @@ def _biquad(x: list[float], co) -> list[float]:
     return out
 
 
-def ecg_bandpass(mv, fs: float, lo: float = 0.5, hi: float = 40.0) -> np.ndarray:
-    """Zero-phase 0.5-40 Hz band-pass: median removed, odd extension of 2 s, HP then LP biquad, forward and back."""
+def ecg_bandpass(mv, fs: float, lo: float = 0.5, hi: float = 40.0,
+                 mains_hz: float = 50.0, mains_q: float = 30.0) -> np.ndarray:
+    """Zero-phase mains notch then 0.5-40 Hz band-pass.
+
+    Median removed, odd extension of 2 s, notch then HP then LP biquad, forward and back. The 40 Hz low-pass
+    alone leaves mains pickup about 11 dB down, which is audible to the beat detector in a room lit by tubes;
+    the notch takes it out without touching the QRS. Skipped when the rate cannot carry it.
+    """
     x = np.asarray(mv, dtype=float)
     n = x.size
     if n == 0:
         return x.copy()
     x = x - _median(x)
-    sections = [_biquad_coeffs("hp", lo, fs), _biquad_coeffs("lp", min(hi, 0.45 * fs), fs)]
+    sections = []
+    if mains_hz > 0.0 and mains_hz < 0.45 * fs:
+        sections.append(_notch_coeffs(mains_hz, mains_q, fs))
+    sections += [_biquad_coeffs("hp", lo, fs), _biquad_coeffs("lp", min(hi, 0.45 * fs), fs)]
     pad = min(n - 1, _rhu(2.0 * fs))
     if pad > 0:
         left = 2.0 * x[0] - x[pad:0:-1]
@@ -668,7 +688,7 @@ def _ecg_analyse(mv, fs: float, cfg: EcgQualityConfig) -> tuple[dict, bool, floa
     if n == 0:
         m["flat_frac"] = 1.0
         return m, False, None
-    y = ecg_bandpass(x, fs, cfg.band_lo_hz, cfg.band_hi_hz)
+    y = ecg_bandpass(x, fs, cfg.band_lo_hz, cfg.band_hi_hz, cfg.mains_hz, cfg.mains_q)
     r, inverted = _detect_on_filtered(y, fs, with_polarity=True)
     m["n_beats"] = float(r.size)
     m["inverted"] = 1.0 if inverted else 0.0
