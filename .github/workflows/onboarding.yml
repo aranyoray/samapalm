@@ -83,6 +83,7 @@ jobs:
           name: samahealth-onboarding-debug-apk-with-model
           path: |
             android/app/build/outputs/apk/debug/app-debug.apk
+            work/ecgfounder/ecgfounder_1lead_fp32.onnx
             work/ecgfounder/ecgfounder_1lead_fp32.report.json
 
   contracts:
