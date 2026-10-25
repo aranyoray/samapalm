@@ -29,6 +29,9 @@ class AppContainer(val context: Context) {
     }
 
     fun client(): SupabaseClient? {
+        // On-device mode has no signed-in operator, so nothing recorded under it carries an identity.
+        // Refusing a client here is what keeps that data off a study table if a URL is pasted in later.
+        if (prefs.localOnly) return null
         val url = prefs.supabaseUrl
         val key = prefs.supabaseAnonKey
         return if (url.isNullOrBlank() || key.isNullOrBlank()) null else SupabaseClient(SupabaseConfig(url, key))

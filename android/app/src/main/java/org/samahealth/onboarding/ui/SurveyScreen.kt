@@ -75,6 +75,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.samahealth.onboarding.quality.QualityRunner
+import org.samahealth.onboarding.data.VisitEntity
 import org.samahealth.onboarding.quality.toJson
 import org.samahealth.onboarding.ecg.ParticipantSummary
 import org.samahealth.onboarding.recorder.PalmRecorderActivity
@@ -122,7 +123,7 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit, onOpenQuality: () -> Uni
                 OutlinedButton(onClick = vm::reopen) { Text("Re-open for correction") }
             }
             for (q in s.questions) {
-                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid, onOpenQuality)
+                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid, onOpenQuality, s.part)
             }
             if (s.screenId.endsWith("review")) ReviewSummary(s, vm)
         }
@@ -224,7 +225,7 @@ private fun ReviewSummary(s: SurveyUi, vm: SurveyViewModel) {
 }
 
 @Composable
-private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?, visitUuid: String, onOpenQuality: () -> Unit) {
+private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?, visitUuid: String, onOpenQuality: () -> Unit, part: String) {
     val err = if (showErrors) q.errors.firstOrNull()?.message else null
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (q.type != "info") {
@@ -237,7 +238,14 @@ private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean,
             "text" -> TextInput(q, readOnly, KeyboardType.Text, parse = { t -> if (t.isBlank()) null else JsonPrimitive(t) }, set = set)
             "pid" -> {
                 TextInput(q, readOnly, KeyboardType.Ascii, parse = { t -> if (t.isBlank()) null else JsonPrimitive(t.trim().uppercase()) }, set = set)
-                if (!readOnly) OutlinedButton(onClick = vm::nextPid) { Text("Next PID from this tablet's block") }
+                if (!readOnly && part != VisitEntity.PART_SCAN) {
+                    OutlinedButton(onClick = vm::nextPid) { Text("Next PID from this tablet's block") }
+                }
+                // Scan first, PID later: the participant may be enrolled on another phone, or on paper only,
+                // and the recording should not wait for the number. Submitting still needs it.
+                if (!readOnly && part == VisitEntity.PART_SCAN && q.value == null) {
+                    OutlinedButton(onClick = vm::skipPidForNow) { Text("Carry on without a PID") }
+                }
             }
             "integer" -> TextInput(q, readOnly, KeyboardType.Number, parse = ::parseInt, set = set)
             "decimal" -> TextInput(q, readOnly, KeyboardType.Decimal, parse = ::parseDecimal, set = set)

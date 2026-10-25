@@ -2,7 +2,10 @@ package org.samahealth.onboarding.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,12 +45,27 @@ fun SettingsScreen(onDone: () -> Unit) {
     var stream by remember { mutableStateOf(p.defaultStream) }
     var mode by remember { mutableStateOf(p.captureMode) }
     var station by remember { mutableStateOf(p.station) }
+    var localOnly by remember { mutableStateOf(p.localOnly) }
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Tablet settings", style = MaterialTheme.typography.headlineSmall)
-        OutlinedTextField(url, { url = it }, label = { Text("Supabase project URL (https://xxxx.supabase.co)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(key, { key = it }, label = { Text("Supabase anon key") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(checked = localOnly, onCheckedChange = { localOnly = it })
+            Spacer(Modifier.width(12.dp))
+            Text("Work on this device only")
+        }
+        Text(
+            if (localOnly)
+                "No sign-in and no upload. Everything stays on this phone, and nothing recorded carries an " +
+                    "operator, so it is for trying the recorder out, not for study visits."
+            else "Turn this on to use the recorder and the quality checks without a Supabase project.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        if (!localOnly) {
+            OutlinedTextField(url, { url = it }, label = { Text("Supabase project URL (https://xxxx.supabase.co)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(key, { key = it }, label = { Text("Supabase anon key") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
         OutlinedTextField(device, { device = it }, label = { Text("Device code (must match the devices table)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(unit, { unit = it }, label = { Text("Unit id (Pi box)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -57,17 +76,17 @@ fun SettingsScreen(onDone: () -> Unit) {
         }
         Text("Clip plan")
         for ((v, label) in listOf("1x60" to "One 60 s clip (BP1, rest, BP2, clip, BP3)", "2x30" to "Two 30 s clips (BP1, rest, clip 1, BP2, clip 2, BP3)")) {
-            Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(plan == v, { plan = v }); Text(label) }
+            ChoiceRow(plan == v, label) { plan = v }
         }
         OutlinedTextField(rest, { rest = it }, label = { Text("Seated rest before the first clip (seconds)") }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
         Text("Default stream")
         for (v in listOf("pilot", "development", "model_selection", "test")) {
-            Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(stream == v, { stream = v }); Text(v) }
+            ChoiceRow(stream == v, v) { stream = v }
         }
         Text("Capture mode")
         for (v in listOf("simultaneous", "sequential")) {
-            Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(mode == v, { mode = v }); Text(v) }
+            ChoiceRow(mode == v, v) { mode = v }
         }
         Text("Station on this phone")
         for ((v, label) in listOf(
@@ -75,7 +94,7 @@ fun SettingsScreen(onDone: () -> Unit) {
             Prefs.STATION_SCAN to "Scan only",
             Prefs.STATION_BOTH to "Both on this phone",
         )) {
-            Row(verticalAlignment = Alignment.CenterVertically) { RadioButton(station == v, { station = v }); Text(label) }
+            ChoiceRow(station == v, label) { station = v }
         }
         Text("The station chooses which tab opens first, and whether this phone hands out new PIDs.",
             style = MaterialTheme.typography.bodySmall)
@@ -85,19 +104,36 @@ fun SettingsScreen(onDone: () -> Unit) {
             val e = end.toIntOrNull()
             val r = rest.toIntOrNull()
             error = when {
-                !url.trim().startsWith("https://") -> "The project URL must start with https://"
-                key.isBlank() -> "The anon key is required"
+                !localOnly && !url.trim().startsWith("https://") -> "The project URL must start with https://"
+                !localOnly && key.isBlank() -> "The anon key is required"
                 s == null || e == null || s < 1 || e > 9999 || s > e -> "PID block must satisfy 1 <= start <= end <= 9999"
                 r == null || r < 0 -> "Rest must be a whole number of seconds"
                 device.isBlank() -> "Device code is required"
                 else -> null
             }
             if (error == null) {
-                p.supabaseUrl = url; p.supabaseAnonKey = key; p.deviceCode = device; p.unitId = unit
+                p.localOnly = localOnly
+                if (!localOnly) { p.supabaseUrl = url; p.supabaseAnonKey = key }
+                p.deviceCode = device; p.unitId = unit
                 p.pidBlockStart = s!!; p.pidBlockEnd = e!!; p.clipPlan = plan; p.restSeconds = r!!
                 p.defaultStream = stream; p.captureMode = mode; p.station = station
                 onDone()
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
+    }
+}
+
+/**
+ * A radio and its label as one target. The label used to be inert, so every choice on this screen could only
+ * be changed by hitting the button itself, which is a small target for a gloved hand on a field phone.
+ */
+@Composable
+private fun ChoiceRow(selected: Boolean, label: String, onSelect: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Text(label)
     }
 }

@@ -50,6 +50,19 @@ class SurveyNavigator(
         return true
     }
 
+    /**
+     * Move to the next visible screen even though this one still has errors.
+     *
+     * For "scan now, PID later": a participant may have been enrolled on a different phone, or be on the
+     * paper form only, and waiting for the number should not stop the recording. The errors stay on the
+     * screen and [submissionStatus] still refuses, so nothing can be submitted around this.
+     */
+    fun skipForward(): Boolean {
+        val target = neighbour(visibleScreens(), forward = true) ?: return false
+        leave(); current = target; enter(current)
+        return true
+    }
+
     fun back(): Boolean {
         val target = neighbour(visibleScreens(), forward = false) ?: return false
         leave(); current = target; enter(current)

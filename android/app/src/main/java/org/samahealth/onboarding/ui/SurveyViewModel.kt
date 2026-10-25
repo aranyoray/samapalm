@@ -175,6 +175,20 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
         advance(n)
     }
 
+    /**
+     * Carry on without the PID. The participant may have been enrolled on another phone, or exist only on
+     * the paper form; either way the recording should not wait for the number. Submission still requires it,
+     * so a visit cannot leave this phone unlabelled.
+     */
+    fun skipPidForNow() {
+        val n = nav ?: return
+        if (n.skipForward()) {
+            showErrors = false
+            message = "No PID yet. Add it before you submit."
+            refresh(); save()
+        }
+    }
+
     private fun advance(n: SurveyNavigator) {
         showErrors = !n.next()
         if (!showErrors) message = null

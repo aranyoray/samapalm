@@ -37,6 +37,18 @@ class Prefs(context: Context) {
     /** Which station this phone is on: "enrol", "scan" or "both" (which tab opens first, and who may take a PID). */
     var station: String get() = s("station") ?: STATION_BOTH; set(v) = put("station", v)
 
+    /**
+     * Work on this device alone: no Supabase, no sign-in, nothing leaves the phone.
+     *
+     * For trying the recorder and the quality checks before a project is wired up. There is no signed-in
+     * operator in this mode, so there is no identity on anything recorded, which is why [AppContainer.client]
+     * refuses to build a client while it is on: data captured this way must not be able to reach a study
+     * table by someone later pasting in a URL.
+     */
+    var localOnly: Boolean
+        get() = sp.getBoolean("local_only", false)
+        set(v) = sp.edit().putBoolean("local_only", v).apply()
+
     /** Set when the server refused the sign-in, so the UI can show a "Sign in again" banner instead of retrying. */
     var signInRequired: Boolean
         get() = sp.getBoolean("sign_in_required", false)
@@ -61,7 +73,7 @@ class Prefs(context: Context) {
             }.apply()
         }
 
-    val isConfigured: Boolean get() = !supabaseUrl.isNullOrBlank() && !supabaseAnonKey.isNullOrBlank()
+    val isConfigured: Boolean get() = localOnly || (!supabaseUrl.isNullOrBlank() && !supabaseAnonKey.isNullOrBlank())
 
     /** Settings the survey engine reads (`settings_defaults` overrides in configs/crf_schema.json). */
     fun engineSettings(part: String = PART_ENROL): Map<String, JsonElement> = mapOf(

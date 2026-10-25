@@ -3,7 +3,9 @@ package org.samahealth.onboarding.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -22,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -61,15 +64,24 @@ private enum class Tab(val route: String, val label: String, val icon: ImageVect
 fun AppNav(activity: ComponentActivity, openVisit: String? = null) {
     val nav = rememberNavController()
     val c = activity.container
-    val firstTab = when (c.prefs.station) {
+    var station by remember { mutableStateOf(c.prefs.station) }
+    val firstTab = when (station) {
         Prefs.STATION_SCAN -> Tab.SCAN
         else -> Tab.ENROL
     }
     val start = when {
         !c.prefs.isConfigured -> "settings"
-        c.prefs.session == null -> "login"
+        c.prefs.session == null && !c.prefs.localOnly -> "login"
         openVisit != null -> "survey/$openVisit"
         else -> firstTab.route
+    }
+    // The station is a mode, not a preference: an enrolling phone hands out PIDs, a scanning phone takes a
+    // PID that was handed out elsewhere. Showing the other station's tab only invites someone to start a
+    // visit on the wrong phone, so it is not shown at all.
+    val tabs = when (station) {
+        Prefs.STATION_ENROL -> listOf(Tab.ENROL, Tab.QUALITY, Tab.TARGETS)
+        Prefs.STATION_SCAN -> listOf(Tab.SCAN, Tab.QUALITY, Tab.TARGETS)
+        else -> Tab.entries.toList()
     }
     var tab by remember { mutableStateOf(firstTab) }
     var inTabs by remember { mutableStateOf(start.startsWith("tab/")) }
@@ -80,10 +92,23 @@ fun AppNav(activity: ComponentActivity, openVisit: String? = null) {
     }
 
     Scaffold(
+        topBar = {
+            if (inTabs && c.prefs.localOnly) {
+                // the colour runs behind the status bar, the words sit below it
+                Surface(color = MaterialTheme.colorScheme.tertiaryContainer) {
+                    Text(
+                        "On this device only: no operator signed in, nothing uploads.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        },
         bottomBar = {
             if (inTabs) {
                 NavigationBar {
-                    for (t in Tab.entries) {
+                    for (t in tabs) {
                         NavigationBarItem(
                             selected = tab == t,
                             onClick = { goTab(t) },
@@ -99,8 +124,16 @@ fun AppNav(activity: ComponentActivity, openVisit: String? = null) {
             composable("settings") {
                 inTabs = false
                 SettingsScreen(onDone = {
-                    if (c.prefs.session == null) nav.navigate("login") { popUpTo(0) }
-                    else { inTabs = true; nav.navigate(firstTab.route) { popUpTo(0) } }
+                    // The station is a mode, so it has to take effect without a restart. firstTab here is
+                    // still the value from before the save, so the destination is read back from prefs.
+                    station = c.prefs.station
+                    val landing = if (c.prefs.station == Prefs.STATION_SCAN) Tab.SCAN else Tab.ENROL
+                    if (c.prefs.session == null && !c.prefs.localOnly) nav.navigate("login") { popUpTo(0) }
+                    else {
+                        inTabs = true
+                        tab = landing
+                        nav.navigate(landing.route) { popUpTo(0) }
+                    }
                 })
             }
             composable("login") {

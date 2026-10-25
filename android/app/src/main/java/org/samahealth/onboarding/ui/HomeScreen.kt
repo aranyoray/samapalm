@@ -151,7 +151,9 @@ fun RecordsScreen(
                     val v = c.repo.newVisit(
                         VisitEntity.PART_SCAN, e.flow().first(), c.prefs.engineSettings(VisitEntity.PART_SCAN),
                     )
-                    c.repo.saveDraft(v.visitUuid, mapOf("study_id" to JsonPrimitive(pid)),
+                    // a blank pid means "start the scan, the number comes later"
+                    val seed = if (pid.isBlank()) emptyMap() else mapOf("study_id" to JsonPrimitive(pid))
+                    c.repo.saveDraft(v.visitUuid, seed,
                         kotlinx.serialization.json.JsonArray(emptyList()), e.flow().first())
                     onOpen(v.visitUuid)
                 }
@@ -216,6 +218,10 @@ fun ScanPidPicker(onDismiss: () -> Unit, onPick: (String) -> Unit) {
                 if (typed.isNotEmpty() && typed !in offered) {
                     Text("This PID has no enrolment on this phone. Check the paper form before you go on.",
                         style = MaterialTheme.typography.bodySmall)
+                }
+                // enrolment may be happening on another phone, or only on paper; the recording need not wait
+                TextButton(onClick = { onPick("") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Start without a PID, add it later")
                 }
             }
         },
