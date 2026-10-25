@@ -238,15 +238,32 @@ private suspend fun preRead(ctx: android.content.Context, row: ClipRow): String 
     val path = str(row.record["ecg_file"]) ?: return "This clip has no ECG file to run the model on."
     val file = File(path)
     if (!file.isFile) return "The ECG file for this clip is missing: $path"
-    val trace = withContext(Dispatchers.IO) { runCatching { readTrace(file) }.getOrNull() }
-        ?: return "The ECG file could not be read."
-    val r = FounderOnnx.run(ctx, trace.first, trace.second)
+    val loaded = withContext(Dispatchers.IO) {
+        runCatching {
+            val t = readTrace(file)
+            // The recorder runs the ECG past both ends of the clip (D-040), and the lead can be flat while
+            // the participant settles onto the electrodes. The ectopy and pause labels combine as max over
+            // windows, so one flat lead-in window could spike a label the clip itself never showed. Read the
+            // clip's own stretch, the same window the quality grade uses.
+            val window = if (file.name == "${row.clipId}_ecg_samples.csv") {
+                val sync = File(file.parentFile, "${row.clipId}_sync.json").takeIf { it.isFile }?.readText()
+                QualityRunner.clipWindow(sync, t.first.size)
+            } else null
+            Triple(if (window == null) t.first else t.first.sliceArray(window), t.second, window != null)
+        }.getOrNull()
+    } ?: return "The ECG file could not be read."
+    val (mv, fs, windowed) = loaded
+    val r = FounderOnnx.run(ctx, mv, fs)
         ?: return "The research model is not installed on this phone."
     if (r.nWindows == 0) return "The strip is shorter than 10 seconds, so the model has nothing to read."
     return buildString {
         appendLine("Research pre-read for the study clinician. Not a result for the participant, and not a")
         appendLine("reading of this recording on its own: a clinician reads every strip.")
         appendLine()
+        if (windowed) {
+            appendLine("Read over the clip window only; the ECG before and after the clip was left out.")
+            appendLine()
+        }
         appendLine("${r.nWindows} window(s)${if (r.polarityFlipped) ", strip was inverted and flipped" else ""}")
         appendLine()
         for (l in r.labels.take(6)) {
