@@ -117,6 +117,14 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit, onOpenQuality: () -> Uni
                 if (!readOnly) Button(onClick = vm::submit) { Text("Save as screen failure") }
             }
             s.message?.let { Banner(it, MaterialTheme.colorScheme.tertiaryContainer) }
+            // On-device mode only: jump past BP and setup straight to the palm clip, for trying the
+            // recorder out. The preregistered scan brackets the clip with BP1/BP2/BP3, so this is not a
+            // route a study visit can take: submission still needs every required answer.
+            if (!readOnly && ctx.container.prefs.localOnly && s.part == VisitEntity.PART_SCAN &&
+                !s.screenId.startsWith("clip")
+            ) {
+                OutlinedButton(onClick = vm::skipToClip) { Text("Skip to the palm clip (testing)") }
+            }
             if (readOnly) {
                 Banner("Submitted on this tablet. Re-open only to correct an error; the server keeps every change in its audit log.",
                     MaterialTheme.colorScheme.secondaryContainer)

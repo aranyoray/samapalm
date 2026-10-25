@@ -189,6 +189,27 @@ class SurveyViewModel(app: Application, private val visitUuid: String) : ViewMod
         }
     }
 
+    /**
+     * Testing only: run forward to the first palm clip, leaving BP and the setup screens unanswered.
+     *
+     * The preregistered scan brackets the clip with BP1, BP2 and BP3 and the reference BP is their mean, so
+     * this must never be a way to record a study visit without them. It is offered only on a phone in
+     * on-device mode, which states on every screen that it is not for study visits, and submission still
+     * refuses while the required answers are missing.
+     */
+    fun skipToClip() {
+        val n = nav ?: return
+        if (!c.prefs.localOnly) return
+        var guard = 0
+        while (!n.current.startsWith("clip") && guard++ < 50) {
+            if (!n.skipForward()) break
+        }
+        showErrors = false
+        message = if (n.current.startsWith("clip")) "Testing: BP and setup were skipped. This is not a study visit."
+        else "Could not reach a clip screen."
+        refresh(); save()
+    }
+
     private fun advance(n: SurveyNavigator) {
         showErrors = !n.next()
         if (!showErrors) message = null
