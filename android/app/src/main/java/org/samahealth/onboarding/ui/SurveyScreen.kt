@@ -84,7 +84,7 @@ import java.time.LocalDate
 private val MST_COLOURS = listOf(0xFFF6EDE4, 0xFFF3E7DB, 0xFFF7EAD0, 0xFFEADABA, 0xFFD7BD96, 0xFFA07E56, 0xFF825C43, 0xFF604134, 0xFF3A312A, 0xFF292420)
 
 @Composable
-fun SurveyScreen(visitUuid: String, onExit: () -> Unit) {
+fun SurveyScreen(visitUuid: String, onExit: () -> Unit, onOpenQuality: () -> Unit = {}) {
     val app = LocalContext.current.applicationContext as Application
     val vm: SurveyViewModel = viewModel(key = visitUuid) { SurveyViewModel(app, visitUuid) }
     val ui by vm.ui.collectAsState()
@@ -122,7 +122,7 @@ fun SurveyScreen(visitUuid: String, onExit: () -> Unit) {
                 OutlinedButton(onClick = vm::reopen) { Text("Re-open for correction") }
             }
             for (q in s.questions) {
-                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid)
+                QuestionField(q, s.showErrors, readOnly, vm, s.restSeconds, s.pid, visitUuid, onOpenQuality)
             }
             if (s.screenId.endsWith("review")) ReviewSummary(s, vm)
         }
@@ -224,7 +224,7 @@ private fun ReviewSummary(s: SurveyUi, vm: SurveyViewModel) {
 }
 
 @Composable
-private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?, visitUuid: String) {
+private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean, vm: SurveyViewModel, restSeconds: Int, pid: String?, visitUuid: String, onOpenQuality: () -> Unit) {
     val err = if (showErrors) q.errors.firstOrNull()?.message else null
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (q.type != "info") {
@@ -249,7 +249,7 @@ private fun QuestionField(q: QuestionUi, showErrors: Boolean, readOnly: Boolean,
             "multi" -> MultiChoice(q, vm.engine, readOnly, set)
             "mst" -> MstPicker(q, readOnly, set)
             "bp" -> BpInput(q, readOnly, set)
-            "clip" -> ClipInput(q, readOnly, pid, visitUuid, vm.engine, set)
+            "clip" -> ClipInput(q, readOnly, pid, visitUuid, vm.engine, set, onOpenQuality)
             "computed" -> Text(formatDerived(q.id, q.derived, restSeconds), style = MaterialTheme.typography.bodyLarge)
         }
         q.warning?.let { Text(it, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall) }
@@ -392,6 +392,7 @@ private fun ClipInput(
     visitUuid: String,
     engine: CrfEngine,
     set: (JsonElement?) -> Unit,
+    onOpenQuality: () -> Unit,
 ) {
     val ctx = LocalContext.current
     val c = ctx.container
@@ -528,6 +529,7 @@ private fun ClipInput(
                     importEcg.launch(arrayOf("application/pdf", "application/octet-stream", "*/*"))
                 }) { Text("Import Kardia ECG") }
                 OutlinedButton(enabled = pid != null && !grading, onClick = { grade("") }) { Text("Re-check quality") }
+                OutlinedButton(onClick = onOpenQuality) { Text("Past recordings") }
             }
         }
         str(o["phone_file"])?.let { Text("Phone clip: $it", style = MaterialTheme.typography.bodySmall) }

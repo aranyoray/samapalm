@@ -5,6 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -20,6 +26,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.navArgument
 import org.samahealth.onboarding.container
 import org.samahealth.onboarding.data.Prefs
@@ -43,11 +50,11 @@ class MainActivity : ComponentActivity() {
 }
 
 /** The four stations of the app (design section 6). */
-private enum class Tab(val route: String, val label: String) {
-    ENROL("tab/enrol", "Enrol"),
-    SCAN("tab/scan", "Scan"),
-    QUALITY("tab/quality", "Quality"),
-    TARGETS("tab/targets", "Targets"),
+private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
+    ENROL("tab/enrol", "Enrol", Icons.Filled.Person),
+    SCAN("tab/scan", "Scan", Icons.Filled.Favorite),
+    QUALITY("tab/quality", "Quality", Icons.Filled.CheckCircle),
+    TARGETS("tab/targets", "Targets", Icons.Filled.Star),
 }
 
 @Composable
@@ -80,7 +87,7 @@ fun AppNav(activity: ComponentActivity, openVisit: String? = null) {
                         NavigationBarItem(
                             selected = tab == t,
                             onClick = { goTab(t) },
-                            icon = {},
+                            icon = { Icon(t.icon, contentDescription = null) },
                             label = { Text(t.label) },
                         )
                     }
@@ -128,10 +135,16 @@ fun AppNav(activity: ComponentActivity, openVisit: String? = null) {
             composable("survey/{visitUuid}", arguments = listOf(navArgument("visitUuid") { type = NavType.StringType })) { entry ->
                 inTabs = false
                 val id = entry.arguments?.getString("visitUuid") ?: return@composable
-                SurveyScreen(visitUuid = id, onExit = {
-                    inTabs = true
-                    if (!nav.popBackStack()) nav.navigate(firstTab.route) { popUpTo(0) }
-                })
+                SurveyScreen(
+                    visitUuid = id,
+                    onExit = {
+                        inTabs = true
+                        if (!nav.popBackStack()) nav.navigate(firstTab.route) { popUpTo(0) }
+                    },
+                    // The tab bar is hidden inside a survey, which left the operator with no way to the
+                    // Quality tab from the one screen they are on straight after recording a clip.
+                    onOpenQuality = { goTab(Tab.QUALITY) },
+                )
             }
         }
     }
