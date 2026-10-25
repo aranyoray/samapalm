@@ -46,6 +46,8 @@ fun SettingsScreen(onDone: () -> Unit) {
     var mode by remember { mutableStateOf(p.captureMode) }
     var station by remember { mutableStateOf(p.station) }
     var localOnly by remember { mutableStateOf(p.localOnly) }
+    var clipLen by remember { mutableStateOf(p.clipSecondsOverride.takeIf { it > 0 }?.toString() ?: "") }
+    var autoStart by remember { mutableStateOf(p.autoStartRecording) }
     var error by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -78,6 +80,19 @@ fun SettingsScreen(onDone: () -> Unit) {
         for ((v, label) in listOf("1x60" to "One 60 s clip (BP1, rest, BP2, clip, BP3)", "2x30" to "Two 30 s clips (BP1, rest, clip 1, BP2, clip 2, BP3)")) {
             ChoiceRow(plan == v, label) { plan = v }
         }
+        OutlinedTextField(clipLen, { clipLen = it.filter { ch -> ch.isDigit() } },
+            label = { Text("Clip length in seconds (blank = the plan's 60 or 30)") }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(checked = autoStart, onCheckedChange = { autoStart = it })
+            Spacer(Modifier.width(12.dp))
+            Text("Start recording automatically")
+        }
+        Text(
+            "The recorder rolls as soon as the camera has settled, so the operator can hold the rig and the " +
+                "palm instead of the phone.",
+            style = MaterialTheme.typography.bodySmall,
+        )
         OutlinedTextField(rest, { rest = it }, label = { Text("Seated rest before the first clip (seconds)") }, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
         Text("Default stream")
@@ -108,6 +123,8 @@ fun SettingsScreen(onDone: () -> Unit) {
                 !localOnly && key.isBlank() -> "The anon key is required"
                 s == null || e == null || s < 1 || e > 9999 || s > e -> "PID block must satisfy 1 <= start <= end <= 9999"
                 r == null || r < 0 -> "Rest must be a whole number of seconds"
+                clipLen.isNotBlank() && (clipLen.toIntOrNull() ?: 0) !in 5..3600 ->
+                    "Clip length must be between 5 and 3600 seconds, or blank for the plan's own length"
                 device.isBlank() -> "Device code is required"
                 else -> null
             }
@@ -117,6 +134,8 @@ fun SettingsScreen(onDone: () -> Unit) {
                 p.deviceCode = device; p.unitId = unit
                 p.pidBlockStart = s!!; p.pidBlockEnd = e!!; p.clipPlan = plan; p.restSeconds = r!!
                 p.defaultStream = stream; p.captureMode = mode; p.station = station
+                p.clipSecondsOverride = clipLen.toIntOrNull()?.takeIf { it in 5..3600 } ?: 0
+                p.autoStartRecording = autoStart
                 onDone()
             }
         }, modifier = Modifier.fillMaxWidth()) { Text("Save") }

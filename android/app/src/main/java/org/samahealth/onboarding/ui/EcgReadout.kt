@@ -44,8 +44,14 @@ object EcgReadout {
         rhythmSentences: JsonElement? = null,
         deviceDetermination: String? = null,
         deviceHrBpm: Int? = null,
+        modelTop: JsonElement? = null,
     ): List<String> {
         val out = ArrayList<String>()
+
+        // The rhythm read comes from the model on this phone. It carries its probability because it is a
+        // pre-read for the study clinician, not a verdict (D-039).
+        (modelTop as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.takeIf { it.isNotEmpty() }
+            ?.let { out.add("Model pre-read for the clinician: " + it.joinToString(", ")) }
 
         if (deviceDetermination != null || deviceHrBpm != null) {
             val bits = listOfNotNull(deviceDetermination, deviceHrBpm?.let { "$it bpm" })

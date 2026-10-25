@@ -31,6 +31,16 @@ class Prefs(context: Context) {
     var pidBlockStart: Int get() = sp.getInt("pid_block_start", 1); set(v) = sp.edit().putInt("pid_block_start", v).apply()
     var pidBlockEnd: Int get() = sp.getInt("pid_block_end", 999); set(v) = sp.edit().putInt("pid_block_end", v).apply()
     var clipPlan: String get() = s("clip_plan") ?: "1x60"; set(v) = put("clip_plan", v)
+
+    /** Clip length in seconds, overriding the plan's 60 or 30. 0 means "use the plan". */
+    var clipSecondsOverride: Int
+        get() = sp.getInt("clip_seconds_override", 0)
+        set(v) = sp.edit().putInt("clip_seconds_override", v).apply()
+
+    /** Roll as soon as the camera has settled, without waiting for the button. */
+    var autoStartRecording: Boolean
+        get() = sp.getBoolean("auto_start_recording", false)
+        set(v) = sp.edit().putBoolean("auto_start_recording", v).apply()
     var restSeconds: Int get() = sp.getInt("rest_seconds", 300); set(v) = sp.edit().putInt("rest_seconds", v).apply()
     var defaultStream: String get() = s("stream") ?: "pilot"; set(v) = put("stream", v)
     var captureMode: String get() = s("capture_mode") ?: "simultaneous"; set(v) = put("capture_mode", v)

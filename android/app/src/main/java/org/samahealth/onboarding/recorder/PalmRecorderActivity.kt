@@ -94,6 +94,8 @@ class PalmRecorderActivity : Activity() {
         const val EXTRA_DISTANCE_CM = "distance_cm"
         /** Clip length in seconds (60 for the 1x60 plan, 30 for 2x30); the clip stops itself at this length. */
         const val EXTRA_SECONDS = "seconds"
+        /** Roll as soon as the camera has settled, instead of waiting for the button. */
+        const val EXTRA_AUTO_START = "auto_start"
         /** Result: ISO 8601 times the clip started rolling and stopped, its length, and whether it stopped early. */
         const val EXTRA_STARTED_AT = "started_at"
         const val EXTRA_ENDED_AT = "ended_at"
@@ -127,7 +129,11 @@ class PalmRecorderActivity : Activity() {
     private val captureMode: String get() = intent.getStringExtra(EXTRA_CAPTURE_MODE) ?: "simultaneous"
     private val torchOn: Boolean get() = captureMode == "sequential"
     private val distanceCm: Float get() = intent.getFloatExtra(EXTRA_DISTANCE_CM, PalmControls.DEFAULT_DISTANCE_CM)
-    private val RECORD_SECONDS: Int get() = intent.getIntExtra(EXTRA_SECONDS, DEFAULT_RECORD_SECONDS).coerceIn(5, 300)
+    // An hour at 1080p30 is about 4 GB, which the phone can hold; the limit exists so a bad extra cannot
+    // ask for something the encoder or the card will not survive.
+    private val RECORD_SECONDS: Int get() = intent.getIntExtra(EXTRA_SECONDS, DEFAULT_RECORD_SECONDS).coerceIn(5, 3600)
+    private val autoStart: Boolean get() = intent.getBooleanExtra(EXTRA_AUTO_START, false)
+    private var autoStarted = false
 
     private lateinit var preview: SurfaceView
     private lateinit var overlay: RecorderOverlay
@@ -615,6 +621,12 @@ class PalmRecorderActivity : Activity() {
             override fun onConfigured(s: CameraCaptureSession) {
                 session = s
                 startSettle(dev, s, if (analysisBound) withAnalysis else withoutAnalysis)
+                // Hands-free: the operator is holding the rig and the palm, not the phone. Once only, so a
+                // session rebuild part way through a visit does not start a second clip behind their back.
+                if (autoStart && !autoStarted && !recording && !finishing) {
+                    autoStarted = true
+                    ui.post { startRecording() }
+                }
             }
 
             override fun onConfigureFailed(s: CameraCaptureSession) {

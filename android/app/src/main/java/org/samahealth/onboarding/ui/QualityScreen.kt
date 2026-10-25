@@ -313,6 +313,7 @@ private fun ClipDetailDialog(
                     rhythmSentences = row.record["rhythm_sentences"],
                     deviceDetermination = str(row.record["ecg_device_determination"]),
                     deviceHrBpm = num(row.record["ecg_device_hr"])?.toInt(),
+                    modelTop = row.record["ecg_model_top"],
                 )) Text(line, style = MaterialTheme.typography.bodySmall)
                 str(row.record["ecg_source"])?.let { Text("ECG from: $it", style = MaterialTheme.typography.bodySmall) }
                 if (row.interrupted) Text("The recording stopped before the full clip length.",

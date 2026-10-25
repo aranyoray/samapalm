@@ -77,6 +77,8 @@ import kotlinx.coroutines.withContext
 import org.samahealth.onboarding.quality.QualityRunner
 import org.samahealth.onboarding.data.VisitEntity
 import org.samahealth.onboarding.quality.toJson
+import java.io.File
+import org.samahealth.onboarding.ecg.FounderOnnx
 import org.samahealth.onboarding.ecg.ParticipantSummary
 import org.samahealth.onboarding.recorder.PalmRecorderActivity
 import java.time.LocalDate
@@ -418,7 +420,9 @@ private fun ClipInput(
     fun put(k: String, v: JsonElement) = set(JsonObject(latest.value + (k to v)))
     var grading by remember(q.id) { mutableStateOf(false) }
     var notes by remember(q.id) { mutableStateOf<List<String>>(emptyList()) }
-    val clipSeconds = if (c.prefs.clipPlan == "2x30") 30.0 else 60.0
+    // the plan's length unless the operator set one, which is how a long run is asked for
+    val clipSeconds = c.prefs.clipSecondsOverride.takeIf { it > 0 }?.toDouble()
+        ?: if (c.prefs.clipPlan == "2x30") 30.0 else 60.0
 
     /** Runs both grades for this clip and folds them into the clip record. */
     fun grade(reason: String) {
@@ -454,6 +458,33 @@ private fun ClipInput(
             g.deviceHrBpm?.let { next = next + ("ecg_device_hr" to JsonPrimitive(it)) }
             g.deviceMainsHz?.let { next = next + ("ecg_device_mains_hz" to JsonPrimitive(it)) }
             g.deviceEnhancedFilter?.let { next = next + ("ecg_device_enhanced_filter" to JsonPrimitive(it)) }
+            // The rhythm read comes from the model on this phone, not from an AliveCor subscription. It runs
+            // on the clip window like the grade does, and only when a model file is present; it is a
+            // pre-read for the study clinician (D-039), which is why the label is kept with its probability
+            // rather than reduced to a verdict.
+            g.ecgFile?.let { rel ->
+                val f = QualityRunner.appFile(ctx, rel)
+                val window = QualityRunner.clipWindow(
+                    runCatching { File(f.parentFile, "${q.id}_sync.json").takeIf { it.isFile }?.readText() }.getOrNull(),
+                    Int.MAX_VALUE,
+                )
+                val r = runCatching { readTraceForModel(f) }.getOrNull()
+                if (r != null) {
+                    val mv = if (window == null) r.first else r.first.sliceArray(
+                        window.first.coerceIn(0, r.first.size) until window.last.coerceIn(0, r.first.size),
+                    )
+                    val res = FounderOnnx.run(ctx, mv, r.second)
+                    if (res != null && res.labels.isNotEmpty()) {
+                        val top = res.labels.first()
+                        next = next + ("ecg_model_label" to JsonPrimitive(top.name)) +
+                            ("ecg_model_prob" to JsonPrimitive(top.prob)) +
+                            ("ecg_model_windows" to JsonPrimitive(res.nWindows)) +
+                            ("ecg_model_top" to JsonArray(res.labels.take(3).map { l ->
+                                JsonPrimitive("%s %.2f".format(l.name.lowercase(), l.prob))
+                            }))
+                    }
+                }
+            }
             // the grades pre-fill the operator's decision; the operator can still change it
             val bad = g.video?.level == "retake" || g.ecg?.level == "retake" ||
                 bool(latest.value["phone_interrupted"]) == true
@@ -551,7 +582,8 @@ private fun ClipInput(
                     .putExtra(PalmRecorderActivity.EXTRA_STUDY_ID, pid)
                     .putExtra(PalmRecorderActivity.EXTRA_CLIP_ID, q.id)
                     .putExtra(PalmRecorderActivity.EXTRA_CAPTURE_MODE, c.prefs.captureMode)
-                    .putExtra(PalmRecorderActivity.EXTRA_SECONDS, clipSeconds.toInt()))
+                    .putExtra(PalmRecorderActivity.EXTRA_SECONDS, clipSeconds.toInt())
+                    .putExtra(PalmRecorderActivity.EXTRA_AUTO_START, c.prefs.autoStartRecording))
             }) { Text("Record phone clip on this device") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled = pid != null, onClick = {
@@ -576,6 +608,7 @@ private fun ClipInput(
             rhythmSentences = o["rhythm_sentences"],
             deviceDetermination = str(o["ecg_device_determination"]),
             deviceHrBpm = num(o["ecg_device_hr"])?.toInt(),
+            modelTop = o["ecg_model_top"],
         )) Text(line, style = MaterialTheme.typography.bodySmall)
         for (n in notes) Text(n, style = MaterialTheme.typography.bodySmall)
 
@@ -670,5 +703,15 @@ private fun formatDerived(id: String, v: JsonElement?, restSeconds: Int): String
         "bracket_flag" -> if (bool(v) == true) "Yes: readings differ by more than the limit" else "No"
         "recovery" -> when (str(v)) { "pass" -> "Rest target met before the first clip"; "short_rest" -> "Rest was shorter than the target"; else -> "-" }
         else -> (v as? JsonPrimitive)?.content ?: v.toString()
+    }
+}
+
+/** (samples in mV, sample rate) from whichever ECG file the clip record points at, for the model. */
+private fun readTraceForModel(file: File): Pair<DoubleArray, Double> {
+    val name = file.name.lowercase()
+    return when {
+        name.endsWith(".pdf") -> org.samahealth.quality.KardiaPdf.extract(file.readBytes()).let { it.mv to it.fs }
+        name.endsWith(".atc") -> org.samahealth.quality.AtcReader.read(file.readBytes()).let { it.mv to it.fs }
+        else -> org.samahealth.quality.EcgCsv.parseLead1Mv(file.readText())
     }
 }
