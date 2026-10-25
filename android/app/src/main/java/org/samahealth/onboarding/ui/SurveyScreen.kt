@@ -513,15 +513,28 @@ private fun ClipInput(
             }
         }
         Text("Start ${str(o["started_at"])?.substring(11, 19) ?: "-"} · end ${str(o["ended_at"])?.substring(11, 19) ?: "-"}", style = MaterialTheme.typography.bodySmall)
+        // The recorder runs the Kardia over BLE at the same time as the video and writes the ECG itself, so
+        // whether the Kardia was recording is measured, not asked. The checkbox is only for a clip recorded
+        // some other way, where there is nothing to count.
         val ecgSamples = (o["ecg_samples"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 0
+        val ecgSeconds = num(o["ecg_seconds"]) ?: 0.0
         if (ecgSamples > 0) {
-            Text("ECG captured on this device: $ecgSamples samples", style = MaterialTheme.typography.bodySmall)
-        }
-        for ((k, label) in listOf("kardia_on" to "Kardia recording during the clip", "beep_heard" to "Sync beeps heard (start and end)")) {
+            Text(
+                "Kardia ECG recorded by this app alongside the video: $ecgSamples samples" +
+                    if (ecgSeconds > 0) ", %.1f s".format(ecgSeconds) else "",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = bool(o[k]) == true, onCheckedChange = { put(k, JsonPrimitive(it)) }, enabled = !readOnly)
-                Text(label)
+                Checkbox(checked = bool(o["kardia_on"]) == true,
+                    onCheckedChange = { put("kardia_on", JsonPrimitive(it)) }, enabled = !readOnly)
+                Text("Kardia was recording during the clip")
             }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = bool(o["beep_heard"]) == true,
+                onCheckedChange = { put("beep_heard", JsonPrimitive(it)) }, enabled = !readOnly)
+            Text("Sync beeps heard (start and end)")
         }
 
         if (!readOnly) {
@@ -558,7 +571,9 @@ private fun ClipInput(
         )) Text(line, style = MaterialTheme.typography.bodySmall)
         for (n in notes) Text(n, style = MaterialTheme.typography.bodySmall)
 
-        Text("What the Kardia app showed")
+        // Only for a strip that was also run through the AliveCor app. The ordinary path records the ECG in
+        // this app, and the rhythm on it is the study clinician's read, not something the operator types.
+        Text("If the AliveCor app was also used, what it showed (optional)")
         val kardiaChoices = remember { engine.choices(JsonObject(mapOf("choices" to JsonPrimitive("kardia")))) }
         for ((value, label) in kardiaChoices) {
             Row(Modifier.fillMaxWidth().clickable(enabled = !readOnly) { put("kardia_determination", JsonPrimitive(value)) },
@@ -576,7 +591,7 @@ private fun ClipInput(
                 val n = kardiaHr.toIntOrNull()
                 if (n == null) set(JsonObject(latest.value - "kardia_hr")) else put("kardia_hr", JsonPrimitive(n))
             },
-            label = { Text("Heart rate shown by the Kardia app (bpm)") },
+            label = { Text("Heart rate shown by the AliveCor app (bpm), optional") },
             singleLine = true, enabled = !readOnly,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
