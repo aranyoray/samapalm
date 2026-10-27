@@ -28,6 +28,7 @@ import json
 import logging
 import math
 import os
+import re
 import shutil
 import sys
 from collections.abc import Iterator, Mapping
@@ -261,6 +262,26 @@ def bayer_pattern_from_format(fmt: str) -> str:
     raise ValueError(f"cannot read a Bayer order from sensor format {fmt!r}")
 
 
+def sensor_bit_depth(fmt: str) -> int:
+    """``SRGGB10_CSI2P`` -> 10: how many bits of the 16-bit container an unpacked frame actually carries."""
+    m = re.search(r"(\d+)", str(fmt))
+    if not m:
+        raise ValueError(f"cannot read a bit depth from sensor format {fmt!r}")
+    return int(m.group(1))
+
+
+def unpacked_raw_format(fmt: str) -> str:
+    """``SRGGB10_CSI2P`` -> ``SRGGB10``: the unpacked spelling of a raw format, for what we ask libcamera for.
+
+    On a Pi 5 the PiSP front end never hands back CSI-2 packed 10-bit. Ask for ``SRGGB10_CSI2P`` and the
+    configured stream comes back as ``BGGR_PISP_COMP1``, a compressed 8-bit-per-pixel format at stride
+    ``width``, which no part of the ingest side can read; ask for the unpacked spelling and it comes back as
+    ``SBGGR16``, the same sensor values left-shifted into 16 bits with nothing lost. So always request the
+    unpacked form and pack to the CONTRACTS 3.1 layout ourselves (see ``Picamera2Source``).
+    """
+    return re.sub(r"_CSI2P$", "", str(fmt).upper())
+
+
 def camera_controls(ucfg: Mapping, crop: Mapping | None = None) -> dict:
     """picamera2 control dict for a locked camera (section 4.6): fixed exposure, gain, AWB gains, lens position.
 
@@ -392,15 +413,49 @@ class Picamera2Source:
         except ImportError:  # pragma: no cover - libcamera absent off the Pi
             log.debug("libcamera not importable; AfMode stays the integer manual value")
         cfg = self.picam2.create_video_configuration(main={"size": (640, 360), "format": "YUV420"},
-                                                     raw={"size": size, "format": fmt}, controls=controls,
-                                                     buffer_count=6)
+                                                     raw={"size": size, "format": unpacked_raw_format(fmt)},
+                                                     controls=controls, buffer_count=6)
         self.picam2.configure(cfg)
         rc = self.picam2.camera_configuration()["raw"]
+        actual = str(rc["format"])
         self.width, self.height = int(rc["size"][0]), int(rc["size"][1])
-        self.stride = int(rc["stride"])
+        self.src_stride = int(rc["stride"])
+        # The Bayer order comes from the stream libcamera actually configured, never from what the unit
+        # config asked for: the imx708 binned modes are BGGR even though the full-resolution mode is RGGB,
+        # and recording the requested order would swap red and blue in every plane downstream.
+        self.bayer_pattern = bayer_pattern_from_format(actual)
+        if self.src_stride >= 2 * self.width:
+            # Unpacked 16-bit (SBGGR16 on a Pi 5): the sensor's 10 bits sit in the high bits, so the shift
+            # below is lossless. Packing costs about 9 ms a frame on a Pi 5, inside the 33 ms budget.
+            self.repack, self.shift = True, 16 - sensor_bit_depth(fmt)
+            self.stride = default_stride(self.width)
+        elif self.src_stride >= math.ceil(self.width * 10 / 8):
+            self.repack, self.shift, self.stride = False, 0, self.src_stride
+        else:
+            raise RuntimeError(
+                f"the camera configured a {actual} stream at stride {self.src_stride} for {self.width} px, "
+                f"which is neither unpacked 16-bit nor 10-bit packed (CONTRACTS 3.1). A compressed PiSP "
+                f"format cannot be recorded; check the sensor mode in the unit config.")
+        self.checked_low_bits = False
         self.fps = float(cam["sensor_mode"]["fps"])
         self.warmup_frames = int(warmup_frames)
         self.started = False
+
+    def to_packed(self, buf) -> bytes:
+        """One camera buffer as a CONTRACTS 3.1 packed 10-bit frame, shifting down when the stream is 16-bit."""
+        if not self.repack:
+            return buf
+        a = np.frombuffer(buf, dtype=np.uint8)[: self.height * self.src_stride]
+        a = a.reshape(self.height, self.src_stride).view(np.uint16)[:, : self.width]
+        if not self.checked_low_bits:
+            # Verify once that the bits we are about to drop are the padding we think they are, rather
+            # than silently throwing away a least-significant bit of every pixel for a whole study.
+            lost = int((a & ((1 << self.shift) - 1)).max()) if self.shift else 0
+            if lost:
+                raise RuntimeError(f"the low {self.shift} bits of the 16-bit stream are not padding "
+                                   f"(max {lost}); shifting down would lose sensor data")
+            self.checked_low_bits = True
+        return pack_csi2p_10bit(a >> self.shift, self.stride)
 
     def start(self) -> None:
         self.picam2.start()
@@ -421,7 +476,7 @@ class Picamera2Source:
             req = self.picam2.capture_request()
             try:
                 md = req.get_metadata()
-                buf = req.make_buffer("raw")
+                buf = self.to_packed(req.make_buffer("raw"))
             finally:
                 req.release()
             yield Frame(buf, int(md["SensorTimestamp"]), wall_ns(), float(md.get("ExposureTime", 0)),
@@ -630,7 +685,8 @@ def main(config_path: str | os.PathLike | None, study_id: str, clip_id: str, out
                 source = Picamera2Source(ucfg, crop, int(cap.get("warmup_frames", DEFAULTS["warmup_frames"])))
             meta_static = {
                 "unit_id": ucfg["unit_id"], "operator": operator, "dept": dept, "stream": stream, "app_ver": APP_VERSION,
-                "study_id": study_id, "bayer_pattern": bayer_pattern_from_format(cam["sensor_mode"]["format"]),
+                "study_id": study_id,
+                "bayer_pattern": getattr(source, "bayer_pattern", None) or bayer_pattern_from_format(cam["sensor_mode"]["format"]),
                 "bit_depth": 10, "fps_nominal": float(cam["sensor_mode"]["fps"]), "awb_gains": [float(v) for v in cam["awb_gains"]],
                 "lens_position": float(cam["lens_position"]), "led_current_ma": cap.get("box_led_current_ma"),
                 "recovery_gate": recovery_gate, "capture_mode": str(ucfg.get("phone", {}).get("capture_mode", pcfg.get("study.capture_mode"))),

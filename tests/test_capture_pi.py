@@ -131,7 +131,7 @@ def test_bayer_pattern_and_camera_controls(ucfg):
     with pytest.raises(ValueError):
         cp.bayer_pattern_from_format("YUV420")
     ctl = cp.camera_controls(ucfg)
-    assert ctl["ExposureTime"] == 8000 and ctl["AnalogueGain"] == 2.0 and ctl["ColourGains"] == (1.6, 1.4)
+    assert ctl["ExposureTime"] == 10000 and ctl["AnalogueGain"] == 2.0 and ctl["ColourGains"] == (1.6, 1.4)
     assert ctl["AeEnable"] is False and ctl["AwbEnable"] is False and ctl["AfMode"] == 0
     assert ctl["LensPosition"] == 2.5 and ctl["FrameDurationLimits"] == (33333, 33333)
     assert "ScalerCrop" not in ctl
@@ -238,11 +238,11 @@ def test_simulate_capture_produces_consistent_files(tmp_path, ucfg, good_log):
     assert meta["start_mono_ns"] == int(ts[0]) and meta["stop_mono_ns"] >= int(ts[-1])
     assert (ts[-1] - ts[0]) / 1e9 < seconds
     assert meta["stop_wall_ns"] > meta["start_wall_ns"]
-    assert float(pts[0]["exposure_us"]) == 8000.0 and float(pts[0]["analogue_gain"]) == 2.0 and float(pts[0]["lux"]) == 400.0
+    assert float(pts[0]["exposure_us"]) == 10000.0 and float(pts[0]["analogue_gain"]) == 2.0 and float(pts[0]["lux"]) == 400.0
     # meta content
     assert meta["unit_id"] == "unit_01" and meta["operator"] == "RB" and meta["dept"] == "Cardio OPD" and meta["stream"] == "pilot"
     assert meta["bayer_pattern"] == "RGGB" and meta["bit_depth"] == 10 and meta["fps_nominal"] == 30.0
-    assert meta["crop_rect"] is None and meta["exposure_us"] == 8000.0 and meta["analogue_gain"] == 2.0
+    assert meta["crop_rect"] is None and meta["exposure_us"] == 10000.0 and meta["analogue_gain"] == 2.0
     assert meta["awb_gains"] == [1.6, 1.4] and meta["lens_position"] == 2.5 and meta["led_current_ma"] == 20
     assert meta["lux"] == 400.0 and meta["sensor_temp_c"] is None
     assert meta["live_sqi"] is None and meta["motion_flag"] is False and meta["recovery_gate"] == "pass"
