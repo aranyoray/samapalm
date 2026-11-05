@@ -231,6 +231,41 @@ python tools/ecgfounder_public_eval.py --weights work/ecgfounder/1_lead_ECGFound
 <https://physionet.org/content/challenge-2017/1.0.0/>; `work/public/ptbxl` holds `ptbxl_database.csv` and
 `records100/` from <https://physionet.org/content/ptb-xl/1.0.3/>.
 
+### 5.1 The phone path, and what would improve it (2026-11-05)
+
+The phone gives the same answers. Three links were checked, and each holds:
+- The Kotlin preprocessing matches the Python fixtures (`./gradlew :ecg-model:test`, 12 of 12 tests pass).
+- The export matches torch on the real weights (max |delta p| 1.4e-6).
+- The exported graph, run with ONNX Runtime on the real strips, gives the torch figures exactly: AF AUROC 0.970 on CinC test and 0.979 on PTB-XL.
+
+`tools/ecgfounder_public_improvements.py` then tried cheap changes, with the same splits and threshold rule.
+Results: `docs/results/ecgfounder_public_improvements.json`.
+
+| Variant | CinC test AF AUROC (95% CI) | PTB-XL AF AUROC (95% CI) |
+|---|---|---|
+| A. current: AF output, 10 s windows, mean | 0.971 (0.953-0.984) | 0.979 (0.961-0.992) |
+| B. 5 s step (half-overlapping windows) | 0.973 (0.955-0.986) | 0.979 (0.961-0.992) |
+| C. max of AF and atrial flutter outputs | 0.971 (0.954-0.984) | 0.979 (0.960-0.992) |
+| D. logistic layer on all 150 outputs (fit on CinC train) | 0.979 (0.965-0.989) | 0.984 (0.972-0.993) |
+| E. RR-interval irregularity alone (6 features) | 0.937 (0.912-0.957) | 0.952 (0.939-0.963) |
+| F. AF output + RR irregularity (fit on CinC train) | 0.978 (0.966-0.988) | 0.980 (0.962-0.992) |
+
+* None of the ranking changes is clearly better than the current output: every interval overlaps A's.
+  D is the only one that helps on both sets, by under 0.01. It is a single 150-weight dot product, so it would
+  port to the phone easily, but the gain does not yet justify changing the pre-read (D-046).
+* Calibration is the real problem. On CinC test the raw AF probability averages 0.36 on strips without AF and
+  0.93 on strips with AF. A clinician reading 0.36 on a normal Kardia strip would be misled.
+* A Platt fit on CinC validation fixes that. Brier score falls from 0.165 to 0.031 on CinC test and from 0.047
+  to 0.014 on PTB-XL, and the ranking does not change. With that fit, a raw output of about 0.94 corresponds to
+  an even chance of AF at CinC's AF share (about 9 percent of strips).
+* Showing a calibrated probability on the phone is a change to the pre-read the clinician sees, so it belongs in
+  the analysis plan with the H6 threshold, not in this runner. The public fit is a starting point; refit it on
+  the study's own clinician-read strips before relying on it.
+* Other open models: ECG-FM (Bo Wang lab) is a 12-lead, 5 s model, and its published off-the-shelf rhythm model
+  generalised poorly to new settings without fine-tuning. HuBERT-ECG reports 0.88-0.92 AUROC on single-lead
+  benchmarks. Neither gives a reason to expect better than ECGFounder's 0.97-0.98 on Kardia lead I, so neither
+  was run here.
+
 ## 6. Licences
 
 * Code: ECGFounder is MIT (c) 2025 PKUDigitalHealth. The vendored Net1D in `palmppg/ecg/founder.py` keeps the
