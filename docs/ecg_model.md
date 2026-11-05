@@ -17,9 +17,10 @@ Code: `palmppg/ecg/founder.py` (vendored Net1D, preprocessing, window rule, fold
 * ECGFounder outputs are research annotations for the study clinician and for the H6 comparison. They are not
   shown or given to participants unless the ethics committee approves it and a clinician has over-read the strip.
   Every output file carries this note in its `use` field.
-* No published evaluation of ECGFounder on Indian or South-Asian ECGs exists. The model has also not been
-  evaluated on Kardia lead I (a handheld, finger-contact recording) by its authors. Treat its probabilities as
-  uncalibrated for this cohort.
+* No published evaluation of ECGFounder on Indian or South-Asian ECGs exists. Its authors did not evaluate it on
+  Kardia lead I (a handheld, finger-contact recording); we have since checked it on public AliveCor recordings
+  (section 5), where it separates AF well but is not calibrated. Treat its probabilities as uncalibrated for this
+  cohort.
 
 ## 1. Get the weights (on a laptop with internet access)
 
@@ -180,7 +181,57 @@ Built, as of 2026-10-24.
 * Show the result to the operator only as "research output for clinician review", never on the participant
   summary (section 9).
 
-## 5. Licences
+## 5. Checked on public Kardia-type recordings (2026-11-05)
+
+`tools/ecgfounder_public_eval.py` runs the model through this runner's own preprocessing (`founder.preprocess`,
+the window rule and the mean combination for AF) on two public sets. **CinC 2017**: the PhysioNet/CinC Challenge
+2017 training set, 8,528 single-lead AliveCor (Kardia) recordings at 300 Hz, labelled Normal, AF, Other rhythm
+or Noisy; split 70/15/15 by recording, stratified, seed 0. **PTB-XL fold 10**: the recommended PTB-XL test fold,
+lead I at 100 Hz (2,198 hospital ECGs, 152 with AFIB). The AF threshold is chosen once on CinC validation (Youden)
+and carried over unchanged to CinC test and to PTB-XL. Weights sha256 `f863a388...` as above; torch 2.15.0 on
+Apple MPS. Results JSON: `docs/results/ecgfounder_public_eval.json`.
+
+| Setting | Data | n (AF) | AF AUROC (95% CI) | Sensitivity | Specificity |
+|---|---|---|---|---|---|
+| zero-shot, filtered (default) | CinC 2017 test | 1,279 (113) | 0.970 (0.953-0.984) | 0.894 | 0.930 |
+| zero-shot, filtered (default) | PTB-XL fold 10, lead I | 2,198 (152) | 0.979 (0.961-0.992) | 0.934 | 0.978 |
+| zero-shot, unfiltered | CinC 2017 test | 1,279 (113) | 0.976 (0.962-0.987) | 0.912 | 0.940 |
+| zero-shot, unfiltered | PTB-XL fold 10, lead I | 2,198 (152) | 0.978 (0.958-0.991) | 0.928 | 0.979 |
+| fine-tuned on CinC train, filtered | CinC 2017 test | 1,279 (113) | 0.984 (0.976-0.991) | 0.973 | 0.921 |
+| fine-tuned on CinC train, filtered | PTB-XL fold 10, lead I | 2,198 (152) | 0.979 (0.961-0.993) | 0.941 | 0.968 |
+
+What this says, and what it does not:
+
+* The pretrained ATRIAL FIBRILLATION output already separates AF well on handheld single-lead recordings of the
+  Kardia family, with no training on them. This answers the narrower half of the gap in the ethics section
+  above (Kardia lead I). It says nothing about Indian or South Asian patients: neither set is from that
+  population.
+* The AF probability is not calibrated for Kardia strips. The threshold that best separates AF on CinC
+  validation is 0.78 filtered and 0.75 unfiltered, not 0.5. Any threshold used for H6 still belongs in the
+  analysis plan, fixed before study data; these values are a starting point for that discussion, not a choice.
+* Fine-tuning the whole network with a 4-class head (N, AF, Other, Noisy; 3 epochs, best by the Challenge score
+  on validation) gained 0.014 AUROC on CinC test, with overlapping intervals, and nothing on PTB-XL. Its Challenge
+  score on CinC test was 0.796 (F1: N 0.877, AF 0.784, Other 0.729, Noisy 0.482). The study keeps the
+  pretrained model (D-039, D-046); the fine-tuned weights stay under `work/` and are not exported to the phone.
+* The runner's polarity check inverted 1,689 of the 8,528 CinC strips (20 percent) and 48 of the 2,198 PTB-XL
+  lead I records. Handheld recordings are often taken with the fingers swapped, so the check matters here.
+* 16 CinC strips are shorter than 10 s and give no window, as the runner specifies; they are left out of the
+  counts above.
+* CinC 2017 has no patient identifiers, so the same person may appear in more than one of its splits. PTB-XL
+  fold 10 is the check without that problem, and the fine-tuned model was never trained on it.
+
+Reproduce (about 15 minutes for zero-shot and 12 for fine-tuning on an M4; the public data are about 700 MB):
+
+```bash
+python tools/ecgfounder_public_eval.py --weights work/ecgfounder/1_lead_ECGFounder.pth \
+  --cinc work/public/cinc2017 --ptbxl work/public/ptbxl --device mps --finetune
+```
+
+`work/public/cinc2017` holds `REFERENCE-v3.csv` and `training2017/` from
+<https://physionet.org/content/challenge-2017/1.0.0/>; `work/public/ptbxl` holds `ptbxl_database.csv` and
+`records100/` from <https://physionet.org/content/ptb-xl/1.0.3/>.
+
+## 6. Licences
 
 * Code: ECGFounder is MIT (c) 2025 PKUDigitalHealth. The vendored Net1D in `palmppg/ecg/founder.py` keeps the
   licence text and the source URL in its module docstring; `configs/ecgfounder_tasks.txt` is upstream

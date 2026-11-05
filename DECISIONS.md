@@ -311,3 +311,15 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   cannot quietly fill in a CRF question. Beside it the app shows what it measured itself and a confidence,
   which is the signal-quality grade restated: it is confidence in the number, never in a diagnosis, and a test
   asserts the readout never emits a rhythm name of its own (D-037 keeps that for the clinician).
+
+- **D-046 (2026-11-05) The study keeps the pretrained ECGFounder; fine-tuning on public Kardia data is not worth
+  it.** Run through this pipeline's own preprocessing, the pretrained ATRIAL FIBRILLATION output gives AF AUROC
+  0.970 (95% CI 0.953-0.984) on the CinC 2017 test split, which is single-lead AliveCor recordings like ours,
+  and 0.979 on PTB-XL fold 10 lead I, with no training on either. Fine-tuning the whole network on the CinC
+  training split raised the CinC figure to 0.984 with overlapping intervals and left PTB-XL at 0.979. A gain
+  that small, on a set where one person can sit in both training and test, does not justify a second model on
+  the phone or a change to the H6 comparison, so D-039 stands and the fine-tuned weights stay under `work/`. The
+  check also showed what to plan for: the AF probability is uncalibrated on Kardia strips (the best CinC
+  validation threshold is 0.78, not 0.5), and the polarity check flips one CinC strip in five. Neither set is
+  from an Indian or South Asian population, so the ethics position in docs/ecg_model.md is unchanged. Details
+  and the command to reproduce: docs/ecg_model.md section 5, `tools/ecgfounder_public_eval.py`.
