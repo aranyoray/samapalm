@@ -54,7 +54,7 @@ If any criterion fails the pilot stops and the failure is reported with the same
   non-AF AUC; every other test is labelled with the number of tests run.
 * Tracks: `product_candidate` (phone, or Pi through the 8-bit sRGB compressed proxy; no ECG) is the only track that may
   be described as a product result. `science` (Pi raw, ECG-aligned, PAT) is reported separately.
-* Synthetic augmentation study on the first 100 development clips only; synthetic tone shifts support no equity
+* Simulated augmentation study on the first 100 development clips only; simulated tone shifts support no equity
   claim; GAN or diffusion augmentation never appears in a headline result.
 
 ## What will not be claimed
@@ -64,6 +64,6 @@ and the one-visit design, and no claim beyond what the measured tables show.
 
 ## Run order
 
-1. Synthetic data and positive control pass. 2. Bench sync acceptance (20 trials). 3. First 10 participants end to end
+1. Simulated data and positive control pass. 2. Bench sync acceptance (20 trials). 3. First 10 participants end to end
 with manual review. 4. First 100: QC, sync grades, augmentation study, interim go/no-go dashboard (thresholds
 untouched). 5. Pilot 500 with the frozen config.

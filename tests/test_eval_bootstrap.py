@@ -1,4 +1,4 @@
-"""Participant bootstrap: CI contains the truth on synthetic clustered data, is deterministic under the seed,
+"""Participant bootstrap: CI contains the truth on simulated clustered data, is deterministic under the seed,
 is wider than a row-level resample when rows cluster within participants, and reads its defaults from cfg."""
 from __future__ import annotations
 

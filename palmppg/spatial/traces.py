@@ -410,6 +410,6 @@ def run_traces(
 
 
 def iter_frames_from_arrays(frames: Iterable, frame_indices: Iterable[int]) -> Iterator[tuple[int, object]]:
-    """Convenience: zip frame indices with frames (for tests and small synthetic clips)."""
+    """Convenience: zip frame indices with frames (for tests and small simulated clips)."""
     for i, f in zip(frame_indices, frames):
         yield int(i), f

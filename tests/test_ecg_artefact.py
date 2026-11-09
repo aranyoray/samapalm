@@ -6,11 +6,11 @@ import numpy as np
 
 from palmppg.ecg.artefact import adaptive_threshold, artefact_onset, exclusion_window_ecg, slew_feature
 from palmppg.ecg.clean import clean_ecg, notch
-from tests.test_ecg_helpers import FS, add_lift_artefact, synthetic_ecg
+from tests.test_ecg_helpers import FS, add_lift_artefact, simulated_ecg
 
 
 def test_step_with_ringing_found_within_10_ms_raw_and_clean(cfg):
-    syn = synthetic_ecg(duration_s=60.0, hr_bpm=72.0, noise_mv=0.01, seed=11)
+    syn = simulated_ecg(duration_s=60.0, hr_bpm=72.0, noise_mv=0.01, seed=11)
     x, t_step = add_lift_artefact(syn["x"], FS, 50.0, step_mv=2.0, ring_mv=1.0)
     assert t_step == 50.0
     for label, sig in (("raw", x), ("clean", clean_ecg(x, FS, cfg=cfg)), ("notched", notch(x, FS, cfg.get("ecg.notch_hz")))):
@@ -28,7 +28,7 @@ def test_step_with_ringing_found_within_10_ms_raw_and_clean(cfg):
 
 
 def test_clean_ecg_returns_not_found_with_reason(cfg):
-    syn = synthetic_ecg(duration_s=60.0, hr_bpm=72.0, noise_mv=0.01, seed=12)
+    syn = simulated_ecg(duration_s=60.0, hr_bpm=72.0, noise_mv=0.01, seed=12)
     for sig in (syn["x"], clean_ecg(syn["x"], FS, cfg=cfg)):
         res = artefact_onset(sig, FS, search_from_s=45.0, cfg=cfg)
         assert res["found"] is False and res["onset_t_s"] is None and res["score"] is None
@@ -41,14 +41,14 @@ def test_clean_ecg_returns_not_found_with_reason(cfg):
 
 
 def test_mains_noise_does_not_hide_the_step_after_notch(cfg):
-    syn = synthetic_ecg(duration_s=60.0, hr_bpm=60.0, mains_mv=0.2, noise_mv=0.01, seed=13)
+    syn = simulated_ecg(duration_s=60.0, hr_bpm=60.0, mains_mv=0.2, noise_mv=0.01, seed=13)
     x, _ = add_lift_artefact(syn["x"], FS, 50.0, step_mv=2.5, ring_mv=1.0)
     res = artefact_onset(notch(x, FS, cfg.get("ecg.notch_hz")), FS, search_from_s=46.0, cfg=cfg)
     assert res["found"] and abs(res["onset_t_s"] - 50.0) <= 0.010
 
 
 def test_edge_cases_and_helpers(cfg):
-    syn = synthetic_ecg(duration_s=20.0, seed=14)
+    syn = simulated_ecg(duration_s=20.0, seed=14)
     x = syn["x"]
     beyond = artefact_onset(x, FS, search_from_s=25.0, cfg=cfg)
     assert beyond["found"] is False and "beyond the signal end" in beyond["reason"]

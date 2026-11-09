@@ -1,7 +1,7 @@
 """Positive control (protocol section 8, run-order step 1): a known pulse must come back out of the whole pipeline.
 
-A one-participant synthetic cohort is generated with every nuisance switched off (no drops, flicker, drift or
-jitter) and a known pulse injected into otherwise static palm frames (the synthetic scene). The full per-participant
+A one-participant simulated cohort is generated with every nuisance switched off (no drops, flicker, drift or
+jitter) and a known pulse injected into otherwise static palm frames (the simulated scene). The full per-participant
 pipeline then runs on the Pi raw path and on the Pi->phone proxy at the configured CRF and at CRF 28, and the
 recovered heart rate, foot times and morphology are scored against the generator's truth with the tolerances in
 `palmppg.synth.positive_control.tolerances` (HR within 1 bpm, feet within one frame median, morphology within
@@ -104,7 +104,7 @@ def truth_in_window(truth: dict, window: tuple[float, float] | None) -> dict:
 
 def run_positive_control(out_root: str | Path, cfg: Config | None = None, seed: int = 1, small: bool = False,
                          proxy_crfs: tuple[int, ...] | None = None, cameras: tuple[str, ...] = ("pi", "pi_proxy")) -> dict:
-    """Generate the clean synthetic participant, run the pipeline, score, and write positive_control.{json,md}."""
+    """Generate the clean simulated participant, run the pipeline, score, and write positive_control.{json,md}."""
     from palmppg.pipeline.run_participant import run_participant
     from palmppg.synth.cohort import make_cohort
     from palmppg.synth.positive_control import score_recovery
@@ -164,7 +164,7 @@ def _json_default(o):
 
 
 def positive_control_markdown(r: dict) -> str:
-    lines = [f"# Positive control ({'small' if r.get('small') else 'default'} synthetic geometry, seed {r.get('seed')})", "",
+    lines = [f"# Positive control ({'small' if r.get('small') else 'default'} simulated geometry, seed {r.get('seed')})", "",
              f"Overall: **{'PASS' if r.get('pass') else 'FAIL'}**. Truth HR {r['truth'].get('hr_bpm'):.2f} bpm; injected AC/DC {r['truth'].get('ac_dc')}.", "",
              "| run | camera | sync | source | HR truth | HR recovered | abs err (bpm) | feet matched | foot median err (frames) | morphology passes | pass |",
              "|---|---|---|---|---|---|---|---|---|---|---|"]

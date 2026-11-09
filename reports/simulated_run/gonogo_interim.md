@@ -1,6 +1,6 @@
 # Interim go/no-go dashboard (first 100; thresholds unchanged)
 
-**Synthetic cohort.** This run measures the pipeline on generated data; it is not a study result.
+**Simulated cohort.** This run measures the pipeline on generated data; it is not a study result.
 
 MST 4-6 n = 9, MST 7-10 n = 19.
 ## Pilot go/no-go (frozen thresholds)

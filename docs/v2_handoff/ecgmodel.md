@@ -39,12 +39,12 @@ You own (create):
 * CLI: `palmppg ecg founder --weights PATH (--atc FILE | --participants DIR) [--unfiltered]` wired like other
   subcommands (edit palmppg/cli.py and palmppg/pipeline/commands.py minimally; only add your subcommand).
 * tools/export_ecgfounder_onnx.py: weights -> fp32 ONNX (opset 17, fixed 5000, Concat pad fix), then checks
-  ONNX Runtime vs torch on random and synthetic inputs (max |delta p| < 1e-4) and writes a JSON report.
+  ONNX Runtime vs torch on random and simulated inputs (max |delta p| < 1e-4) and writes a JSON report.
   onnx/onnxruntime are not installed: install them into the venv with pip (PyPI is reachable) and add them as an
   optional extra in pyproject.toml ([project.optional-dependencies] ecgmodel = [...]).
 * tests/test_ecg_founder.py: with RANDOMLY INITIALISED weights (no download): architecture shape (N,150),
   parameter count ~30.8M, preprocessing (resampling 300->500, window count for 30 s, z-score stats, polarity
-  flip on an inverted synthetic ECG), window combination rules, the Concat-pad fix gives torch == ONNX Runtime
+  flip on an inverted simulated ECG), window combination rules, the Concat-pad fix gives torch == ONNX Runtime
   within 1e-4 (skip only if onnxruntime import fails), and loading a saved random state_dict through load_model.
   Mark slow tests with the existing `deep` marker (see pyproject.toml markers).
 * docs/ecg_model.md: how to download the weights on a laptop, run the CLI, export ONNX, licence notes (code MIT;

@@ -1,4 +1,4 @@
-"""Synthetic fixtures shared by the ingest tests (no tests in this file).
+"""Simulated fixtures shared by the ingest tests (no tests in this file).
 
 Everything here is built from known parameters so tests can check numbers against ground truth:
 packed Bayer clips with known plane levels, a cos^4 vignette, chosen dropped frames and sensor timestamps;
@@ -59,7 +59,7 @@ def write_unit_calibration(unit_dir: Path, width: int, height: int, strength: fl
     return {"vignette": vig, "dark": dark, "flat": flat, "strength": strength}
 
 
-def write_synthetic_pi_clip(pi_dir: Path, clip_id: str = "clip1", width: int = 192, height: int = 108, n_frames: int = 90,
+def write_simulated_pi_clip(pi_dir: Path, clip_id: str = "clip1", width: int = 192, height: int = 108, n_frames: int = 90,
                             fps: float = 30.0, seed: int = 7, dropped: tuple[int, ...] = (), levels: dict | None = None,
                             strength: float = 0.35, black: float = BLACK, t0_ns: int = 5_000_000_000, stride_bytes: int | None = None,
                             modulation=None, study_id: str = "SWHT-PP-003-0001", unit_id: str = "unit_01", led_block=None) -> dict:

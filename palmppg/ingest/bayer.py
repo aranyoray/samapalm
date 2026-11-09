@@ -85,7 +85,7 @@ def unpack_csi2p_10bit(buf, width: int, height: int, stride_bytes: int | None = 
 def pack_csi2p_10bit(frame_uint16: np.ndarray, stride_bytes: int | None = None) -> bytes:
     """Inverse of `unpack_csi2p_10bit`: (H, W) uint16 values 0..1023 -> packed bytes with stride padding (zeros).
 
-    Used by synthetic writers (section 8 positive control) and roundtrip tests. Values above 1023 raise.
+    Used by simulated-data writers (section 8 positive control) and roundtrip tests. Values above 1023 raise.
     """
     f = np.asarray(frame_uint16)
     if f.ndim != 2:
@@ -142,7 +142,7 @@ def split_planes(frame: np.ndarray, pattern: str = "RGGB") -> dict[str, np.ndarr
 
 
 def merge_planes(planes: Mapping[str, np.ndarray], pattern: str = "RGGB") -> np.ndarray:
-    """Inverse of `split_planes`: planes {R, G1, G2, B} of (…, h, w) -> mosaic (…, 2h, 2w) of the planes' dtype. Used by the D-006 proxy chain and synthetic writers (section 8)."""
+    """Inverse of `split_planes`: planes {R, G1, G2, B} of (…, h, w) -> mosaic (…, 2h, 2w) of the planes' dtype. Used by the D-006 proxy chain and simulated-data writers (section 8)."""
     offs = plane_offsets(pattern)
     ref = np.asarray(planes["R"])
     out = np.empty(ref.shape[:-2] + (ref.shape[-2] * 2, ref.shape[-1] * 2), dtype=ref.dtype)

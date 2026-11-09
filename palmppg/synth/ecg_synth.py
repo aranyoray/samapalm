@@ -1,4 +1,4 @@
-"""Synthetic single-lead ECG built from the same beat schedule as the palm pulse (CONTRACTS 3.6).
+"""Simulated single-lead ECG built from the same beat schedule as the palm pulse (CONTRACTS 3.6).
 
 Protocol sections served: 3 (ecg/ layout: ATC file, kardia_meta.json, optional PDF strip), 4.3 (coarse
 anchor: the Kardia recording starts an app latency after thumb contact; fine anchor: the thumb lift leaves an
@@ -150,7 +150,7 @@ def _block(block_id: bytes, data: bytes) -> bytes:
 
 
 def write_atc(path: str | Path, mv: np.ndarray, fs: float, start_iso: str, device_id: str = "KARDIA-SYNTH-0001",
-              phone_model: str = "Kardia tablet (synthetic)", recorder_sw: str = "KardiaApp synth", recorder_hw: str = "KardiaMobile Card",
+              phone_model: str = "Kardia tablet (simulated)", recorder_sw: str = "KardiaApp synth", recorder_hw: str = "KardiaMobile Card",
               location: str = "MCH Kolkata", record_uuid: str | None = None, resolution_nv: int = ATC_RESOLUTION_NV) -> Path:
     """Write an ATC v1 chunk file: info (date 32, uuid 40, udid 44, model 32, sw 32, hw 32, location 52 bytes),
     fmt (u8 format, u16 Hz, u16 nV/LSB, u8 flags, u16 reserved) and ecg (int16 LE)."""
@@ -177,7 +177,7 @@ def write_kardia_meta(path: str | Path, start_wall_ts: str, duration_s: float, f
     return path
 
 
-def write_pdf_strip(path: str | Path, mv: np.ndarray, fs: float, title: str = "KardiaMobile (synthetic)",
+def write_pdf_strip(path: str | Path, mv: np.ndarray, fs: float, title: str = "KardiaMobile (simulated)",
                     row_seconds: float = 10.0, mm_per_s: float = 25.0, mm_per_mv: float = 10.0) -> Path:
     """Kardia-style PDF strip at 25 mm/s and 10 mm/mV on a red/pink grid with a dark trace (section 6.4 fallback).
     Rendered with matplotlib (imported lazily)."""
@@ -268,7 +268,7 @@ def write_ecg_record(ecg_dir: str | Path, study_id: str, number: int, foot_t_ref
     start_iso = kardia_wall.isoformat(timespec="milliseconds")
     label = app_rhythm_label(rhythm, rng)
     if export_format == "pdf":
-        file = write_pdf_strip(ecg_dir / f"kardia_{number:04d}.pdf", rec["mv"], fs, title=f"KardiaMobile {study_id} (synthetic)")
+        file = write_pdf_strip(ecg_dir / f"kardia_{number:04d}.pdf", rec["mv"], fs, title=f"KardiaMobile {study_id} (simulated)")
     else:
         file = write_atc(ecg_dir / f"kardia_{number:04d}.atc", rec["mv"], fs, start_iso, device_id=device_id)
     write_kardia_meta(ecg_dir / "kardia_meta.json", start_iso, kd, fs, label, device_id, export_format)
@@ -282,7 +282,7 @@ def write_ecg_record(ecg_dir: str | Path, study_id: str, number: int, foot_t_ref
         "artefact_onset_ecg_s": rec["artefacts_ecg_s"][0][0] if rec["artefacts_ecg_s"] else None,
         "artefact_onset_ref_s": float(lift) if lift is not None else None, "rhythm": rhythm, "app_rhythm_label": label,
         "ecg_hr_bpm": float(60.0 / np.mean(np.diff(rec["r_times_ecg_s"]))) if rec["r_times_ecg_s"].size > 2 else None,
-        "clock_map": {"stream": "ecg", "offset_s": float(ecg_t0_ref), "drift": 0.0, "method": "synthetic_truth"},
+        "clock_map": {"stream": "ecg", "offset_s": float(ecg_t0_ref), "drift": 0.0, "method": "simulated_truth"},
     }
     (ecg_dir / "ecg_truth.json").write_text(json.dumps(truth, indent=1), encoding="utf-8")
     return truth

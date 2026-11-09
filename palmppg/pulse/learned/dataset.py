@@ -3,7 +3,7 @@
 `ClipRecord` points at one clip of one camera: a proxy video (`proxy_128x72.zarr`, (n, 72, 128, 3)
 uint8, CONTRACTS section 4) and/or an STMap source (`patches.zarr`, (n, rows, cols, ch)), plus the
 target pulse (a column of `pulse.parquet`, the `best` entry of `pulse_sqi.json`, or an in-memory
-synthetic ground truth). `ClipDataset` cuts fixed windows (`window_frames`, `step_frames`) and reads
+simulated ground truth). `ClipDataset` cuts fixed windows (`window_frames`, `step_frames`) and reads
 only the frames of one window per `__getitem__` (never a whole clip, CONTRACTS section 0.6).
 `participant_folds` / `split_records` make grouped folds by `study_id`; the trainer refuses any
 train / validation pair that shares a participant. torch is imported lazily (collate / loader).
@@ -237,14 +237,14 @@ class ClipDataset:
                                            num_workers=0, generator=g, drop_last=False)
 
 
-# --------------------------------------------------------------------------- synthetic ground truth
-def synthetic_video_clip(n_frames: int, fs: float, hr_bpm: float, seed: int, size: tuple[int, int] = (72, 128),
+# --------------------------------------------------------------------------- simulated ground truth
+def simulated_video_clip(n_frames: int, fs: float, hr_bpm: float, seed: int, size: tuple[int, int] = (72, 128),
                          ac: float = 0.02, noise: float = 0.01, hrv: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     """A proxy-sized uint8 video with a known pulse: a palm-coloured ellipse whose brightness drops in
     proportion to the blood-volume pulse (green most, red least), on a static dark background, plus
     pixel noise. Returns (video (n, H, W, 3) uint8, pulse (n,) in volume polarity). Used for the learned
     model tests and the positive control of section 8."""
-    g = rng(seed, "synthetic_video")
+    g = rng(seed, "simulated_video")
     h, w = size
     t = np.arange(n_frames) / fs
     f = hr_bpm / 60.0 * (1 + hrv * np.sin(2 * np.pi * 0.25 * t))

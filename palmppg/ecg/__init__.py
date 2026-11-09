@@ -2,7 +2,7 @@
 
 Modules:
   atc            AliveCor ATC v1 chunk files: parse, describe, write (CONTRACTS section 3.6)
-  pdf_digitiser  Kardia PDF strip fallback: synthetic renderer and the digitiser (ecg_digitised = True)
+  pdf_digitiser  Kardia PDF strip fallback: simulated strip renderer and the digitiser (ecg_digitised = True)
   clean          zero-phase band-pass plus mains notch, all bands from configs/pipeline.yaml ecg.*
   rpeaks         NeuroKit2 R-peak detection with a two-detector agreement check; IBI series with bounds
   features       heart rate, IBI statistics and rhythm features; instantaneous rate for the sync xcorr

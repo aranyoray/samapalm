@@ -1,6 +1,6 @@
 # Sync bench self-test (SWHT-PP-003, protocol section 4.5)
 
-Generated 2026-10-18. Trials: 20. Source: **SYNTHETIC SELF-TEST: generated LED traces, audio and artefact pairs with known offsets, drift and jitter; no camera, buzzer or GPIO was involved. This exercises the detectors and fits only.**
+Generated 2026-10-18. Trials: 20. Source: **SIMULATED SELF-TEST: generated LED traces, audio and artefact pairs with known offsets, drift and jitter; no camera, buzzer or GPIO was involved. This exercises the detectors and fits only.**
 
 ## Acceptance criteria (from configs/pipeline.yaml)
 
@@ -18,7 +18,7 @@ Generated 2026-10-18. Trials: 20. Source: **SYNTHETIC SELF-TEST: generated LED t
 | artefact | 20 | 20 | 20 |
 | **all four** | **20** | 20 | 20 |
 
-Overall: 20/20 trials pass every criterion: **ACCEPTED** (synthetic self-test; hardware acceptance still outstanding)
+Overall: 20/20 trials pass every criterion: **ACCEPTED** (simulated self-test; hardware acceptance still outstanding)
 
 ## Per-trial results
 

@@ -1,4 +1,4 @@
-"""End-to-end pipeline on one small synthetic participant: every stage runs, outputs exist, sync and pulse are sane."""
+"""End-to-end pipeline on one small simulated participant: every stage runs, outputs exist, sync and pulse are sane."""
 import json
 
 import numpy as np

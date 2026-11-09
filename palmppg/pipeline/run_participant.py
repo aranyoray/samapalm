@@ -238,9 +238,9 @@ def _day_offsets(layout: StudyLayout, pi_meta: Mapping, cfg: Config) -> dict[str
 
 # --------------------------------------------------------------------------- landmark ground truth adapter
 def provider_landmarks_json(src: Path, dst: Path) -> Path | None:
-    """Adapt a ground-truth landmarks file to the SyntheticLandmarkProvider layout.
+    """Adapt a ground-truth landmarks file to the SimulatedLandmarkProvider layout.
 
-    The synthetic generator writes {"landmarks": [{"name", "x", "y", "z"} x 21], "is_left", "palmar", "static": true}
+    The simulated-data generator writes {"landmarks": [{"name", "x", "y", "z"} x 21], "is_left", "palmar", "static": true}
     (or {"frames": [...]}); the provider reads {"frames": [{"frame_idx", "lm": [[x, y, z] x 21]}], "static": [[x, y, z] x 21]}.
     Returns the path to pass as `landmark_json`, or None when `src` is absent.
     """
@@ -249,7 +249,7 @@ def provider_landmarks_json(src: Path, dst: Path) -> Path | None:
     data = json.loads(src.read_text(encoding="utf-8"))
     if isinstance(data.get("static"), list) or (isinstance(data.get("frames"), list) and data["frames"] and "lm" in data["frames"][0]):
         return src
-    out: dict[str, Any] = {"is_left": bool(data.get("is_left", True)), "palmar": bool(data.get("palmar", True)), "source": data.get("source", "synthetic")}
+    out: dict[str, Any] = {"is_left": bool(data.get("is_left", True)), "palmar": bool(data.get("palmar", True)), "source": data.get("source", "simulated")}
 
     def _lm(entries):
         return [[float(e["x"]), float(e["y"]), float(e.get("z", 0.0))] for e in entries]

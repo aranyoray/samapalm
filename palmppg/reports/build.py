@@ -76,8 +76,8 @@ def build_all_reports(cfg: Config | None = None, work_root: str | Path | None = 
     out = work_root / "reports"
     out.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
-    synthetic = "synth" in str(work_root)
-    banner = "> Synthetic cohort: these pages measure the pipeline on generated data and are not study results.\n\n" if synthetic else ""
+    simulated = any(k in str(work_root) for k in ("synth", "simulated"))
+    banner = "> Simulated cohort: these pages measure the pipeline on generated data and are not study results.\n\n" if simulated else ""
 
     frames = load_features(work_root)
     pi = frames.get("pi", pd.DataFrame())
@@ -128,7 +128,7 @@ def build_all_reports(cfg: Config | None = None, work_root: str | Path | None = 
         p.write_text(text, encoding="utf-8")
         written.append(p)
     written += strata_tables(work_root, cfg, out, n_resamples)
-    summary = summary_markdown(work_root, frames, pages, synthetic)
+    summary = summary_markdown(work_root, frames, pages, simulated)
     (out / "summary.md").write_text(summary, encoding="utf-8")
     written.append(out / "summary.md")
     hits = {str(p): scan_text(p.read_text(encoding="utf-8")) for p in written}
@@ -138,10 +138,10 @@ def build_all_reports(cfg: Config | None = None, work_root: str | Path | None = 
     return written
 
 
-def summary_markdown(work_root: Path, frames: dict, pages: dict, synthetic: bool) -> str:
+def summary_markdown(work_root: Path, frames: dict, pages: dict, simulated: bool) -> str:
     lines = ["# Run summary", ""]
-    if synthetic:
-        lines += ["This run used a synthetic cohort. It shows the pipeline running end to end and reports what it measured on "
+    if simulated:
+        lines += ["This run used a simulated cohort. It shows the pipeline running end to end and reports what it measured on "
                   "generated data; it carries no information about people.", ""]
     for cam, df in frames.items():
         v = df.get(f"qc__{cam}__valid_clip", pd.Series(dtype=bool)).fillna(False).astype(bool)
@@ -152,5 +152,5 @@ def summary_markdown(work_root: Path, frames: dict, pages: dict, synthetic: bool
     if "gonogo.md" in pages:
         lines += ["", "Go/no-go: see gonogo.md (frozen thresholds, evaluated once)."]
     lines += ["", "Limitations that apply to every page: single site, one visit per participant, cuff readings that bracket rather than "
-              "accompany the clip, MST band self-selected from a swatch card, and synthetic tone shifts that support no equity claim."]
+              "accompany the clip, MST band self-selected from a swatch card, and simulated tone shifts that support no equity claim."]
     return "\n".join(lines) + "\n"

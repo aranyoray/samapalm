@@ -48,11 +48,11 @@ You own (create):
 * palmppg/quality/__init__.py, palmppg/quality/onsite.py: numpy-only Python reference with identical algorithms
   (same biquad and FFT/periodogram code paths so numbers match); readers for roi.csv / ecg_samples.csv / ATC
   (reuse palmppg.ecg.atc) / Kardia PDF (pymupdf or a port of your reader).
-* tools/make_quality_fixtures.py, configs/quality_fixtures/*.json: synthetic cases with known answers (clean
+* tools/make_quality_fixtures.py, configs/quality_fixtures/*.json: simulated cases with known answers (clean
   pulse at known bpm, noisy, black frames, short clip, clipping, dropped frames; ECG clean at known bpm, noisy,
   flat, inverted, irregular RR series, pause) generated as recorder-format CSV text + expected metrics/grade.
-  Also a synthetic vector Kardia-like PDF (reportlab, already a dependency: see palmppg/ecg/pdf_digitiser.py
-  render_synthetic_strip_pdf) with known samples, stored small (base64 or a .pdf under configs/quality_fixtures).
+  Also a simulated vector Kardia-like PDF (reportlab, already a dependency: see palmppg/ecg/pdf_digitiser.py
+  render_simulated_strip_pdf) with known samples, stored small (base64 or a .pdf under configs/quality_fixtures).
   Real Kardia sample PDFs downloaded by a research agent are at
   /tmp/claude-0/-home-user-samapalm/1767d121-93b8-57dc-bbea-5d5b03c9a3eb/scratchpad/dl_jph1l/kardiamobile-1l-ecg.pdf
   (and dl_jph6l/ for 6-lead; helper scripts in scratchpad/scripts/pdftrace.py): use them ONLY for local checks

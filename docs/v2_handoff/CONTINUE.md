@@ -31,12 +31,12 @@ Branch `wip/onboarding-v2`, merged to `master` once CI is green. Read `docs/onbo
 1. **The PI must confirm the recruitment target numbers** in `configs/recruitment_targets.json`. They are
    defaults taken from the concept note, and the Targets tab presents them as if they were agreed.
 2. **The quality thresholds are PROVISIONAL** (`VideoQualityConfig`, `EcgQualityConfig`), to be calibrated on
-   pilot clips as DECISIONS D-008 says. They have only been exercised on synthetic signals.
+   pilot clips as DECISIONS D-008 says. They have only been exercised on simulated signals.
 3. **Not yet run on a participant**: the app installs and runs on the OnePlus 12, but the camera, the Kardia
    and the full two-station flow have not been exercised hands-on. That is the next thing to do.
 4. **The scan station's "Do enrolment for this PID now"** shortcut from the BP1 screen (design section 6) is
    not built; a single operator can still run both parts by switching tabs.
-5. **The Kardia PDF reader has only been checked against a synthetic export.** Point it at a real Kardia PDF
+5. **The Kardia PDF reader has only been checked against a simulated export.** Point it at a real Kardia PDF
    before relying on it; it reports what it assumed in `warnings`.
 6. **Known test failures on macOS only** (all of them fail on `master` too, and all are environment, not code):
    `test_capture_pi.py` and `test_capture_sync_marker.py` need Linux's `time.CLOCK_BOOTTIME`;

@@ -1,4 +1,4 @@
-"""Every classical method recovers the synthetic 72 bpm pulse within 1 bpm, in the volume polarity (6.3)."""
+"""Every classical method recovers the simulated 72 bpm pulse within 1 bpm, in the volume polarity (6.3)."""
 import numpy as np
 import pytest
 from scipy.signal import find_peaks

@@ -14,7 +14,7 @@ paths:
   study_root: data/study            # real study data mount (never committed)
   work_root: work                   # derived caches, tables, reports
   test_root: data/test_stream       # locked prospective test stream, separate mount, read once
-  synthetic_root: work/synthetic
+  simulated_root: work/simulated
   mlruns: mlruns
 
 clock:

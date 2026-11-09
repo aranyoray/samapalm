@@ -23,13 +23,13 @@ from palmppg.ingest.timestamps import (
     resample_series,
     write_frame_times,
 )
-from tests.test_ingest_helpers import write_synthetic_pi_clip
+from tests.test_ingest_helpers import write_simulated_pi_clip
 
 DROPPED = (10, 11, 50, 70)  # gaps of 2, 1, 1 frames -> 3 gaps, 4 frames dropped
 
 
 def test_pi_frame_times_with_three_known_gaps(tmp_path, cfg):
-    clip = write_synthetic_pi_clip(tmp_path / "pi", n_frames=100, width=16, height=8, dropped=DROPPED)
+    clip = write_simulated_pi_clip(tmp_path / "pi", n_frames=100, width=16, height=8, dropped=DROPPED)
     df = read_pi_pts(tmp_path / "pi" / "clip1_pts.csv")
     assert list(df.columns) == ["frame_idx", "sensor_ts_ns", "wall_ns", "exposure_us", "analogue_gain", "digital_gain", "lux"]
     assert len(df) == 96 and df["sensor_ts_ns"].dtype == np.int64

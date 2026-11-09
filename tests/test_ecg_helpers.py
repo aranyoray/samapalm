@@ -1,4 +1,4 @@
-"""Self-contained fixtures for the ECG tests: a template-based synthetic single-lead ECG with exactly known
+"""Self-contained fixtures for the ECG tests: a template-based simulated single-lead ECG with exactly known
 R-peak times, and a temporary participant folder writer (CONTRACTS section 3.6 layout)."""
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ TEMPLATE = ((0.15, -0.18, 0.025), (-0.08, -0.025, 0.006), (1.0, 0.0, 0.009), (-0
 FS = 300.0
 
 
-def synthetic_ecg(fs: float = FS, duration_s: float = 60.0, hr_bpm: float = 65.0, rsa_bpm: float = 3.0,
+def simulated_ecg(fs: float = FS, duration_s: float = 60.0, hr_bpm: float = 65.0, rsa_bpm: float = 3.0,
                   rsa_hz: float = 0.25, r_amp_mv: float = 1.0, noise_mv: float = 0.0, mains_mv: float = 0.0,
                   mains_hz: float = 50.0, wander_mv: float = 0.0, wander_hz: float = 0.2, seed: int = 0,
                   first_beat_s: float = 0.6) -> dict:
@@ -42,7 +42,7 @@ def synthetic_ecg(fs: float = FS, duration_s: float = 60.0, hr_bpm: float = 65.0
         tt = t[lo:hi] - tb
         for amp, centre, sigma in TEMPLATE:
             x[lo:hi] += r_amp_mv * amp * np.exp(-0.5 * ((tt - centre) / sigma) ** 2)
-    g = rng(seed, "synthetic_ecg")
+    g = rng(seed, "simulated_ecg")
     if noise_mv:
         x = x + noise_mv * g.normal(size=n)
     if mains_mv:
@@ -70,7 +70,7 @@ def write_participant(root: Path, study_id: str, ecg_mv: np.ndarray | None = Non
     """Temporary participant folder with ecg/kardia_0001.atc (when `ecg_mv`), ecg/kardia_0001.pdf (when
     `pdf_mv`), ecg/kardia_meta.json and clinician.json (when given)."""
     from palmppg.ecg.atc import write_atc
-    from palmppg.ecg.pdf_digitiser import render_synthetic_strip_pdf
+    from palmppg.ecg.pdf_digitiser import render_simulated_strip_pdf
 
     pp = ParticipantPaths(study_id, Path(root) / "participants" / study_id)
     pp.ecg.mkdir(parents=True, exist_ok=True)
@@ -79,7 +79,7 @@ def write_participant(root: Path, study_id: str, ecg_mv: np.ndarray | None = Non
     if ecg_mv is not None:
         write_atc(pp.ecg / "kardia_0001.atc", ecg_mv, fs=fs, start_time=start, info={"phone_model": "tablet"})
     if pdf_mv is not None:
-        render_synthetic_strip_pdf(pp.ecg / "kardia_0001.pdf", pdf_mv, fs)
+        render_simulated_strip_pdf(pp.ecg / "kardia_0001.pdf", pdf_mv, fs)
     dur = (ecg_mv if ecg_mv is not None else pdf_mv)
     meta = {"start_wall_ts": start.isoformat(), "duration_s": (len(dur) / fs) if dur is not None else None, "fs": fs,
             "app_rhythm_label": app_label, "device_id": "KARDIA-01", "export_format": fmt}

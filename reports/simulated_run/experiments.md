@@ -1,4 +1,4 @@
-> Synthetic cohort: these pages measure the pipeline on generated data and are not study results.
+> Simulated cohort: these pages measure the pipeline on generated data and are not study results.
 
 # E0 baselines
 
@@ -317,7 +317,7 @@ Regression `error ~ mst_band + age + sex_f + bmi + bp_target` (cluster-robust by
 
 MST leakage probe (science/pi): {}
 
-Synthetic tone shifts in generated data support no equity claim.
+Simulated tone shifts in generated data support no equity claim.
 
 
 ---

@@ -1,4 +1,4 @@
-"""Sequence models fit a synthetic frequency target far better than the mean baseline (protocol 9, E4/E5)."""
+"""Sequence models fit a simulated frequency target far better than the mean baseline (protocol 9, E4/E5)."""
 import numpy as np
 import pytest
 

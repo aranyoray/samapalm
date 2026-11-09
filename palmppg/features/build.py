@@ -25,7 +25,7 @@ from .store import build_clip_features, register_features
 
 DEFAULT_STREAMS: tuple[str, ...] = ("pilot", "development", "model_selection")
 TEST_TABLES_SUBDIR = "tables_test_stream"
-_NON_CLIP_DIRS = {"tables", "reports", "synthetic", TEST_TABLES_SUBDIR}
+_NON_CLIP_DIRS = {"tables", "reports", "simulated", TEST_TABLES_SUBDIR}
 
 
 # --------------------------------------------------------------------------- discovery

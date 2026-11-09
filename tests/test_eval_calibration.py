@@ -1,4 +1,4 @@
-"""Calibration and decision curves on synthetic probabilities with hand-computed expectations."""
+"""Calibration and decision curves on simulated probabilities with hand-computed expectations."""
 from __future__ import annotations
 
 import numpy as np

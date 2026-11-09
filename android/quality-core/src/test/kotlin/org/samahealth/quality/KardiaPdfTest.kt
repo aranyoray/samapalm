@@ -9,8 +9,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * The Kotlin PDF reader must recover the same trace as the Python one from the synthetic Kardia-style export
- * (configs/quality_fixtures/kardia_synthetic.pdf), whose samples are known: they are the `clean_75bpm` ECG case.
+ * The Kotlin PDF reader must recover the same trace as the Python one from the simulated Kardia-style export
+ * (configs/quality_fixtures/kardia_simulated.pdf), whose samples are known: they are the `clean_75bpm` ECG case.
  */
 class KardiaPdfTest {
 

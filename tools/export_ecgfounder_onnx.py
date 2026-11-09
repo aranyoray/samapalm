@@ -5,7 +5,7 @@
 
 Writes the model (default work/ecgfounder/ecgfounder_1lead_fp32.onnx) and a JSON report next to it
 (<model>.report.json): versions, opset, operator list, weights and model sha256, size, and the parity of ONNX
-Runtime against torch on random z-scored windows and on synthetic ECG windows run through
+Runtime against torch on random z-scored windows and on simulated ECG windows run through
 `palmppg.ecg.founder.preprocess` (sinus, AF, ectopy, inverted). Pass: max |delta p| < 1e-4 on every window and
 all 150 outputs. Needs the `ecgmodel` extra (onnx, onnxruntime) and torch. Exit code 0 on pass, 3 on fail.
 
@@ -32,8 +32,8 @@ TOL_DP = 1e-4
 DEFAULT_OUT = ROOT / "work" / "ecgfounder" / "ecgfounder_1lead_fp32.onnx"
 
 
-def synthetic_windows(seed: int = 0) -> tuple[np.ndarray, list[str]]:
-    """Preprocessed windows from synthetic 30 s Kardia-like strips (300 Hz) of known rhythm."""
+def simulated_windows(seed: int = 0) -> tuple[np.ndarray, list[str]]:
+    """Preprocessed windows from simulated 30 s Kardia-like strips (300 Hz) of known rhythm."""
     from palmppg.synth.ecg_synth import ecg_waveform
 
     rng = np.random.default_rng(seed)
@@ -104,9 +104,9 @@ def main(argv: list[str] | None = None) -> int:
 
     rng = np.random.default_rng(args.seed)
     x_rand = founder.z_score(rng.standard_normal((8, 1, founder.WIN))).astype(np.float32)
-    x_syn, syn_names = synthetic_windows(args.seed)
-    checks = {"random": parity(model, out, x_rand), "synthetic": parity(model, out, x_syn)}
-    checks["synthetic"]["windows"] = syn_names
+    x_syn, syn_names = simulated_windows(args.seed)
+    checks = {"random": parity(model, out, x_rand), "simulated": parity(model, out, x_syn)}
+    checks["simulated"]["windows"] = syn_names
     ok = all(c["pass"] for c in checks.values())
     report = {
         "created_at": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),

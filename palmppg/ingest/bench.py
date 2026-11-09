@@ -1,12 +1,12 @@
-"""Bench acceptance of the sync chain (protocol section 4.5) and the synthetic self-test of the detectors.
+"""Bench acceptance of the sync chain (protocol section 4.5) and the simulated self-test of the detectors.
 
 Section 4.5: twenty trials with a flashing marker in the aperture; both cameras and the Pi log must agree
 on the LED onsets within one frame; the audio onset within ``sync.audio.onset_tolerance_ms`` of the Pi
 log; a simulated ECG artefact (tap on the card) aligns within one frame. ``bench_trials_report`` scores a
-list of trials (hardware captures prepared by the operator tooling, or the synthetic trials made here) and
+list of trials (hardware captures prepared by the operator tooling, or the simulated trials made here) and
 writes the one-page markdown report. Its header states which of the two it is.
 
-``synthetic_bench_selftest`` is the only part that can run without hardware: it generates LED block traces,
+``simulated_bench_selftest`` is the only part that can run without hardware: it generates LED block traces,
 audio and artefact pairs with known offsets, drift and jitter, runs the real detectors and fits, and
 scores the recovered values against the truth. It exercises the detectors; it says nothing about the
 cameras, the buzzer or the GPIO timing, and the report says so.
@@ -28,7 +28,7 @@ from palmppg.ingest.sync_events import pattern_edges, pattern_specs
 DEFAULT_REPORT_PATH = REPO_ROOT / "reports" / "bench_sync_report.md"
 
 
-# --------------------------------------------------------------------------- synthetic signal generators
+# --------------------------------------------------------------------------- simulated signal generators
 def on_intervals(onsets_s: Mapping[str, float], specs: Mapping[str, Mapping]) -> list[tuple[float, float]]:
     """LED/buzzer on-intervals ``[(t_on, t_off), ...]`` for patterns fired at ``onsets_s``."""
     out: list[tuple[float, float]] = []
@@ -100,7 +100,7 @@ def evaluate_trial(trial: Mapping, cfg: Config) -> dict:
     Trial keys: ``fps`` (Pi), ``phone_fps``, ``pi_log_edges`` ``{pattern: [(t_ref_s, kind)]}``,
     ``pi_video_edges`` / ``phone_video_edges`` / ``audio_edges`` ``{pattern: [edge dicts]}`` or None,
     ``artefact`` ``{"pairs": [(video_t_ref_s, ecg_t_ecg_s), ...], "true_offset_s": float | None}`` or None,
-    and, for synthetic trials, ``truth`` ``{phone_offset_s, phone_drift, audio_offset_s}``.
+    and, for simulated trials, ``truth`` ``{phone_offset_s, phone_drift, audio_offset_s}``.
     Criteria: Pi video and phone video edges within one frame of the log after one offset (+ drift);
     audio within ``sync.audio.onset_tolerance_ms``; artefact pair within one frame (``fine_anchor_uncertainty_s``).
     """
@@ -187,7 +187,7 @@ def bench_trials_report(trials: Sequence[Mapping], cfg: Config | None = None, ha
     """Score bench trials and write the one-page markdown report (section 4.5).
 
     ``hardware=True`` labels the trials as hardware captures (the acceptance that must pass before any
-    patient); ``hardware=False`` labels them as the synthetic self-test, which exercises the detectors only.
+    patient); ``hardware=False`` labels them as the simulated self-test, which exercises the detectors only.
     Returns the markdown; writes it to ``out_path`` when given (default ``reports/bench_sync_report.md``).
     The text reports measured numbers only.
     """
@@ -200,7 +200,7 @@ def bench_trials_report(trials: Sequence[Mapping], cfg: Config | None = None, ha
     overall = sum(1 for r in results if r["pass"])
     mode = ("HARDWARE CAPTURES: metronome flash in the aperture, both cameras, Pi log, buzzer and a card tap"
             if hardware else
-            "SYNTHETIC SELF-TEST: generated LED traces, audio and artefact pairs with known offsets, drift and jitter; "
+            "SIMULATED SELF-TEST: generated LED traces, audio and artefact pairs with known offsets, drift and jitter; "
             "no camera, buzzer or GPIO was involved. This exercises the detectors and fits only.")
     today = dt.date.today().isoformat()
     L: list[str] = []
@@ -225,7 +225,7 @@ def bench_trials_report(trials: Sequence[Mapping], cfg: Config | None = None, ha
     L.append("")
     verdict = "ACCEPTED" if n > 0 and overall == n else "NOT ACCEPTED"
     L.append(f"Overall: {overall}/{n} trials pass every criterion: **{verdict}**"
-             + ("" if hardware else " (synthetic self-test; hardware acceptance still outstanding)"))
+             + ("" if hardware else " (simulated self-test; hardware acceptance still outstanding)"))
     L.append("")
     L.append("## Per-trial results")
     L.append("")
@@ -266,10 +266,10 @@ def bench_trials_report(trials: Sequence[Mapping], cfg: Config | None = None, ha
     return md
 
 
-# --------------------------------------------------------------------------- synthetic self-test
-def make_synthetic_trial(trial_id: int, cfg: Config, gen: np.random.Generator, clip_s: float = 12.0,
+# --------------------------------------------------------------------------- simulated self-test
+def make_simulated_trial(trial_id: int, cfg: Config, gen: np.random.Generator, clip_s: float = 12.0,
                          fs_audio: float = 48000.0) -> dict:
-    """One synthetic trial with known truth: Pi trace (identity, short exposure), phone trace (offset,
+    """One simulated trial with known truth: Pi trace (identity, short exposure), phone trace (offset,
     drift, full-frame exposure, PTS jitter), audio (offset, noise), thumb-lift/ECG-artefact pairs."""
     fps = float(cfg.get("pi.nominal_fps"))
     phone_fps = float(cfg.get("phone.nominal_fps"))
@@ -319,15 +319,15 @@ def make_synthetic_trial(trial_id: int, cfg: Config, gen: np.random.Generator, c
     }
 
 
-def synthetic_bench_selftest(n_trials: int = 20, seed: int | None = None, cfg: Config | None = None,
+def simulated_bench_selftest(n_trials: int = 20, seed: int | None = None, cfg: Config | None = None,
                              out_path: str | Path | None = DEFAULT_REPORT_PATH, clip_s: float = 12.0) -> dict:
-    """Generate ``n_trials`` synthetic trials, run the detectors and fits, score them and write the report
-    labelled as the synthetic self-test (section 4.5; software only). Returns ``{n_trials, n_pass, results,
+    """Generate ``n_trials`` simulated trials, run the detectors and fits, score them and write the report
+    labelled as the simulated self-test (section 4.5; software only). Returns ``{n_trials, n_pass, results,
     markdown, trials}``."""
     cfg = cfg or load_pipeline_config()
     seed = int(cfg.get("study.seed")) if seed is None else int(seed)
     gen = rng(seed, "bench_selftest")
-    trials = [make_synthetic_trial(i + 1, cfg, gen, clip_s=clip_s) for i in range(int(n_trials))]
+    trials = [make_simulated_trial(i + 1, cfg, gen, clip_s=clip_s) for i in range(int(n_trials))]
     md = bench_trials_report(trials, cfg, hardware=False, out_path=out_path, title="Sync bench self-test")
     results = [evaluate_trial(t, cfg) for t in trials]
     return {"n_trials": len(trials), "n_pass": sum(1 for r in results if r["pass"]), "results": results,
@@ -335,5 +335,5 @@ def synthetic_bench_selftest(n_trials: int = 20, seed: int | None = None, cfg: C
 
 
 if __name__ == "__main__":  # pragma: no cover - manual entry point
-    res = synthetic_bench_selftest()
-    print(f"synthetic self-test: {res['n_pass']}/{res['n_trials']} trials pass; report at {DEFAULT_REPORT_PATH}")
+    res = simulated_bench_selftest()
+    print(f"simulated self-test: {res['n_pass']}/{res['n_trials']} trials pass; report at {DEFAULT_REPORT_PATH}")

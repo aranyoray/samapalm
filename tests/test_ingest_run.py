@@ -1,4 +1,4 @@
-"""End-to-end ingest orchestrators on a synthetic participant: Pi raw clip with drops and flicker, phone mp4."""
+"""End-to-end ingest orchestrators on a simulated participant: Pi raw clip with drops and flicker, phone mp4."""
 from __future__ import annotations
 
 import json
@@ -17,7 +17,7 @@ from tests.test_ingest_helpers import (
     FFMPEG,
     render_mp4,
     textured_frame,
-    write_synthetic_pi_clip,
+    write_simulated_pi_clip,
     write_unit_calibration,
 )
 
@@ -31,7 +31,7 @@ HAND = {"hand_detected": True, "hand_is_left": True, "hand_palmar": True, "landm
 def _participant(tmp_path, flicker=False):
     root = tmp_path / "study" / "participants" / "SWHT-PP-003-0001"
     mod = (lambda i: 1.0 + 0.01 * np.sin(2 * np.pi * 10.0 * i / 30.0)) if flicker else None
-    clip = write_synthetic_pi_clip(root / "pi", n_frames=N, width=W, height=H, dropped=DROPPED, strength=0.3, modulation=mod)
+    clip = write_simulated_pi_clip(root / "pi", n_frames=N, width=W, height=H, dropped=DROPPED, strength=0.3, modulation=mod)
     unit = tmp_path / "study" / "units" / "unit_01"
     write_unit_calibration(unit, W, H, strength=0.3)
     return ParticipantPaths("SWHT-PP-003-0001", root), unit, clip

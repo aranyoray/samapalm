@@ -28,7 +28,7 @@ DC = {"R": 300.0, "G1": 500.0, "G2": 505.0, "B": 200.0}
 
 
 def _landmark_df(lm_by_time):
-    rows = [_row(i, t, {"source": "synthetic", "confidence": 1.0, "is_left": True, "palmar": True, "lm": lm})
+    rows = [_row(i, t, {"source": "simulated", "confidence": 1.0, "is_left": True, "palmar": True, "lm": lm})
             for i, t, lm in lm_by_time]
     return landmarks_frame(rows)
 
@@ -98,7 +98,7 @@ def test_roi_stats_rgb_frame_with_inverse_srgb():
     assert raw["mean"]["R"] == 200.0
 
 
-def _synthetic_frames(schedule, n=300, drop=range(100, 105), region="central_palm", bump=100.0):
+def _simulated_frames(schedule, n=300, drop=range(100, 105), region="central_palm", bump=100.0):
     ms = schedule.masks_at(0.0)
     region_mask = np.zeros(PLANE, bool)
     region_mask.ravel()[ms.roi_index[region]] = True
@@ -120,7 +120,7 @@ def _synthetic_frames(schedule, n=300, drop=range(100, 105), region="central_pal
 
 
 def test_run_traces_recovers_dc_ac_and_marks_dropped_frames(schedule, tmp_path):
-    frames, t = _synthetic_frames(schedule)
+    frames, t = _simulated_frames(schedule)
     grid = uniform_grid(0.0, t[-1], FPS)
     times = pd.DataFrame({"frame_idx": np.arange(300), "t_ref_s": t})
     df, patches, info = run_traces(frames, schedule, times, grid, PI_CHANNELS, white_level=1000.0,

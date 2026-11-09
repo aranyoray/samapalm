@@ -1,4 +1,4 @@
-"""End-to-end spatial stage on small synthetic Pi and phone clips (sections 6.1, 6.2)."""
+"""End-to-end spatial stage on small simulated Pi and phone clips (sections 6.1, 6.2)."""
 import json
 
 import numpy as np
@@ -61,10 +61,10 @@ def test_pi_path_writes_every_artefact_with_known_numbers(cfg, clip, tmp_path):
     for name in ("landmarks.parquet", "rois.json", "traces.parquet", "patches.zarr", "static_colour.json", "spatial_summary.json"):
         assert (out_dir / name).exists(), name
     assert summary["hand_detected"] is True and summary["hand_is_left"] is True and summary["hand_palmar"] is True
-    assert summary["landmark_source"] == "synthetic" and summary["motion_flag"] is False
+    assert summary["landmark_source"] == "simulated" and summary["motion_flag"] is False
     assert summary["landmark_jitter_px"] == pytest.approx(0.0005 * FULL[1], abs=1e-6)   # 0.192 px per landmark frame
     lm = pd.read_parquet(out_dir / "landmarks.parquet")
-    assert len(lm) == SECONDS * cfg.get("qc.hand_preview_fps") and (lm["source"] == "synthetic").all()
+    assert len(lm) == SECONDS * cfg.get("qc.hand_preview_fps") and (lm["source"] == "simulated").all()
     rois = json.loads((out_dir / "rois.json").read_text())
     assert set(rois) == set(cfg.get("rois.names")) | {"thumb"}
     assert all(v["n_pixels"] > 0 for v in rois.values()) and rois["thumb"]["frame_idx"] == summary["roi_frame_idx"]

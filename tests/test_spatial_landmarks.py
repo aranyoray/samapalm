@@ -11,7 +11,7 @@ from palmppg.spatial.landmarks import (
     LandmarkProvider,
     MediaPipeHandsProvider,
     SkinSegmentationFallback,
-    SyntheticLandmarkProvider,
+    SimulatedLandmarkProvider,
     handedness_from_label,
     landmark_jitter_px,
     landmarks_frame,
@@ -76,30 +76,30 @@ def test_palmar_geometry_follows_thumb_side_and_is_rotation_invariant():
     assert palmar_from_geometry(collinear, True) is None
 
 
-# ---------------------------------------------------------------- synthetic provider
-def test_synthetic_provider_reads_frames_and_static(tmp_path):
+# ---------------------------------------------------------------- simulated provider
+def test_simulated_provider_reads_frames_and_static(tmp_path):
     lm = hand_template_landmarks()
     frames = []
     for k, idx in enumerate((0, 8, 16)):
         frames.append({"frame_idx": idx, "lm": (lm + np.array([0.01 * k, 0.0, 0.0])).tolist(), "is_left": True, "palmar": True})
     path = tmp_path / "landmarks.json"
     path.write_text(json.dumps({"frames": frames, "static": lm.tolist()}))
-    prov = SyntheticLandmarkProvider(path)
+    prov = SimulatedLandmarkProvider(path)
     d0 = prov.detect(None, 0)
-    assert d0["source"] == "synthetic" and d0["lm"].shape == (21, 3) and d0["is_left"] is True and d0["palmar"] is True
+    assert d0["source"] == "simulated" and d0["lm"].shape == (21, 3) and d0["is_left"] is True and d0["palmar"] is True
     assert np.allclose(d0["lm"], lm)
     assert np.allclose(prov.detect(None, 3)["lm"], lm)                       # nearest: frame 0
     assert np.allclose(prov.detect(None, 5)["lm"], lm + [0.01, 0, 0])        # nearest: frame 8
     assert np.allclose(prov.detect(None, 999)["lm"], lm + [0.02, 0, 0])      # beyond the last: frame 16
     static_only = tmp_path / "static.json"
     static_only.write_text(json.dumps({"static": lm.tolist(), "is_left": False, "palmar": True}))
-    prov2 = SyntheticLandmarkProvider(static_only)
+    prov2 = SimulatedLandmarkProvider(static_only)
     for idx in (0, 7, 500):
         d = prov2.detect(None, idx)
         assert np.allclose(d["lm"], lm) and d["is_left"] is False
     (tmp_path / "bad.json").write_text(json.dumps({"frames": []}))
     with pytest.raises(ValueError):
-        SyntheticLandmarkProvider(tmp_path / "bad.json")
+        SimulatedLandmarkProvider(tmp_path / "bad.json")
 
 
 # ---------------------------------------------------------------- skin fallback

@@ -1,4 +1,4 @@
-"""Synthetic left palm, palmar view, over the dark box aperture (protocol sections 3, 4.2, 6.2, 8).
+"""Simulated left palm, palmar view, over the dark box aperture (protocol sections 3, 4.2, 6.2, 8).
 
 What the scene provides
   * a static linear-RGB reflectance image of a left palm (palm ellipse, four fingers, thumb) with the thumb
@@ -10,7 +10,7 @@ What the scene provides
   * 21 ground-truth landmarks in MediaPipe order, normalised to the half-resolution preview, and the ROI
     ground-truth masks for every name in cfg `rois.names` plus `thumb`;
   * an optional melanin level: multiplicative per-channel darkening of the skin, B attenuated most and R
-    least. Any scene with melanin > 0 is labelled "synthetic tone shift" (section 8: supports no equity claim);
+    least. Any scene with melanin > 0 is labelled "simulated tone shift" (section 8: supports no equity claim);
   * Bayer RGGB sampling with per-channel sensor responsivity, black level from cfg `pi.black_level`, 10-bit
     range from cfg `pi.white_level`, Poisson shot noise at a configurable full-well scale and Gaussian read noise.
 
@@ -34,7 +34,7 @@ LANDMARK_NAMES = (
     "PINKY_MCP", "PINKY_PIP", "PINKY_DIP", "PINKY_TIP",
 )
 FINGERS = ("index", "middle", "ring", "little")
-TONE_LABEL = "synthetic tone shift"
+TONE_LABEL = "simulated tone shift"
 
 # linear-RGB reflectances (not protocol quantities; scene design)
 SKIN_REFLECTANCE = (0.60, 0.40, 0.32)
@@ -110,7 +110,7 @@ def _similarity(points, scale: float, angle_deg: float, shift, pivot) -> list[tu
 
 def scale_block(block: dict, width: int, height: int, ref_wh: tuple[int, int] = REFERENCE_GEOMETRY_WH,
                 min_px: int = 8) -> dict:
-    """Scale a cfg pixel block (full-resolution reference geometry) to a synthetic frame size; coordinates are
+    """Scale a cfg pixel block (full-resolution reference geometry) to a simulated frame size; coordinates are
     kept even so the block holds whole Bayer cells, and at least `min_px` wide/high."""
     sx, sy = width / ref_wh[0], height / ref_wh[1]
     x = 2 * int(round(block["x"] * sx / 2))
@@ -172,10 +172,10 @@ def make_palm_scene(width: int, height: int, cfg, rng: np.random.Generator, mela
                     hand_jitter: float = 0.0, led_block: dict | None = None, thumb_block: dict | None = None,
                     target_skin_g_dn: float = 450.0, full_well_e: float = 8000.0, read_noise_dn: float = 2.0,
                     responsivity: tuple[float, float, float] = (0.63, 1.0, 0.71), texture: float = 0.05) -> PalmScene:
-    """Build the synthetic palm scene for a frame of `width` x `height` (full-resolution Bayer geometry).
+    """Build the simulated palm scene for a frame of `width` x `height` (full-resolution Bayer geometry).
 
     cfg supplies `sync.led_block.pi`, `sync.thumb_block.pi`, `pi.black_level`, `pi.white_level`, `rois.names`,
-    `rois.excluded`. `melanin` in [0, 1] darkens the skin per channel (synthetic tone shift). `hand_jitter`
+    `rois.excluded`. `melanin` in [0, 1] darkens the skin per channel (simulated tone shift). `hand_jitter`
     (0..1) adds a per-participant similarity perturbation of the hand pose. `target_skin_g_dn` sets the
     exposure so that the central-palm G signal lands at that many DN above black (section 6.1 exposure).
     """
@@ -494,8 +494,8 @@ def srgb_eotf(enc: np.ndarray) -> np.ndarray:
 # ----------------------------------------------------------------------------- ground-truth files
 def landmarks_record(scene: PalmScene, clip_id: str, frame_idx: int = 0, t_ref_s: float = 0.0) -> dict:
     """Landmark ground truth in the shape of CONTRACTS section 4 `landmarks.parquet` rows (lm00_x..lm20_z,
-    normalised preview coordinates, z = 0) plus a named list; `source` = "synthetic_truth"."""
-    rec = {"clip_id": clip_id, "source": "synthetic_truth", "order": "mediapipe", "normalised": True,
+    normalised preview coordinates, z = 0) plus a named list; `source` = "simulated_truth"."""
+    rec = {"clip_id": clip_id, "source": "simulated_truth", "order": "mediapipe", "normalised": True,
            "image_size": [scene.width // 2, scene.height // 2], "frame_idx": int(frame_idx), "t_ref_s": float(t_ref_s),
            "confidence": 1.0, "is_left": True, "palmar": True, "static": True,
            "landmarks": [{"name": LANDMARK_NAMES[i], "x": float(scene.landmarks[i, 0]), "y": float(scene.landmarks[i, 1]), "z": 0.0}

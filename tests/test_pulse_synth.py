@@ -1,4 +1,4 @@
-"""Synthetic colour traces with a known pulse, shared by the pulse tests (plus checks of the generator).
+"""Simulated colour traces with a known pulse, shared by the pulse tests (plus checks of the generator).
 
 The trace model (WP5 brief): DC per channel, 0.5 % AC in green with R:G:B AC ratios 0.5 : 1 : 0.6,
 72 bpm with respiratory HRV, a 0.3 Hz motion drift common to all channels, and per-sample noise at a
@@ -36,7 +36,7 @@ def rate_profile(t: np.ndarray, hr_bpm: float, hrv: float, ramp: tuple[float, fl
 def synth_traces(hr_bpm: float = HR_BPM, hrv: float = 0.03, drift_amp: float = 0.02, noise: float = 0.0005,
                  ac_g: float = 0.005, seed: int = 1, dur_s: float = DUR_S, fs: float = FS,
                  ramp: tuple[float, float] | None = None, dc: np.ndarray = DC) -> dict:
-    """{"t", "rgb" (T, 3), "volume" (T,), "hr_t" (T,) bpm} synthetic ROI-mean traces."""
+    """{"t", "rgb" (T, 3), "volume" (T,), "hr_t" (T,) bpm} simulated ROI-mean traces."""
     g = rng(seed, "synth_traces")
     t = np.arange(int(round(dur_s * fs))) / fs
     hr_t = rate_profile(t, hr_bpm, hrv, ramp)

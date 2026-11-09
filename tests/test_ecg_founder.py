@@ -2,7 +2,7 @@
 
 Known answers: the published architecture size (about 30.8 M parameters), 30 s at 300 Hz -> 15000 samples at
 500 Hz -> three 10 s windows, a resampled sine against the analytic sine, filter gains at 50 Hz / 10 Hz, an
-inverted synthetic ECG flipped back to the upright one, hand-computed window combinations, torch == ONNX Runtime.
+inverted simulated ECG flipped back to the upright one, hand-computed window combinations, torch == ONNX Runtime.
 """
 from __future__ import annotations
 
@@ -287,6 +287,6 @@ def test_export_tool_report(tmp_path):
     assert tool.main(["--random-weights", "--out", str(out)]) == 0
     rep = json.loads(out.with_suffix(".report.json").read_text())
     assert rep["pass"] is True and rep["opset"] == 17 and rep["weights"]["random"] is True
-    assert rep["checks"]["random"]["max_abs_dp"] < 1e-4 and rep["checks"]["synthetic"]["max_abs_dp"] < 1e-4
-    assert rep["checks"]["synthetic"]["n_windows"] == 24      # 4 strips x 2 filter settings x 3 windows
+    assert rep["checks"]["random"]["max_abs_dp"] < 1e-4 and rep["checks"]["simulated"]["max_abs_dp"] < 1e-4
+    assert rep["checks"]["simulated"]["n_windows"] == 24      # 4 strips x 2 filter settings x 3 windows
     assert "Concat" in rep["operators"] and rep["input"]["shape"] == ["batch", 1, 5000]

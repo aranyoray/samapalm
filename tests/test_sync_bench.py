@@ -1,17 +1,17 @@
-"""Bench self-test (section 4.5): 20/20 synthetic trials pass and the markdown is labelled synthetic."""
+"""Bench self-test (section 4.5): 20/20 simulated trials pass and the markdown is labelled simulated."""
 import re
 
 import pytest
 
 from palmppg.core.lint import scan_text
-from palmppg.ingest.bench import bench_trials_report, evaluate_trial, synthetic_bench_selftest
+from palmppg.ingest.bench import bench_trials_report, evaluate_trial, simulated_bench_selftest
 
 
 @pytest.fixture(scope="module")
 def selftest(tmp_path_factory):
     out = tmp_path_factory.mktemp("bench") / "bench_sync_report.md"
     from palmppg.core.config import load_pipeline_config
-    return synthetic_bench_selftest(n_trials=20, seed=20261017, cfg=load_pipeline_config(), out_path=out), out
+    return simulated_bench_selftest(n_trials=20, seed=20261017, cfg=load_pipeline_config(), out_path=out), out
 
 
 def test_selftest_passes_20_of_20(selftest):
@@ -27,11 +27,11 @@ def test_selftest_passes_20_of_20(selftest):
     assert out.exists()
 
 
-def test_markdown_labelled_synthetic_and_clean(selftest):
+def test_markdown_labelled_simulated_and_clean(selftest):
     res, out = selftest
     md = out.read_text()
     assert md == res["markdown"]
-    assert "SYNTHETIC SELF-TEST" in md and "no camera, buzzer or GPIO was involved" in md
+    assert "SIMULATED SELF-TEST" in md and "no camera, buzzer or GPIO was involved" in md
     assert "hardware acceptance still outstanding" in md
     assert "20/20 trials pass every criterion" in md
     assert md.count("| pass |") >= 20
@@ -45,7 +45,7 @@ def test_hardware_label_and_failure_listing(selftest):
     trials[1] = dict(trials[1], audio_edges=None)                     # no beeps recorded
     trials[2] = dict(trials[2], artefact={"pairs": trials[2]["artefact"]["pairs"][:1], "true_offset_s": None})
     md = bench_trials_report(trials, hardware=True, out_path=None)
-    assert "HARDWARE CAPTURES" in md and "SYNTHETIC" not in md
+    assert "HARDWARE CAPTURES" in md and "SIMULATED" not in md
     assert "trial 2, audio: no beeps detected" in md
     assert "NOT ACCEPTED" in md
     ev = evaluate_trial(trials[2], __import__("palmppg.core.config", fromlist=["x"]).load_pipeline_config())

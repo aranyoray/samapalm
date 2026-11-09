@@ -19,7 +19,7 @@ Rules:
 * Never use the banned vocabulary listed in palmppg/core/lint.py in code, comments, labels or docs:
   tests/test_core_lint.py enforces it repository-wide. Say "screening heuristic", "research use",
   "for clinician review" instead.
-* Tests must check real behaviour against independently known answers (synthetic signals with known heart rate,
+* Tests must check real behaviour against independently known answers (simulated signals with known heart rate,
   hand-computed thresholds), not just "runs without error".
 * When Python and Kotlin implement the same logic, Python generates golden fixtures (a tools/ script writes JSON
   under configs/) and both test suites check them.

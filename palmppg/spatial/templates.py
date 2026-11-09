@@ -2,7 +2,7 @@
 
 The template is a LEFT hand seen palm-on (palmar) in a non-mirrored image with the fingers pointing
 up: wrist near the bottom centre, four fingers above the palm, thumb to the image RIGHT (the
-left_thumb_right convention of `palmppg.spatial.landmarks`). It gives synthetic generators and tests a
+left_thumb_right convention of `palmppg.spatial.landmarks`). It gives simulated-data generators and tests a
 plausible landmark set; `transform_landmarks` turns it into other hands, poses and jitters.
 """
 from __future__ import annotations

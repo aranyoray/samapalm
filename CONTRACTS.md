@@ -41,7 +41,7 @@ wrong for your module, change it here first and note it in DECISIONS.md.
 | `palmppg/pulse` | WP5 | preprocessing, classical, sqi, fusion, learned, self-supervised, denoising |
 | `palmppg/beats` | WP6 | segmentation, morphology, apg, hrv, perfusion, resp, quality, pat |
 | `palmppg/features` | WP7 | feature store builders, registry population, stream isolation |
-| `palmppg/synth` | WP8 | synthetic participant generator, augmentation library, positive control |
+| `palmppg/synth` | WP8 | simulated participant generator, augmentation library, positive control |
 | `palmppg/models` | WP9 | tabular, temporal, cnn, transformer, graph, fm, fusion, uncertainty, track guard |
 | `palmppg/eval`, `palmppg/audits` | WP10 | metrics, bootstrap, non-inferiority, calibration, strata engine, go/no-go, audits |
 | `palmppg/capture` | WP12 | capture_pi.py, sync_marker.py, offload.sh, phone_settings.md, android/ |
@@ -226,7 +226,7 @@ described as product results in reports.
 |---|---|---|
 | `sync.json` | ingest.sync `write_sync_json` | full sync report: `grade`, `grade_detail`, `offsets.<stream>.{offset_s, drift, uncertainty_s, method}`, `pi_video`, `phone`, `ecg.{thumb_contact, wall_clock, anchor_comparison, thumb_lift, fine, map, xcorr}`, `residuals`, `flags` |
 | `pipeline.json`, `pipeline_rerun.json` | pipeline.run_participant | per-stage status, seconds, error and traceback; `ok`; per-camera QC summary |
-| `landmarks_provider.json` | pipeline.run_participant | ground-truth landmarks adapted to the SyntheticLandmarkProvider layout |
+| `landmarks_provider.json` | pipeline.run_participant | ground-truth landmarks adapted to the SimulatedLandmarkProvider layout |
 | `ecg/rate_series.parquet` | ecg.run | `t_ecg_s, bpm` at `sync.xcorr.rate_fs` |
 | `<camera>/mean_intensity.parquet`, `mean_intensity_grid.parquet` | ingest.run | per-frame and grid mean intensities per plane/channel |
 | `<camera>/ingest.json` | ingest.run | calibration, drops, flicker detail, EIS detail, proxy info |

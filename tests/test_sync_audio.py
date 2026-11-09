@@ -1,4 +1,4 @@
-"""Buzzer beep detection on synthetic 48 kHz audio: sub-millisecond onsets, absent patterns (section 4.2)."""
+"""Buzzer beep detection on simulated 48 kHz audio: sub-millisecond onsets, absent patterns (section 4.2)."""
 import numpy as np
 import pytest
 

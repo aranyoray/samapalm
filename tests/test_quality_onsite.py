@@ -1,4 +1,4 @@
-"""On-site quality grades (design section 4): known answers on synthetic signals, the recorder-file readers, the
+"""On-site quality grades (design section 4): known answers on simulated signals, the recorder-file readers, the
 Kardia PDF vector reader, and the shared fixtures that pin the Kotlin twin android/quality-core."""
 import base64
 import gzip
@@ -31,7 +31,7 @@ def case(cases, name):
     raise KeyError(name)
 
 
-# --------------------------------------------------------------------------- independent synthetic signals
+# --------------------------------------------------------------------------- independent simulated signals
 def synth_ecg(seconds=30.0, bpm=75.0, fs=FS, start=0.4, rr=None, noise=0.0, invert=False, seed=0):
     """Lead-I-like beats at known times: P, QRS and T as Gaussians. Returns (mv, beat times)."""
     rng = np.random.default_rng(seed)
@@ -425,4 +425,4 @@ def test_ecg_fixture_cases_from_the_samples_csv(c):
 def test_the_fixture_files_carry_no_participant_data():
     for p in sorted(FX.glob("*.json")):
         note = json.loads(p.read_text()).get("note", "")
-        assert "ynthetic" in note, f"{p.name} must say it is synthetic"
+        assert "simulated" in note.lower(), f"{p.name} must say it is simulated"

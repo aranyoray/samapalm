@@ -41,10 +41,10 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   sRGB 8-bit, H.264 CRF 23 encoded and decoded, then run through the phone pipeline). `pi_proxy` is how Pi
   data can feed `product_candidate` models ("Pi features restricted to what a phone can produce").
 - **D-007 (2026-10-17) ATC parser.** Implemented against the published ATC v1 chunk layout (CONTRACTS §3.6) with
-  tolerant chunk walking and a writer used for synthetic data. The first real Kardia export must be opened with
+  tolerant chunk walking and a writer used for simulated data. The first real Kardia export must be opened with
   `palmppg.ecg.atc.describe()` and the layout confirmed before any ECG result is trusted; the PDF digitiser is
   the fallback either way.
-- **D-008 (2026-10-17) SQI threshold is provisional** (0.35 on the 0..1 `snr_band` scale from synthetic and
+- **D-008 (2026-10-17) SQI threshold is provisional** (0.35 on the 0..1 `snr_band` scale from simulated and
   bench data) and is frozen at run-order step 3 (first 10 participants). It is recorded in `frozen_config.yaml`
   with `status: provisional`; the go/no-go thresholds in the same file are frozen now and signed.
 - **D-009 (2026-10-17) Environment.** Python 3.13 in a uv venv; CPU-only torch from PyPI (the PyTorch CPU index
@@ -54,7 +54,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   report (`palmppg/core/lint.py`), not by convention.
 - **D-011 (2026-10-17) Test stream guard.** `TestStreamGuard` refuses a second read of the test mount and logs
   every attempt with the frozen-config hash. Development and test rows never share a parquet file.
-- **D-012 (2026-10-17) Synthetic frame geometry.** Synthetic Pi clips default to 384x216 (same aspect, 1/4
+- **D-012 (2026-10-17) Simulated frame geometry.** Simulated Pi clips default to 384x216 (same aspect, 1/4
   scale, identical packing and Bayer order) so the positive control runs in minutes on 4 CPUs; the unpacker is
   tested at full 1536x864 geometry on a few frames.
 - **D-013 (2026-10-17) Registry merge rule.** `FeatureRegistry.register` compares only the track-relevant fields
@@ -77,7 +77,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   defaults; none is a performance threshold.
 - **D-017 (2026-10-17) Pi proxy CRF = 18.** The OnePlus 12 records at its highest bitrate (about 50 Mbit/s at
   1080p30), which is closer to libx264 CRF 18 than to CRF 23. CRF 23, 28 and 35 remain augmentation severities
-  (section 8). Measured on the small synthetic geometry (192x108, 20 s, 0.32 percent AC/DC): the proxy keeps the pulse
+  (section 8). Measured on the small simulated geometry (192x108, 20 s, 0.32 percent AC/DC): the proxy keeps the pulse
   at CRF 6 (AC 0.091 percent, spectral peak 96.7 bpm, SQI 0.63 against 0.101 percent / 96.7 bpm / 0.66 on the Pi
   planes) and loses it at CRF 23 (peak 55 bpm), because x264 skips near-static macroblocks when a frame is only a
   few macroblocks wide. The positive control therefore runs the proxy at the default geometry (384x216, 60 s) and
@@ -99,7 +99,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   values are not compared across foot definitions or across sync methods.
 - **D-021 (2026-10-18) Proxy at CRF 28.** On the default-geometry positive control the Pi->H.264 proxy recovered the
   pulse at CRF 18 (HR error 0.14 bpm, 61 of 63 feet) and lost it at CRF 28 (30.9 bpm against 70.6 bpm). This is a
-  measured property of the synthetic scene (AC/DC 0.5 percent on a static, low-texture palm), reported as a negative
+  measured property of the simulated scene (AC/DC 0.5 percent on a static, low-texture palm), reported as a negative
   result; it feeds the phone-app design (highest bitrate, no re-encoding) and the section 8 compression curves.
 - **D-022 (2026-10-18) Which camera answers which criterion.** The pilot go/no-go criteria are evaluated on the Pi
   (lab reference): coverage and the MST coverage drop on the Pi, pulse rate on the Pi (as the protocol states), and
@@ -109,20 +109,20 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   large-area candidates (whole-palm and the SNR-weighted multi-ROI fusion, per method; cfg `pulse.best_candidates`),
   with each candidate's SQI weighted by cross-method agreement on the rate (`pulse.best_selection: consensus_sqi`,
   tolerance 5 bpm). Taking the maximum SQI over all method x ROI pairs (about 130 candidates) selected noise: on one
-  synthetic participant the selected signal sat at 68 bpm while five whole-palm methods agreed on 93 bpm (truth
-  92.6 bpm). On the 30-participant synthetic cohort the change raised Pi pulse-rate agreement within 3 bpm on valid
+  simulated participant the selected signal sat at 68 bpm while five whole-palm methods agreed on 93 bpm (truth
+  92.6 bpm). On the 30-participant simulated cohort the change raised Pi pulse-rate agreement within 3 bpm on valid
   clips from 40 percent (first 10 participants) to 82 percent (all 30). Per-ROI signals are still written.
 - **D-024 (2026-10-18) Pulse rate for E1** = 60 / median beat interval over the analysis window, compared with the
   ECG median-interval rate. One missed beat doubles one interval and drags a mean-interval rate; the median is used
   on both sides so the comparison is like for like.
-- **D-025 (2026-10-18) SQI threshold calibration against null clips.** On synthetic null clips (AC/DC = 0, small
+- **D-025 (2026-10-18) SQI threshold calibration against null clips.** On simulated null clips (AC/DC = 0, small
   geometry) the best-SQI met the provisional threshold 0.35 on 3 of 8 Pi clips, 8 of 8 phone clips and 4 of 8 proxy
   clips, so the SQI criterion alone would have passed them. The Pi separates (null 95th percentile 0.38; 80 percent of pulse clips above it); the phone and proxy at
   320x180 and 192x108 with H.264 do not (signal and null distributions overlap). The study threshold stays
   provisional in the signed frozen config; at run-order step 3 it is set to the 95th percentile of best-SQI on bench
   null recordings (static white card in the box, recorded on both cameras), a procedure that uses no outcome.
   `palmppg.experiments.sqi_calibration` implements it.
-- **D-026 (2026-10-18) Bootstrap resamples in the synthetic report build.** The synthetic-run strata tables used 500
+- **D-026 (2026-10-18) Bootstrap resamples in the simulated report build.** The simulated-run strata tables used 500
   participant-bootstrap resamples to fit the build in about ten minutes on 4 CPUs; `palmppg reports build` uses cfg
   `bootstrap.n_resamples` (2000) by default, which is what every pilot table uses.
 - **D-027 (2026-10-18) Learned-model training re-initialises weights from the seed.** `train_model` resets every
@@ -186,7 +186,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   resting palm under `landmark_jitter_px_max: 3.0`. `exposure_us` is not in `frozen_config.yaml`, which is
   untouched. The measured value is recorded as `illumination.lux_measured` beside the design target rather than
   overwriting it. `palmppg/synth/bayer_video.py` deliberately keeps `exposure_us: 8000` as its default so the
-  committed synthetic run and its reports stay reproducible; the rig and the simulator are separate operating
+  committed simulated run and its reports stay reproducible; the rig and the simulator are separate operating
   points. **Not yet verified on hardware:** the positive control and the D-025 SQI null calibration must be re-run
   at the new operating point before the bench acceptance in run-order step 2, and `lux_measured` re-read at 10 ms.
 - **D-035 (2026-10-24) A phone torch is never a supplementary illuminant.** Raised when the 350 lux reading
@@ -226,7 +226,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   POS pulse and the de Haan and Jeanne (2013) SNR for the video, and a Pan-Tompkins style detector with the
   Orphanidou (2015) template correlation, Clifford (2012) kSQI and the Dash (2009) irregularity triple for the
   ECG. The thresholds in `VideoQualityConfig` and `EcgQualityConfig` are first guesses: they have been exercised
-  on synthetic signals with a known heart rate and beat count, never on a pilot clip, and D-008 requires them to
+  on simulated signals with a known heart rate and beat count, never on a pilot clip, and D-008 requires them to
   be calibrated once clips exist. The operator always decides; a grade only pre-selects. The irregularity flag
   never lowers a grade and never names a rhythm: it is a reason for a clinician to look, which is why the
   participant summary says "the time between beats varied" and nothing more.
@@ -286,7 +286,7 @@ rationale, and what would change it. Provisional entries are the ones waiting on
   not rejection. In a room lit by tubes that was enough to cost the beat detector, and the loss showed up as a
   low template match rather than as the mains artefact it was. A 50 Hz RBJ notch at Q 30 now runs ahead of the
   band-pass in both `palmppg/quality/onsite.py` and the Kotlin port, in the same order, so the two still agree
-  to 1e-9 on every fixture. On the synthetic cases the clean strip barely moves (template match 0.9972 to
+  to 1e-9 on every fixture. On the simulated cases the clean strip barely moves (template match 0.9972 to
   0.9973) and the noisy one improves (0.386 to 0.395, and three mains-driven false beats disappear). The
   frequency is config, not a constant, because a 60 Hz site needs the other value; the existing 50 Hz notch in
   `FounderPrep` is inherited verbatim from upstream ECGFounder and is left alone. Raw files stay unfiltered:

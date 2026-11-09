@@ -1,4 +1,4 @@
-"""PDF digitiser on a rendered synthetic Kardia-style strip: R-peak times within 20 ms of the source,
+"""PDF digitiser on a rendered simulated Kardia-style strip: R-peak times within 20 ms of the source,
 amplitude within 15 %, grid calibration and deskew recovered (protocol 6.4 fallback path)."""
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from palmppg.ecg.pdf_digitiser import (
     grid_bbox,
     line_pitch_px,
     rasterise_pdf,
-    render_synthetic_strip_pdf,
+    render_simulated_strip_pdf,
 )
 from palmppg.ecg.rpeaks import detect_rpeaks
 from tests.test_ecg_helpers import nearest_offsets
@@ -42,7 +42,7 @@ def _compare(src, dig, cfg):
 
 def test_digitised_strip_matches_source_within_tolerances(tmp_path, cfg):
     src = _source(30, 72, 5)
-    info = render_synthetic_strip_pdf(tmp_path / "strip.pdf", src, FS, skew_deg=0.6)
+    info = render_simulated_strip_pdf(tmp_path / "strip.pdf", src, FS, skew_deg=0.6)
     assert info["rows"] == 3 and info["pages"] == 1 and info["row_seconds"] == 10.0
     res = digitise_pdf(tmp_path / "strip.pdf", fs_out=FS)
     assert res["ecg_digitised"] is True and res["fs"] == FS and res["rows_found"] == 3 and res["n_pages"] == 1
@@ -66,7 +66,7 @@ def test_digitised_strip_matches_source_within_tolerances(tmp_path, cfg):
 
 def test_partial_last_row_and_negative_skew(tmp_path, cfg):
     src = _source(25, 60, 2)
-    render_synthetic_strip_pdf(tmp_path / "s.pdf", src, FS, skew_deg=-1.2)
+    render_simulated_strip_pdf(tmp_path / "s.pdf", src, FS, skew_deg=-1.2)
     res = digitise_pdf(tmp_path / "s.pdf", fs_out=FS)
     assert res["rows_found"] == 3 and [r["full"] for r in res["rows"]] == [True, True, False]
     assert abs(res["duration_s"] - (src.size - 1) / FS) < 0.02
@@ -78,7 +78,7 @@ def test_partial_last_row_and_negative_skew(tmp_path, cfg):
 
 def test_two_pages_and_fast_rate(tmp_path, cfg):
     src = _source(60, 110, 13)
-    info = render_synthetic_strip_pdf(tmp_path / "two.pdf", src, FS)
+    info = render_simulated_strip_pdf(tmp_path / "two.pdf", src, FS)
     assert info["pages"] == 2 and info["rows"] == 6
     res = digitise_pdf(tmp_path / "two.pdf", fs_out=FS)
     assert res["n_pages"] == 2 and res["rows_found"] == 6 and abs(res["samples_mv"].size - src.size) <= 2
@@ -89,7 +89,7 @@ def test_two_pages_and_fast_rate(tmp_path, cfg):
 
 def test_pixel_classes_grid_pitch_and_errors(tmp_path):
     src = _source(10, 70, 1)
-    render_synthetic_strip_pdf(tmp_path / "one.pdf", src, FS)
+    render_simulated_strip_pdf(tmp_path / "one.pdf", src, FS)
     rgb = rasterise_pdf(tmp_path / "one.pdf", 300)[0]
     grid, trace = classify_pixels(rgb)
     assert not (grid & trace).any() and trace.sum() > 1000 and grid.sum() > trace.sum()
@@ -101,7 +101,7 @@ def test_pixel_classes_grid_pitch_and_errors(tmp_path):
     assert pitch["residual_px"] < 0.5
     assert abs(pitch["first_px"] + x0 - 20.0 * 300 / MM_PER_INCH) < 1.0
     with pytest.raises(ValueError):
-        render_synthetic_strip_pdf(tmp_path / "wide.pdf", src, FS, row_seconds=20.0)
+        render_simulated_strip_pdf(tmp_path / "wide.pdf", src, FS, row_seconds=20.0)
     # a page without a grid cannot be digitised
     from reportlab.pdfgen import canvas
 

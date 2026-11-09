@@ -34,7 +34,7 @@ AUDIO_CHUNK = 4800
 PHONE_MONO0_NS = 9_000_000_000_000
 DEFAULT_PHONE_OPTIONS = {
     "pre_roll_s": 1.5, "post_roll_s": 1.0, "preset": "veryfast", "bitrate_mbps": 20.0, "iso": 400, "exposure_ns": 8_000_000,
-    "app": "OpenCamera", "device_model": "OnePlus 12", "os_build": "OxygenOS 15.0 (synthetic)",
+    "app": "OpenCamera", "device_model": "OnePlus 12", "os_build": "OxygenOS 15.0 (simulated)",
     "full_well_e": 3000.0, "read_noise": 0.004, "target_skin_g": 0.42, "flicker_pct": 0.0, "drift_pct": 0.0,
     "audio_level": 0.5, "audio_noise_dbfs": -45.0, "audio_ramp_s": 0.005, "acoustic_delay_s": 0.001,
     "phone_wall_err_s": 0.0, "vfr_jitter_ms": 0.0, "custom_recorder": False, "perspective": 0.03,
@@ -275,7 +275,7 @@ def write_phone_clip(out_dir: str | Path, clip_id: str, scene: ps.PalmScene, pul
         "exposure_ns": int(opt["exposure_ns"]), "wb_locked": True, "focus_locked": True, "stabilisation": False, "hdr": False,
         "torch": "on" if torch else "off", "capture_mode": extra.get("capture_mode", cfg.get("study.capture_mode")),
         "start_wall_ns": start_wall_ns, "led_block": dict(view["led_block"]), "study_id": extra.get("study_id", "SWHT-PP-003-0000"),
-        "clip_id": clip_id, "codec": "h264", "crf": crf, "synthetic": True,
+        "clip_id": clip_id, "codec": "h264", "crf": crf, "simulated": True,
     }
     (out_dir / f"{clip_id}_meta.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     if opt["custom_recorder"]:
@@ -286,7 +286,7 @@ def write_phone_clip(out_dir: str | Path, clip_id: str, scene: ps.PalmScene, pul
     truth = {
         "clip_id": clip_id, "study_id": meta["study_id"], "camera": "phone", "fps": float(fps), "n_frames": n_frames,
         "size": [w, h], "crf": crf, "torch": torch, "pts_s": pts.tolist(), "t_ref_s": t_ref.tolist(),
-        "clock_map": {"stream": "phone_video", "offset_s": float(offset_s), "drift": float(drift), "method": "synthetic_truth"},
+        "clock_map": {"stream": "phone_video", "offset_s": float(offset_s), "drift": float(drift), "method": "simulated_truth"},
         "waveform_at_frames": w_all.tolist(), "led_intervals_pts_s": led_pts, "beep_intervals_pts_s": beep_pts,
         "led_schedule_ref_s": schedule, "thumb_contact_pts_s": (contact_s - offset_s) / (1 + drift),
         "thumb_lift_pts_s": ((lift_s - offset_s) / (1 + drift)) if lift_s is not None else None,

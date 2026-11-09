@@ -10,14 +10,14 @@ import pytest
 from palmppg.core.paths import WorkLayout
 from palmppg.core.tracks import REGISTRY
 from palmppg.ecg.run import ECGInputError, default_search_from_s, process_ecg
-from tests.test_ecg_helpers import FS, add_lift_artefact, synthetic_ecg, write_participant
+from tests.test_ecg_helpers import FS, add_lift_artefact, simulated_ecg, write_participant
 
 CLINICIAN = {"rhythm": "Atrial fibrillation", "ecg_hr": 66, "lead12_obtained": True, "adverse_event": None,
              "reader_id": "R2", "read_date": "2026-10-17"}
 
 
 def test_process_ecg_from_atc(tmp_path, cfg):
-    syn = synthetic_ecg(duration_s=60.0, hr_bpm=66.0, rsa_bpm=2.0, noise_mv=0.01, seed=21)
+    syn = simulated_ecg(duration_s=60.0, hr_bpm=66.0, rsa_bpm=2.0, noise_mv=0.01, seed=21)
     x, t_step = add_lift_artefact(syn["x"], FS, 54.2, step_mv=3.0, ring_mv=1.5)
     pp = write_participant(tmp_path / "study", "SWHT-PP-003-0001", ecg_mv=x, clinician=CLINICIAN, app_label="Possible AF")
     work = WorkLayout(tmp_path / "work")
@@ -62,7 +62,7 @@ def test_process_ecg_from_atc(tmp_path, cfg):
 
 
 def test_process_ecg_from_pdf_fallback(tmp_path, cfg):
-    syn = synthetic_ecg(duration_s=30.0, hr_bpm=78.0, rsa_bpm=2.0, seed=22)
+    syn = simulated_ecg(duration_s=30.0, hr_bpm=78.0, rsa_bpm=2.0, seed=22)
     pp = write_participant(tmp_path / "study", "SWHT-PP-003-0002", pdf_mv=syn["x"], clinician={"rhythm": "sinus", "ecg_hr": 78, "lead12_obtained": False})
     clip_dir = WorkLayout(tmp_path / "work").clip("SWHT-PP-003-0002", "clip1")
     res = process_ecg(pp, clip_dir, cfg)
@@ -97,7 +97,7 @@ def test_missing_ecg_and_search_defaults(tmp_path, cfg):
 
 
 def test_caller_search_window_and_prefer_pdf(tmp_path, cfg):
-    syn = synthetic_ecg(duration_s=40.0, hr_bpm=70.0, seed=23)
+    syn = simulated_ecg(duration_s=40.0, hr_bpm=70.0, seed=23)
     x, t_step = add_lift_artefact(syn["x"], FS, 30.0, step_mv=2.0)
     pp = write_participant(tmp_path / "study", "SWHT-PP-003-0004", ecg_mv=x, pdf_mv=syn["x"][:int(20 * FS)], clinician=CLINICIAN)
     clip_dir = WorkLayout(tmp_path / "work").clip("SWHT-PP-003-0004", "clip1")

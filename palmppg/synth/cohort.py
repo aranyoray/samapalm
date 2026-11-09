@@ -1,8 +1,8 @@
-"""Build a synthetic study_root (protocol section 3 layout) with known truth for every participant.
+"""Build a simulated study_root (protocol section 3 layout) with known truth for every participant.
 
 Protocol sections served: 3 (clock_sync_log.csv, units/unit_01 calibration files, participants/<id>/ with
 crf.json, clinician.json, pi/, phone/, ecg/), 4.1 (daily clock offsets of the Pi and the Kardia tablet
-against the phone), 8 / 12 run-order step 1 (synthetic data the whole pipeline is exercised on first).
+against the phone), 8 / 12 run-order step 1 (simulated data the whole pipeline is exercised on first).
 
 Streams frames: every clip is generated and written frame by frame (bayer_video, phone_video); nothing holds
 a clip in memory. The default profile follows cfg `synth.*` (384 x 216, 60 s; DECISIONS D-012); `small=True`
@@ -95,7 +95,7 @@ def write_unit_calibration(unit_dir: Path, prof: dict, cfg, r: np.random.Generat
     lux_nominal = 400.0
     grid = [[round(float(lux_nominal * illum[int((i + 0.5) * h / rows), int((j + 0.5) * w / cols)]), 1) for j in range(cols)] for i in range(rows)]
     (unit_dir / "luxmap.json").write_text(json.dumps({"lux_grid": grid, "rows": rows, "cols": cols, "lux_nominal": lux_nominal,
-                                                      "unit_id": unit_dir.name, "synthetic": True}, indent=1), encoding="utf-8")
+                                                      "unit_id": unit_dir.name, "simulated": True}, indent=1), encoding="utf-8")
     pv.write_phone_flatfield(unit_dir / "phone_flatfield.mp4", (prof["phone_width"], prof["phone_height"]), prof["fps"], 2.0, cfg, r,
                              crf=prof["phone_crf"])
     return {"dark_mean_dn": float(dark_dn.mean()), "flat_centre_dn": float(flat_dn[h // 2 - 4:h // 2 + 4, w // 2 - 4:w // 2 + 4].mean()),
@@ -218,13 +218,13 @@ def make_cohort(root: str | Path, n_participants: int, seed: int, cfg=None, over
             print(f"{tr['study_id']}: {tr['build_seconds']:.1f} s", flush=True)
     summary = {"root": str(root), "n_participants": int(n_participants), "seed": int(seed), "profile": prof, "clock": clock,
                "unit": unit_info, "participants": truths, "elapsed_s": time.time() - t_start, "tone_label": ps.TONE_LABEL,
-               "note": "synthetic cohort: melanin levels are a synthetic tone shift and support no equity claim"}
+               "note": "simulated cohort: melanin levels are a simulated tone shift and support no equity claim"}
     (root / "cohort_truth.json").write_text(json.dumps(summary, indent=1, default=bv._json_default), encoding="utf-8")
     return summary
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Build a synthetic SWHT-PP-003 study_root with known truth.")
+    ap = argparse.ArgumentParser(description="Build a simulated SWHT-PP-003 study_root with known truth.")
     ap.add_argument("--root", required=True)
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--seed", type=int, default=1)

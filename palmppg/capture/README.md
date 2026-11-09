@@ -76,7 +76,7 @@ Scoring and the report:
    - the simulated ECG artefact aligns with the video tap within one frame (`sync.fine_anchor_uncertainty_s`).
 9. The command writes the one-page report `reports/bench_sync_report.md` with the per-trial residuals, the
    pass counts per criterion, and the verdict. Its header says whether the trials were hardware captures or
-   the synthetic self-test (`palmppg bench selftest`), which exercises the detectors only and is not an
+   the simulated self-test (`palmppg bench selftest`), which exercises the detectors only and is not an
    acceptance.
 
 How to file the bench report:

@@ -1,4 +1,4 @@
-"""Section 8 synthetic augmentation study on the first clips of the pilot/development stream.
+"""Section 8 simulated augmentation study on the first clips of the pilot/development stream.
 
 For every clip, every transform of the section 8 library and every severity, the raw Pi frames are transformed and
 re-analysed with the classical methods; the measured pulse rate, SQI, coverage and morphology stability are compared
@@ -9,7 +9,7 @@ with the same clip untransformed. Outputs (work/augmentation/):
   benign_check.md       benign transforms checked for rate preservation within cfg augment.rate_preservation_bpm
   ablation.json / .md   training with versus without augmented copies (pulse-rate and BP-tertile tasks)
 Rules kept: development/pilot clips only; augmented copies never sit in the validation fold of their source clip;
-no temporal smoothing or interpolation (asserted by the library); synthetic tone shifts support no equity claim.
+no temporal smoothing or interpolation (asserted by the library); simulated tone shifts support no equity claim.
 """
 from __future__ import annotations
 
@@ -260,12 +260,12 @@ def run_augmentation_study(layout: StudyLayout, work: WorkLayout, cfg: Config, n
     benign = curves[curves["transform"].isin(BENIGN)]
     lines = ["# Augmentation study: corruptions ranked by the pulse-rate error they cause", "",
              (f"{df['study_id'].nunique()} clips, {len(names)} transforms, methods {', '.join(methods)}. Error = |rate - reference| in bpm, "
-              "worst severity, median over clips and methods. Reference = generator truth on synthetic clips, ECG median HR otherwise."), "",
+              "worst severity, median over clips and methods. Reference = generator truth on simulated clips, ECG median HR otherwise."), "",
              "| rank | transform | worst median error (bpm) |", "|---|---|---|"]
     lines += [f"| {i + 1} | {k} | {v:.2f} |" for i, (k, v) in enumerate(rank.items())]
     base_err = curves[curves["transform"] == "none"]["median_abs_err_vs_ref_bpm"].median()
     lines += ["", f"Untransformed clips: median error {base_err:.2f} bpm.", "",
-              "Synthetic tone shift rows are labelled `SyntheticToneShift` and support no equity claim."]
+              "Simulated tone shift rows are labelled `SimulatedToneShift` and support no equity claim."]
     (out_dir / "ranking.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     bl = ["# Benign transforms: is the rate recovered from the original preserved?", "", f"Tolerance {tol} bpm (cfg augment.rate_preservation_bpm).", "",
           "| transform | severity | level | method | median abs change from original (bpm) | preserved |", "|---|---|---|---|---|---|"]

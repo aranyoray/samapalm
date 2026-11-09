@@ -1,4 +1,4 @@
-"""Equity audit end to end on synthetic data with a planted MST effect and without; MST leakage probe."""
+"""Equity audit end to end on simulated data with a planted MST effect and without; MST leakage probe."""
 from __future__ import annotations
 
 import numpy as np

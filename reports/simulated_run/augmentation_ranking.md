@@ -1,6 +1,6 @@
 # Augmentation study: corruptions ranked by the pulse-rate error they cause
 
-12 clips, 23 transforms, methods GREEN, CHROM, POS, PBV. Error = |rate - reference| in bpm, worst severity, median over clips and methods. Reference = generator truth on synthetic clips, ECG median HR otherwise.
+12 clips, 23 transforms, methods GREEN, CHROM, POS, PBV. Error = |rate - reference| in bpm, worst severity, median over clips and methods. Reference = generator truth on simulated clips, ECG median HR otherwise.
 
 | rank | transform | worst median error (bpm) |
 |---|---|---|
@@ -20,7 +20,7 @@
 | 14 | FrameDrops | 1.39 |
 | 15 | Quantise8bit | 1.39 |
 | 16 | ReadNoise | 1.39 |
-| 17 | SyntheticToneShift | 1.39 |
+| 17 | SimulatedToneShift | 1.39 |
 | 18 | IlluminantShift | 1.38 |
 | 19 | VignettingGain | 1.37 |
 | 20 | MotionBlur | 1.24 |
@@ -30,4 +30,4 @@
 
 Untransformed clips: median error 0.82 bpm.
 
-Synthetic tone shift rows are labelled `SyntheticToneShift` and support no equity claim.
+Simulated tone shift rows are labelled `SimulatedToneShift` and support no equity claim.

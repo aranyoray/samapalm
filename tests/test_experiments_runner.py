@@ -33,7 +33,7 @@ def ctx(tmp_path, cfg):
     frames = _frames()
     for cam, df in frames.items():
         restore_registry(df.columns, cam)
-    return Context(cfg, tmp_path, frames=frames, synthetic=True)
+    return Context(cfg, tmp_path, frames=frames, simulated=True)
 
 
 def test_e5_has_both_baselines_and_counts_failures(ctx):
@@ -73,6 +73,6 @@ def test_gonogo_reads_results_and_never_changes_thresholds(ctx, tmp_path):
     e1_pulse_rate(ctx)
     e5_static_vs_temporal(ctx)
     before = verify_frozen()["signature"]["sha256"]
-    g = run_gonogo(ctx.cfg, interim=True, work_root=tmp_path, synthetic=True)
+    g = run_gonogo(ctx.cfg, interim=True, work_root=tmp_path, simulated=True)
     assert verify_frozen()["signature"]["sha256"] == before
     assert "coverage_overall_pct" in g["markdown"] and isinstance(g["go"], bool)

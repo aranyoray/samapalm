@@ -1,4 +1,4 @@
-> Synthetic cohort: these pages measure the pipeline on generated data and are not study results.
+> Simulated cohort: these pages measure the pipeline on generated data and are not study results.
 
 # STARD flow (pilot)
 

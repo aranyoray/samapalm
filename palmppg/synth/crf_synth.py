@@ -1,4 +1,4 @@
-"""CRF, clinician read and latent truth for a synthetic participant (protocol 3.1, CONTRACTS 3.7).
+"""CRF, clinician read and latent truth for a simulated participant (protocol 3.1, CONTRACTS 3.7).
 
 Protocol sections served: 3.1 (every CRF field by name, three bracketing cuff readings with an occasional
 BP1 outlier, optional chart values), 7 (population priors that populate every stratum: MST bands mostly
@@ -205,7 +205,7 @@ def clinician_from_latent(latent: dict, rng: np.random.Generator, cfg, ecg_hr_bp
 
 
 def sample_crf(study_id: str, rng: np.random.Generator, cfg, stream: str = "pilot", overrides: dict | None = None) -> tuple[dict, dict, dict]:
-    """Sample (crf, clinician, latent) for one synthetic participant. Section 3.1 / 7 / 9 E7."""
+    """Sample (crf, clinician, latent) for one simulated participant. Section 3.1 / 7 / 9 E7."""
     latent = sample_latent(study_id, rng, cfg, overrides)
     crf = crf_from_latent(latent, rng, cfg, stream=stream)
     clin = clinician_from_latent(latent, rng, cfg)

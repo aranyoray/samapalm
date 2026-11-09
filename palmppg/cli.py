@@ -1,6 +1,6 @@
 """Command-line entry point. Sub-commands are wired to the pipeline, experiments and reports modules.
 
-    palmppg synth cohort --root work/synthetic --n 3 [--small]
+    palmppg synth cohort --root work/simulated --n 3 [--small]
     palmppg synth positive-control [--out work/positive_control]
     palmppg bench selftest | bench report <trials_dir>
     palmppg pipeline run --study-root <dir> [--limit N] [--study-id ID]
@@ -29,10 +29,10 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="palmppg", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("synth", help="synthetic data and positive control")
+    s = sub.add_parser("synth", help="simulated data and positive control")
     ss = s.add_subparsers(dest="sub", required=True)
     c = ss.add_parser("cohort")
-    c.add_argument("--root", default="work/synthetic")
+    c.add_argument("--root", default="work/simulated")
     c.add_argument("--n", type=int, default=3)
     c.add_argument("--small", action="store_true")
     c.add_argument("--seed", type=int, default=1)
@@ -62,7 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
     fb.add_argument("--study-root", required=True)
     _add_common(fb)
 
-    a = sub.add_parser("augment", help="synthetic augmentation study")
+    a = sub.add_parser("augment", help="simulated augmentation study")
     asub = a.add_subparsers(dest="sub", required=True)
     ast = asub.add_parser("study")
     ast.add_argument("--study-root", required=True)

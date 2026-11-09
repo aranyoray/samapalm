@@ -1,9 +1,9 @@
-"""Kardia PDF strip fallback: a synthetic strip renderer and the digitiser (protocol section 6.4).
+"""Kardia PDF strip fallback: a simulated strip renderer and the digitiser (protocol section 6.4).
 
 "Fallback PDF digitiser: deskew, isolate the trace at 25 mm/s and 10 mm/mV, extract and resample to
-300 Hz, set ecg_digitised = true; unit-test it on a synthetic PDF you render yourself."
+300 Hz, set ecg_digitised = true; unit-test it on a simulated PDF you render yourself."
 
-Renderer (`render_synthetic_strip_pdf`, reportlab): a Kardia-like page with a red/pink 1 mm / 5 mm paper
+Renderer (`render_simulated_strip_pdf`, reportlab): a Kardia-like page with a red/pink 1 mm / 5 mm paper
 grid, a dark trace drawn at true scale (speed_mm_s, gain_mm_mv), several rows per page, header text, row
 labels, and an optional page skew for the deskew test.
 
@@ -57,7 +57,7 @@ class DigitiserError(RuntimeError):
 
 
 # =========================================================================== renderer
-def render_synthetic_strip_pdf(path: str | Path, ecg_mv, fs: float, speed_mm_s: float = DEFAULT_SPEED_MM_S,
+def render_simulated_strip_pdf(path: str | Path, ecg_mv, fs: float, speed_mm_s: float = DEFAULT_SPEED_MM_S,
                                gain_mm_mv: float = DEFAULT_GAIN_MM_MV, rows: int | None = None,
                                row_seconds: float = 10.0, row_pitch_mm: float = 30.0,
                                margins_mm: tuple[float, float, float, float] = (20.0, 12.0, 22.0, 12.0),
@@ -65,7 +65,7 @@ def render_synthetic_strip_pdf(path: str | Path, ecg_mv, fs: float, speed_mm_s: 
                                trace_width_mm: float = 0.25, trace_rgb=(0.10, 0.10, 0.10),
                                fine_rgb=(1.0, 0.76, 0.76), bold_rgb=(1.0, 0.50, 0.50),
                                fine_width_mm: float = 0.15, bold_width_mm: float = 0.30,
-                               title: str = "Single-lead strip (synthetic, lead I)") -> dict:
+                               title: str = "Single-lead strip (simulated, lead I)") -> dict:
     """Render `ecg_mv` (millivolts at `fs` Hz) as a Kardia-like PDF strip at true scale (protocol 6.4 test).
 
     Rows of `row_seconds` (or `rows` equal rows) stacked `row_pitch_mm` apart on a red/pink 1 mm / 5 mm

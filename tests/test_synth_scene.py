@@ -1,4 +1,4 @@
-"""Synthetic palm scene ground truth (palmppg.synth.palm_scene)."""
+"""Simulated palm scene ground truth (palmppg.synth.palm_scene)."""
 import numpy as np
 import pytest
 
@@ -48,7 +48,7 @@ def test_landmarks_in_mediapipe_order_on_the_hand(scene):
     assert scene.landmarks[12, 1] < scene.landmarks[9, 1] < scene.landmarks[0, 1]   # middle tip above its MCP above the wrist
     assert scene.landmarks[4, 0] < scene.landmarks[0, 0]                           # thumb tip left of the wrist
     rec = ps.landmarks_record(scene, "clip1")
-    assert rec["is_left"] and rec["palmar"] and rec["source"] == "synthetic_truth"
+    assert rec["is_left"] and rec["palmar"] and rec["source"] == "simulated_truth"
     assert all(f"lm{i:02d}_{c}" in rec for i in range(21) for c in "xyz")
 
 

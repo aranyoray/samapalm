@@ -20,13 +20,13 @@ from palmppg.ecg.atc import (
     walk_blocks,
     write_atc,
 )
-from tests.test_ecg_helpers import synthetic_ecg
+from tests.test_ecg_helpers import simulated_ecg
 
 TZ = dt.timezone(dt.timedelta(hours=5, minutes=30))
 
 
 def _signal(seconds=10.0):
-    return synthetic_ecg(duration_s=seconds, hr_bpm=70.0, seed=1)["x"]
+    return simulated_ecg(duration_s=seconds, hr_bpm=70.0, seed=1)["x"]
 
 
 def test_roundtrip_samples_fs_start_time_info_and_blocks(tmp_path):

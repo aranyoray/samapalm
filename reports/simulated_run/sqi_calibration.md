@@ -1,6 +1,6 @@
 # SQI threshold calibration against null clips
 
-Synthetic null clips (AC/DC = 0) and synthetic pulse clips at the small test geometry. This calibrates the procedure, not the study threshold, which is frozen at run-order step 3 from bench null recordings on the real unit.
+Simulated null clips (AC/DC = 0) and simulated pulse clips at the small test geometry. This calibrates the procedure, not the study threshold, which is frozen at run-order step 3 from bench null recordings on the real unit.
 
 Provisional threshold 0.35. Null quantile 95.
 

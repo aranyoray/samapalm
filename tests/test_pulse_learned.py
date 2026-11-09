@@ -1,4 +1,4 @@
-"""Learned extractors: forward shapes, 2-epoch CPU training reduces the loss on a synthetic video with a
+"""Learned extractors: forward shapes, 2-epoch CPU training reduces the loss on a simulated video with a
 known pulse, participant-grouped split enforcement, dataset target alignment, inference (6.3, 10, 11.1)."""
 import json
 import time
@@ -18,7 +18,7 @@ from palmppg.pulse.learned.dataset import (  # noqa: E402
     assert_participant_disjoint,
     participant_folds,
     split_records,
-    synthetic_video_clip,
+    simulated_video_clip,
 )
 from palmppg.pulse.learned.infer import infer_clip, predict_pulse  # noqa: E402
 from palmppg.pulse.learned.train import TrainConfig, evaluate, hr_mae_bpm, train_model  # noqa: E402
@@ -36,7 +36,7 @@ def _kw(name):
 def clips():
     out = []
     for i, (hr, seed) in enumerate([(66.0, 1), (84.0, 2), (75.0, 3)]):
-        video, pulse = synthetic_video_clip(3 * T, 30.0, hr, seed)
+        video, pulse = simulated_video_clip(3 * T, 30.0, hr, seed)
         out.append(ClipRecord(f"SWHT-PP-003-000{i}", video=video, target=pulse, camera="phone"))
     return out
 
@@ -46,8 +46,8 @@ def datasets(clips):
     return ClipDataset(clips[:2], T, T), ClipDataset(clips[2:], T, T)
 
 
-def test_synthetic_clip_has_known_pulse_in_green():
-    video, pulse = synthetic_video_clip(90, 30.0, 72.0, 0)
+def test_simulated_clip_has_known_pulse_in_green():
+    video, pulse = simulated_video_clip(90, 30.0, 72.0, 0)
     assert video.shape == (90, H, W, 3) and video.dtype == np.uint8 and pulse.shape == (90,)
     g = video[:, 30:42, 56:72, 1].astype(float).mean(axis=(1, 2))
     assert np.corrcoef(-g, pulse)[0, 1] > 0.9                                   # intensity falls with volume
@@ -114,7 +114,7 @@ def test_dataset_reads_targets_from_pulse_parquet_and_zarr(tmp_path):
     import zarr
 
     n = 96
-    video, pulse = synthetic_video_clip(n, 30.0, 72.0, 5)
+    video, pulse = simulated_video_clip(n, 30.0, 72.0, 5)
     t = np.arange(n) / 30.0
     z = zarr.create_array(store=str(tmp_path / "proxy_128x72.zarr"), shape=video.shape, chunks=(32, H, W, 3), dtype="uint8")
     z[:] = video

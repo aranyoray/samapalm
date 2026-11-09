@@ -61,11 +61,11 @@ def rate_error(frames, mask, pt, cfg):
 def test_registry_covers_section_8_and_levels_come_from_cfg(cfg):
     expected = {"Rotate", "Translate", "Scale", "Perspective", "MicroJitter", "ExposureShift", "IlluminantShift", "VignettingGain",
                 "MovingShadow", "ShotNoise", "ReadNoise", "Quantise8bit", "Defocus", "MotionBlur", "FrameDrops", "TimestampJitter",
-                "VFRResample", "FlickerModulation", "H264Compress", "H265Compress", "Downscale", "ChromaSubsample", "SyntheticToneShift"}
+                "VFRResample", "FlickerModulation", "H264Compress", "H265Compress", "Downscale", "ChromaSubsample", "SimulatedToneShift"}
     assert set(ag.TRANSFORMS) == expected
     grid = ag.severity_grid(cfg)
     assert grid["Rotate"] == cfg.get("augment.rotation_deg") and grid["H264Compress"] == cfg.get("augment.h264_crf")
-    assert grid["SyntheticToneShift"] == cfg.get("augment.melanin_levels") and len(grid["Downscale"]) == 2
+    assert grid["SimulatedToneShift"] == cfg.get("augment.melanin_levels") and len(grid["Downscale"]) == 2
     assert all(not cls.temporal_interpolation for cls in ag.TRANSFORMS.values())
     with pytest.raises(ValueError):
         ag.Rotate(severity_index=7, cfg=cfg)
@@ -84,8 +84,8 @@ def test_each_transform_preserves_count_logs_params_and_keeps_rate_at_mildest_se
         assert len(out) == N
     if name in ("H264Compress", "H265Compress", "ChromaSubsample"):
         assert out[0].kind == "rgb" and "pi_proxy" in out[0].labels
-    if name == "SyntheticToneShift":
-        assert "synthetic tone shift" in out[0].labels and entry["label"] == "synthetic tone shift"
+    if name == "SimulatedToneShift":
+        assert "simulated tone shift" in out[0].labels and entry["label"] == "simulated tone shift"
     assert rate_error(out, pulsed["mask"], pulsed["pt"], cfg) <= cfg.get("augment.rate_preservation_bpm")
 
 
@@ -94,7 +94,7 @@ def test_each_transform_preserves_count_logs_params_and_keeps_rate_at_mildest_se
 # codecs (CRF 35 removes a sub-DN modulation from static blocks; the degradation is recorded, not assumed benign).
 BENIGN_AT_MAX = ["Rotate", "Translate", "Scale", "Perspective", "MicroJitter", "IlluminantShift", "VignettingGain", "ShotNoise",
                  "ReadNoise", "Quantise8bit", "Defocus", "MotionBlur", "FrameDrops", "TimestampJitter", "VFRResample",
-                 "FlickerModulation", "Downscale", "ChromaSubsample", "SyntheticToneShift"]
+                 "FlickerModulation", "Downscale", "ChromaSubsample", "SimulatedToneShift"]
 
 
 @pytest.mark.parametrize("name", BENIGN_AT_MAX)
@@ -137,18 +137,18 @@ def test_exposure_shift_down_is_benign_and_up_saturates(pulsed, cfg):
 
 
 def test_rgb_frames_through_photometric_and_codec_paths(pulsed, cfg):
-    for spec in (("ExposureShift", 0, {"sign": -1}), ("H264Compress", 0), ("SyntheticToneShift", 1), ("Downscale", 1)):
+    for spec in (("ExposureShift", 0, {"sign": -1}), ("H264Compress", 0), ("SimulatedToneShift", 1), ("Downscale", 1)):
         out = list(ag.apply_chain(iter(pulsed["rgb"]), [spec], rng(6, spec[0]), None, cfg))
         assert len(out) == N and out[0].kind == "rgb" and out[0].data.dtype == np.uint8
         assert rate_error(out, pulsed["mask"], pulsed["pt"], cfg) <= cfg.get("augment.rate_preservation_bpm")
-    tone = list(ag.apply_chain(iter(pulsed["rgb"][:5]), [("SyntheticToneShift", 2)], rng(6, "t"), None, cfg))
+    tone = list(ag.apply_chain(iter(pulsed["rgb"][:5]), [("SimulatedToneShift", 2)], rng(6, "t"), None, cfg))
     lin_in, lin_out = pulsed["rgb"][0].linear(), tone[0].linear()
     m = pulsed["mask"]
     ratio = [lin_out[..., c][m].mean() / lin_in[..., c][m].mean() for c in range(3)]
     assert ratio[2] < ratio[1] < ratio[0] < 1.0
 
 
-@pytest.mark.parametrize("name", ["Rotate", "MicroJitter", "ShotNoise", "Defocus", "FlickerModulation", "SyntheticToneShift", "MovingShadow"])
+@pytest.mark.parametrize("name", ["Rotate", "MicroJitter", "ShotNoise", "Defocus", "FlickerModulation", "SimulatedToneShift", "MovingShadow"])
 def test_no_temporal_mixing(name, pulsed, cfg):
     frames = pulsed["bayer"][:40]
     perturbed = [f if f.idx != 20 else f.with_data(np.clip(f.data.astype(np.int32) + 60, 0, 1023).astype(np.uint16)) for f in frames]

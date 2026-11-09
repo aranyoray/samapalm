@@ -1,4 +1,4 @@
-"""Synthetic ECG, ATC writer and Kardia metadata (palmppg.synth.ecg_synth)."""
+"""Simulated ECG, ATC writer and Kardia metadata (palmppg.synth.ecg_synth)."""
 import datetime as dt
 import json
 import struct

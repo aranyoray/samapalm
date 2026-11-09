@@ -104,7 +104,7 @@ per 20-byte packet; a 6L interleaves lead I and lead II. Reading a Card as inter
 rate, a 2:1 decimated lead I, and a second "lead" that is really the discarded samples — which is what the
 first real recording did, writing 150 Hz instead of 300 Hz. `finalise` therefore compares how much the signal
 moves between neighbouring values against how much it moves between values two apart: below 0.9 it is one
-waveform. On the recording that exposed this the ratio was 0.58; a synthetic two-lead stream whose leads
+waveform. On the recording that exposed this the ratio was 0.58; a simulated two-lead stream whose leads
 correlate at 0.987 scores 2.44. The ratio and the decision are both written to `<clip>_sync.json`, so a wrong
 call is visible rather than silent.
 

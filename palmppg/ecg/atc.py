@@ -1,4 +1,4 @@
-"""AliveCor ATC v1 chunk files: tolerant parser, chunk lister and a writer for synthetic data.
+"""AliveCor ATC v1 chunk files: tolerant parser, chunk lister and a writer for simulated data.
 
 Serves protocol section 6.4 ("ingest ATC: parse header for start time, fs, gain; samples to millivolts")
 against the layout fixed in CONTRACTS section 3.6:
@@ -273,7 +273,7 @@ def write_atc(path: str | Path, samples_mv, fs: float = 300, start_time: dt.date
               resolution_nv: int = DEFAULT_RESOLUTION_NV, info: Mapping[str, str] | None = None,
               annotations: bytes | None = None, extra_blocks: Sequence[tuple[bytes, bytes]] = (),
               fmt_format: int = 1, flags: int = 0, version: tuple[int, int, int] = DEFAULT_VERSION) -> dict:
-    """Write an ATC v1 file that `parse_atc` reads back (synthetic participants, bench tests; CONTRACTS 3.6).
+    """Write an ATC v1 file that `parse_atc` reads back (simulated participants, bench tests; CONTRACTS 3.6).
 
     `samples_mv` (float, millivolts) are quantised to int16 at `resolution_nv` nV/LSB and clipped to the
     int16 rails (the count is returned so a test can check the parser's clip detection). `start_time` goes

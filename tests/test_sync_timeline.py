@@ -1,4 +1,4 @@
-"""build_timeline on fully synthetic sets: grade fine / coarse / none, sequential mode, report and features
+"""build_timeline on fully simulated sets: grade fine / coarse / none, sequential mode, report and features
 (protocol section 4 in full, 4.4 grading, D-002 window, D-004 grade logic)."""
 import json
 

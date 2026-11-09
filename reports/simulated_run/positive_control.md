@@ -1,4 +1,4 @@
-# Positive control (default synthetic geometry, seed 1)
+# Positive control (default simulated geometry, seed 1)
 
 Overall: **FAIL**. Truth HR 70.62 bpm; injected AC/DC {'R': 0.0028224000000000005, 'G': 0.00504, 'B': 0.0030492}.
 

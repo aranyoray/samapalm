@@ -1,4 +1,4 @@
-"""DANN: domain accuracy falls below the no-adversary baseline on a synthetic domain shift (E11)."""
+"""DANN: domain accuracy falls below the no-adversary baseline on a simulated domain shift (E11)."""
 import numpy as np
 import pytest
 

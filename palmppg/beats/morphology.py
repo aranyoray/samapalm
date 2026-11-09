@@ -30,7 +30,7 @@ import pandas as pd
 
 from palmppg.beats._signal import ANALYSIS_FS, bridge_nans, derivative, local_extrema, resample_segment
 
-# Algorithm constants (not protocol quantities): the decay-fit window (shared with the synthetic truth
+# Algorithm constants (not protocol quantities): the decay-fit window (shared with the simulated truth
 # definition), the smoothing spans of the slope and fourth-derivative estimates, the minimum relative
 # size of a fourth-derivative shoulder, the split fraction without a notch and the gate on the ensemble
 # notch flag.

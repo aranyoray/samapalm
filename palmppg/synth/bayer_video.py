@@ -291,7 +291,7 @@ def write_pi_clip(out_dir: str | Path, clip_id: str, scene: ps.PalmScene, pulse:
         "recovery_gate": extra.get("recovery_gate", "pass"), "video_seconds": float(seconds),
         "capture_mode": extra.get("capture_mode", cfg.get("study.capture_mode")), "n_frames_written": n_written,
         "led_block": dict(scene.led_block), "thumb_block": dict(scene.thumb_block),
-        "format": "SRGGB10_CSI2P", "synthetic": True,
+        "format": "SRGGB10_CSI2P", "simulated": True,
     }
     (out_dir / f"{clip_id}_meta.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     ps.write_landmarks(out_dir / f"{clip_id}_landmarks.json", scene, clip_id)

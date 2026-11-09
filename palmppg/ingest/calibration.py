@@ -104,7 +104,7 @@ class UnitCalibration:
     def from_frames(cls, dark_mosaic: np.ndarray | None, flat_mosaic: np.ndarray | None, black_level: float,
                     pattern: str = "RGGB", eps: float = 1e-3, central_fraction: float = 0.5, luxmap: dict | None = None,
                     unit_id: str | None = None, sources: dict | None = None) -> UnitCalibration:
-        """Build from unpacked uint16 mosaics (dark may be None: a constant black level is used instead). CONTRACTS section 3.1 formulas; used by the loader and by synthetic tests (section 8)."""
+        """Build from unpacked uint16 mosaics (dark may be None: a constant black level is used instead). CONTRACTS section 3.1 formulas; used by the loader and by tests on simulated data (section 8)."""
         if flat_mosaic is None:
             return cls.none(black_level, unit_id, pattern)
         flat = {k: v.astype(np.float32) for k, v in split_planes(flat_mosaic, pattern).items()}

@@ -36,10 +36,10 @@ def calibration_table(null_root: str | Path, signal_root: str | Path, provisiona
     return rows
 
 
-def calibration_markdown(rows: list[dict], provisional: float, quantile: float = 95.0, synthetic: bool = True) -> str:
+def calibration_markdown(rows: list[dict], provisional: float, quantile: float = 95.0, simulated: bool = True) -> str:
     lines = ["# SQI threshold calibration against null clips", ""]
-    if synthetic:
-        lines += ["Synthetic null clips (AC/DC = 0) and synthetic pulse clips at the small test geometry. This calibrates the procedure, "
+    if simulated:
+        lines += ["Simulated null clips (AC/DC = 0) and simulated pulse clips at the small test geometry. This calibrates the procedure, "
                   "not the study threshold, which is frozen at run-order step 3 from bench null recordings on the real unit.", ""]
     lines += [f"Provisional threshold {provisional}. Null quantile {quantile:g}.", "",
               "| camera | null n | signal n | null median | null q | signal median | null clips passing provisional | signal clips passing provisional | signal clips at or above null q |",

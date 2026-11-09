@@ -1,4 +1,4 @@
-"""Unit calibration: a synthetic vignette is removed to within the configured residual; fallback without files."""
+"""Unit calibration: a simulated vignette is removed to within the configured residual; fallback without files."""
 from __future__ import annotations
 
 import json
@@ -19,7 +19,7 @@ from tests.test_ingest_helpers import (
     BLACK,
     make_mosaic,
     vignette_map,
-    write_synthetic_pi_clip,
+    write_simulated_pi_clip,
     write_unit_calibration,
 )
 
@@ -34,7 +34,7 @@ def test_central_region_slices():
 def test_vignette_removed_within_residual_limit(tmp_path, cfg):
     unit = tmp_path / "unit_01"
     truth = write_unit_calibration(unit, W, H, strength=0.35)
-    clip = write_synthetic_pi_clip(tmp_path / "pi", n_frames=3, width=W, height=H, strength=0.35)
+    clip = write_simulated_pi_clip(tmp_path / "pi", n_frames=3, width=W, height=H, strength=0.35)
     meta = clip["meta"]
     cal = UnitCalibration.load(unit, meta, black_level=cfg.get("pi.black_level"))
     assert cal.applied and cal.luxmap is not None and cal.unit_id == "unit_01"
@@ -70,7 +70,7 @@ def test_vignette_removed_within_residual_limit(tmp_path, cfg):
 def test_stack_apply_matches_single(tmp_path, cfg):
     unit = tmp_path / "unit_01"
     write_unit_calibration(unit, W, H)
-    clip = write_synthetic_pi_clip(tmp_path / "pi", n_frames=4, width=W, height=H)
+    clip = write_simulated_pi_clip(tmp_path / "pi", n_frames=4, width=W, height=H)
     cal = UnitCalibration.load(unit, clip["meta"], black_level=cfg.get("pi.black_level"))
     reader = BayerClipReader(clip["raw"], clip["meta"])
     _ids, planes = next(reader.iter_chunks(chunk=4))
@@ -81,7 +81,7 @@ def test_stack_apply_matches_single(tmp_path, cfg):
 
 
 def test_no_calibration_subtracts_black_level(tmp_path, cfg):
-    clip = write_synthetic_pi_clip(tmp_path / "pi", n_frames=1, width=W, height=H, strength=0.0)
+    clip = write_simulated_pi_clip(tmp_path / "pi", n_frames=1, width=W, height=H, strength=0.0)
     cal = UnitCalibration.load(tmp_path / "missing_unit", clip["meta"], black_level=cfg.get("pi.black_level"))
     assert not cal.applied
     assert cal.summary()["calibration_applied"] is False

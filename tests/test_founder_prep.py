@@ -130,8 +130,8 @@ def test_the_rhythm_labels_match_the_vendored_task_list():
 
 
 # --------------------------------------------------------------------------- fixtures (these pin the Kotlin port)
-def test_the_fixture_file_is_synthetic_and_current():
-    assert "ynthetic" in FX["note"]
+def test_the_fixture_file_is_simulated_and_current():
+    assert "simulated" in FX["note"].lower()
     assert FX["fs_model"] == fp.FS_MODEL
     assert FX["window_samples"] == fp.WIN
     assert FX["median_kernel"] == int(0.4 * fp.FS_MODEL) + 1

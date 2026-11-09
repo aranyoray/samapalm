@@ -118,12 +118,12 @@ python tools/export_ecgfounder_onnx.py --weights work/ecgfounder/1_lead_ECGFound
 python tools/export_ecgfounder_onnx.py --random-weights --out /tmp/rand.onnx   # pipeline check only
 ```
 
-The tool exports fp32, opset 17, and runs ONNX Runtime against torch on random z-scored windows and on synthetic
+The tool exports fp32, opset 17, and runs ONNX Runtime against torch on random z-scored windows and on simulated
 ECG windows (sinus, AF-like, ectopy, inverted; filtered and unfiltered). Pass: max |delta p| < 1e-4 on all 150
 outputs. The JSON report lists versions, operators, sizes, both sha256 values and the parity numbers.
 
 Checked with the real weights (2026-10-24, torch 2.14.1 / onnx 1.23.2 / onnxruntime 1.31.0): the export passes
-with max |delta p| 2.1e-6 on random windows and 6.9e-7 on synthetic ECG, and max |delta logit| 1.8e-5. The file
+with max |delta p| 2.1e-6 on random windows and 6.9e-7 on simulated ECG, and max |delta logit| 1.8e-5. The file
 is 123.3 MB. Weights sha256 `f863a38897fb49a27fec7e44008ea3c7bdbd29c77fa4a02ecbb8c56df4f37603`
 (`1_lead_ECGFounder.pth`, 369,807,481 bytes); the CI model job checks that sum before exporting.
 
@@ -140,14 +140,14 @@ Built, as of 2026-10-24.
 * Preprocessing: `android/ecg-model` (`org.samahealth.ecgmodel.FounderPrep`) is a port of
   `palmppg/ecg/founder_prep.py`, which was split out of `founder.py` so the chain can be imported, tested and
   used to generate fixtures without torch. `tools/make_founder_fixtures.py` writes
-  `configs/founder_fixtures/preprocess.json` (synthetic strips, every intermediate stage, the filter
+  `configs/founder_fixtures/preprocess.json` (simulated strips, every intermediate stage, the filter
   coefficients and the combination rule) and both `tests/test_founder_prep.py` and
   `android/ecg-model/src/test/.../FounderPrepTest.kt` check against it. The Kotlin resampling matches scipy to
   2e-6, the filtered windows to 5e-6 and the model input to 1e-4, all in float32, which is the precision the
   model is fed in.
 * Checked end to end on 2026-10-24: the tensors the Kotlin port produces were run through the real exported
   graph with ONNX Runtime and compared with the Python runner's, giving max |delta p| 4.8e-6 per window and
-  1.0e-6 after combining, with the same top labels (a synthetic 72 bpm sinus strip reads "sinus rhythm" 0.99).
+  1.0e-6 after combining, with the same top labels (a simulated 72 bpm sinus strip reads "sinus rhythm" 0.99).
   Reproduce it with `./gradlew :ecg-model:test -PfounderDump=<dir>`, which writes the tensors, then run the
   graph on those files and on `model_input_f32_b64` from the fixture.
 * Inference: `org.samahealth.onboarding.ecg.FounderOnnx` in the app. The model file is optional: it is looked

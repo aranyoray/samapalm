@@ -47,16 +47,16 @@ def gonogo_inputs(work_root: Path, frames: dict | None = None) -> dict:
     return res
 
 
-def run_gonogo(cfg: Config | None = None, interim: bool = False, work_root: str | Path | None = None, synthetic: bool | None = None) -> dict:
+def run_gonogo(cfg: Config | None = None, interim: bool = False, work_root: str | Path | None = None, simulated: bool | None = None) -> dict:
     cfg = cfg or load_pipeline_config()
     work_root = Path(work_root or cfg.get("paths.work_root"))
     inputs = gonogo_inputs(work_root)
     clean = {k: (np.nan if v is None else v) for k, v in inputs.items() if not isinstance(v, list)}
     rep = evaluate_go_no_go(clean, load_frozen_config())
-    synthetic = synthetic if synthetic is not None else "synth" in str(work_root)
+    simulated = simulated if simulated is not None else any(k in str(work_root) for k in ("synth", "simulated"))
     head = ["# Interim go/no-go dashboard (first 100; thresholds unchanged)" if interim else "# Pilot go/no-go", ""]
-    if synthetic:
-        head += ["**Synthetic cohort.** This run measures the pipeline on generated data; it is not a study result.", ""]
+    if simulated:
+        head += ["**Simulated cohort.** This run measures the pipeline on generated data; it is not a study result.", ""]
     head += [f"MST 4-6 n = {inputs.get('n_mst_4_6')}, MST 7-10 n = {inputs.get('n_mst_7_10')}.", ""]
     tail = ["", "Product track alongside (E5, not a criterion):", ""]
     for s in inputs.get("product_track_e5", []):

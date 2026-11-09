@@ -34,7 +34,7 @@ from palmppg.experiments.data import (
 )
 
 TRACK_CAMERAS = {"product_candidate": ("phone", "pi_proxy"), "science": ("pi",)}
-SYNTHETIC_NOTE = "Synthetic cohort: numbers measure the pipeline on generated data and say nothing about people."
+SIMULATED_NOTE = "Simulated cohort: numbers measure the pipeline on generated data and say nothing about people."
 
 
 # --------------------------------------------------------------------------- utilities
@@ -64,7 +64,7 @@ def experiment_config() -> dict:
 class Context:
     """Shared state for one run: config, feature frames, output dir, seed, folds per camera."""
 
-    def __init__(self, cfg: Config, work_root: Path, frames: dict[str, pd.DataFrame] | None = None, synthetic: bool | None = None):
+    def __init__(self, cfg: Config, work_root: Path, frames: dict[str, pd.DataFrame] | None = None, simulated: bool | None = None):
         self.cfg = cfg
         self.work_root = Path(work_root)
         self.out = self.work_root / "experiments"
@@ -77,8 +77,8 @@ class Context:
         self.demo_cols = [c for c in demographics_columns(cfg.with_overrides({"experiments": {"demographics_columns": self.exp["defaults"]["demographics_columns"]}}))]
         self.folds: dict[str, Any] = {}
         any_df = next(iter(self.frames.values())) if self.frames else pd.DataFrame()
-        self.synthetic = synthetic if synthetic is not None else bool(len(any_df) and any_df["study_id"].astype(str).str.startswith("SWHT-PP-003-").all()
-                                                                       and (self.work_root.name.startswith(("synth", "positive")) or "synth" in str(self.work_root)))
+        self.simulated = simulated if simulated is not None else bool(len(any_df) and any_df["study_id"].astype(str).str.startswith("SWHT-PP-003-").all()
+                                                                       and (self.work_root.name.startswith(("synth", "simulated", "positive")) or any(k in str(self.work_root) for k in ("synth", "simulated"))))
 
     def frame(self, camera: str) -> pd.DataFrame | None:
         return self.frames.get(camera)
@@ -94,9 +94,9 @@ class Context:
     def write(self, name: str, result: dict) -> dict:
         d = self.out / name
         d.mkdir(parents=True, exist_ok=True)
-        result.setdefault("synthetic", self.synthetic)
-        if self.synthetic:
-            result.setdefault("note", SYNTHETIC_NOTE)
+        result.setdefault("simulated", self.simulated)
+        if self.simulated:
+            result.setdefault("note", SIMULATED_NOTE)
         (d / "results.json").write_text(json.dumps(_jsonable(result), indent=1), encoding="utf-8")
         md = result.get("markdown")
         if md:
@@ -377,7 +377,7 @@ def e6_equity(ctx: Context) -> dict:
                 md += [f"MST leakage probe ({track}/{cam}): " + json.dumps(_jsonable({k: v for k, v in lp.items() if not isinstance(v, (dict, list, pd.DataFrame))}))[:600], ""]
             except Exception as exc:  # noqa: BLE001
                 res["leakage_probe"][f"{track}:{cam}"] = {"error": str(exc)}
-    md.append("Synthetic tone shifts in generated data support no equity claim." if ctx.synthetic else "")
+    md.append("Simulated tone shifts in generated data support no equity claim." if ctx.simulated else "")
     res["markdown"] = "\n".join(md) + "\n"
     return ctx.write("E6", res)
 

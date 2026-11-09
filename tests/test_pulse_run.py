@@ -1,4 +1,4 @@
-"""run_pulse end to end on a temp camera_dir: synthetic traces.parquet (Pi planes and phone RGB), a Timeline,
+"""run_pulse end to end on a temp camera_dir: simulated traces.parquet (Pi planes and phone RGB), a Timeline,
 optional patches.zarr for 2SR; outputs, masks, SQI, fusion and the feature registry (6.3, CONTRACTS 4-5)."""
 import json
 

@@ -1,4 +1,4 @@
-"""Known-answer tests for palmppg.beats (protocol 6.5, 6.6) on a synthetic PPG with known beats and morphology."""
+"""Known-answer tests for palmppg.beats (protocol 6.5, 6.6) on a simulated PPG with known beats and morphology."""
 import json
 
 import numpy as np

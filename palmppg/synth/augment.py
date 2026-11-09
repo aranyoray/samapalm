@@ -1,11 +1,11 @@
 """Augmentation library: every protocol section 8 transform as a class, a registry and a logged chain.
 
-Protocol section 8 (synthetic augmentation study on the first 100 clips): geometric (rotation, translation,
+Protocol section 8 (simulated augmentation study on the first 100 clips): geometric (rotation, translation,
 scale, mild perspective, per-frame micro-jitter), photometric (exposure, illuminant, vignetting gain, moving
 shadow), noise (shot noise by lower effective light, read noise, 8-bit quantisation), blur (defocus, motion),
 temporal (frame drops, timestamp jitter, variable-frame-rate timestamps, 50 Hz flicker sampled at frame times
 so it aliases to 10 Hz at 30 fps), compression and resolution (H.264 / H.265 CRF lists, downscale, chroma
-subsampling) and the synthetic skin-tone shift (melanin darkening, every output labelled "synthetic tone shift").
+subsampling) and the simulated skin-tone shift (melanin darkening, every output labelled "simulated tone shift").
 
 Rules encoded here
   * No temporal smoothing or frame interpolation anywhere: every transform declares
@@ -705,13 +705,13 @@ class ChromaSubsample(Transform):
         return g.with_data(cv2.cvtColor(out, cv2.COLOR_YCrCb2RGB))
 
 
-# ----------------------------------------------------------------------------- synthetic skin tone
-class SyntheticToneShift(Transform):
+# ----------------------------------------------------------------------------- simulated skin tone
+class SimulatedToneShift(Transform):
     """Multiplicative melanin darkening exp(-level * k_c) with k = MELANIN_ABSORPTION (B most, R least) at cfg
     augment.melanin_levels; optional `mask` (h, w) bool restricts it to skin. Every output is labelled
-    "synthetic tone shift" and supports no equity claim (section 8)."""
+    "simulated tone shift" and supports no equity claim (section 8)."""
 
-    name, levels_key, level_param = "SyntheticToneShift", "melanin_levels", "level"
+    name, levels_key, level_param = "SimulatedToneShift", "melanin_levels", "level"
     label = TONE_LABEL
 
     def frame(self, f, rng):
@@ -735,7 +735,7 @@ class SyntheticToneShift(Transform):
 TRANSFORMS: dict[str, type[Transform]] = {cls.name: cls for cls in (
     Rotate, Translate, Scale, Perspective, MicroJitter, ExposureShift, IlluminantShift, VignettingGain, MovingShadow,
     ShotNoise, ReadNoise, Quantise8bit, Defocus, MotionBlur, FrameDrops, TimestampJitter, VFRResample, FlickerModulation,
-    H264Compress, H265Compress, Downscale, ChromaSubsample, SyntheticToneShift)}
+    H264Compress, H265Compress, Downscale, ChromaSubsample, SimulatedToneShift)}
 
 
 def make_transform(spec, cfg=None) -> Transform:

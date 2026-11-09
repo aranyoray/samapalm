@@ -4,7 +4,7 @@ Three providers share one interface, `LandmarkProvider.detect(preview_rgb_uint8,
 
   MediaPipeHandsProvider     MediaPipe Hands (legacy `mediapipe.solutions.hands` when installed, else the
                              tasks-API HandLandmarker with a `.task` model file). Imported lazily.
-  SyntheticLandmarkProvider  ground-truth landmarks written by the synthetic generator (JSON).
+  SimulatedLandmarkProvider  ground-truth landmarks written by the simulated-data generator (JSON).
   SkinSegmentationFallback   YCrCb skin segmentation -> largest blob -> convex hull -> approximate
                              landmarks, flagged `source="skin_fallback"` with low confidence.
 
@@ -280,9 +280,9 @@ class MediaPipeHandsProvider(LandmarkProvider):
                 det.close()
 
 
-# --------------------------------------------------------------------------- synthetic ground truth
-class SyntheticLandmarkProvider(LandmarkProvider):
-    """Ground-truth landmarks from the synthetic generator's JSON (section 8 positive control).
+# --------------------------------------------------------------------------- simulated ground truth
+class SimulatedLandmarkProvider(LandmarkProvider):
+    """Ground-truth landmarks from the simulated-data generator's JSON (section 8 positive control).
 
     File layout: {"frames": [{"frame_idx": i, "lm": [[x, y, z] * 21], "is_left": true, "palmar": true}, ...],
     "static": [[x, y, z] * 21]}. When "frames" is absent (or empty) "static" is used for every frame.
@@ -291,7 +291,7 @@ class SyntheticLandmarkProvider(LandmarkProvider):
     top-level keys, then to True (the study images the left palm).
     """
 
-    source = "synthetic"
+    source = "simulated"
 
     def __init__(self, path_to_landmarks_json: str | os.PathLike, confidence: float = 1.0) -> None:
         self.path = Path(path_to_landmarks_json)

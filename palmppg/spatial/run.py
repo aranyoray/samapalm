@@ -20,7 +20,7 @@ from palmppg.spatial.landmarks import (
     LandmarkProvider,
     MediaPipeHandsProvider,
     SkinSegmentationFallback,
-    SyntheticLandmarkProvider,
+    SimulatedLandmarkProvider,
     run_landmarks,
 )
 from palmppg.spatial.static_colour import (
@@ -77,9 +77,9 @@ def default_white_level(camera: str, cfg: Config) -> float:
 
 
 def build_provider(cfg: Config, landmark_json: str | Path | None = None, provider: LandmarkProvider | None = None):
-    """Synthetic ground truth when a landmark JSON is given, else the caller's provider, else MediaPipe."""
+    """Simulated ground truth when a landmark JSON is given, else the caller's provider, else MediaPipe."""
     if landmark_json is not None:
-        return SyntheticLandmarkProvider(landmark_json)
+        return SimulatedLandmarkProvider(landmark_json)
     if provider is not None:
         return provider
     return MediaPipeHandsProvider(

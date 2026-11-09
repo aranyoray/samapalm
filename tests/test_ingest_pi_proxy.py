@@ -14,7 +14,7 @@ from tests.test_ingest_helpers import (
     FFMPEG,
     WHITE,
     make_mosaic,
-    write_synthetic_pi_clip,
+    write_simulated_pi_clip,
     write_unit_calibration,
 )
 
@@ -55,7 +55,7 @@ def test_demosaic_full_srgb_known_colour():
 def test_make_pi_proxy_frame_count_colour_and_times(tmp_path, cfg):
     unit = tmp_path / "unit_01"
     write_unit_calibration(unit, W, H, strength=0.3)
-    clip = write_synthetic_pi_clip(tmp_path / "pi", n_frames=20, width=W, height=H, strength=0.3, levels=LEVELS)
+    clip = write_simulated_pi_clip(tmp_path / "pi", n_frames=20, width=W, height=H, strength=0.3, levels=LEVELS)
     meta = clip["meta"]
     cal = UnitCalibration.load(unit, meta, black_level=cfg.get("pi.black_level"))
     reader = BayerClipReader(clip["raw"], meta)

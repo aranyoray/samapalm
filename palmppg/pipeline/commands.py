@@ -69,7 +69,7 @@ def dispatch(args) -> int:
         from palmppg.ingest import bench
 
         if sub == "selftest":
-            rep = bench.synthetic_bench_selftest(n_trials=20, seed=1)
+            rep = bench.simulated_bench_selftest(n_trials=20, seed=1)
             print(rep["markdown"])
             return 0 if rep["n_pass"] == rep["n_trials"] else 3
         # hardware trials: one JSON file per trial in trials_dir, in the bench_trials_report trial shape
